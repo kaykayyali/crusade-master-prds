@@ -215,13 +215,26 @@ in (no cross-tenant joins)</li>
 <li>If invalid: clear error (“Code not found”, “Code expired”, “Code
 already used”, “Wrong tenant”)</li>
 </ul>
-<h3 id="faction-picker">3.3 Faction Picker</h3>
-<p>Searchable dropdown of all 26 Wahapedia factions. Each option shows:
-- Faction logo (from Wahapedia) - One-line description - Linked
-Armageddon-specific content flag (if any)</p>
-<p>After selection: - Create <code>CampaignMember.factionId</code> -
-Create an empty <code>Roster</code> (no draft, no approved) - Player is
-redirected to “Import your first roster” CTA</p>
+<h3 id="faction-team-picker-two-distinct-picks">3.3 Faction + Team
+Picker (two distinct picks)</h3>
+<p>When a player joins a campaign, they pick two things — a 40K faction
+and a campaign team (if the campaign has teams).</p>
+<p><strong>Faction picker:</strong> - Searchable dropdown of all 26
+Wahapedia factions. Each option shows: - Faction logo (from Wahapedia) -
+One-line description - Linked Armageddon-specific content flag (if any)
+- Sets <code>CampaignMember.factionId</code></p>
+<p><strong>Team picker (only if
+<code>Campaign.teamsEnabled = true</code>):</strong> - List of
+<code>CampaignTeam</code> rows for the campaign - Each team shown with:
+name, color, description, current player count - Sets
+<code>CampaignMember.teamId</code> - The picker does NOT filter the 40K
+faction picker — a Helsreach Defender can be any 40K faction</p>
+<p><strong>Free-for-all campaigns
+(<code>teamsEnabled = false</code>):</strong> - Only the faction picker
+shows. Team picker step is skipped.</p>
+<p>After both picks complete: - Create empty <code>Roster</code> (no
+draft, no approved) - Player is redirected to “Import your first roster”
+CTA</p>
 <h3 id="first-time-onboarding">3.4 First-Time Onboarding</h3>
 <p>Modal flow shown on first login to a campaign:</p>
 <ol type="1">
@@ -249,8 +262,12 @@ importer</li>
     G --&gt; H[Authenticated, back on /join]
     H --&gt; I{Invite valid?}
     I --&gt;|No| J[Show error]
-    I --&gt;|Yes| K[Pick faction]
-    K --&gt; L[Create Roster shell]
+    I --&gt;|Yes| K{Pick faction (always)}
+    K --&gt; L{Campaign has teams?}
+    L --&gt;|Yes| M[Pick team]
+    L --&gt;|No| N[Skip]
+    M --&gt; O[Create Roster shell]
+    N --&gt; O
     L --&gt; M[Redirected to /campaigns/{id}]
     M --&gt; N{First time in this campaign?}
     N --&gt;|Yes| O[Onboarding tour]
@@ -275,16 +292,18 @@ fully used.”</li>
 campaign group.”</li>
 </ul>
 <hr />
-<h2 id="faction-picker-notes">5. Faction Picker Notes</h2>
-<ul>
-<li>26 Wahapedia factions are the canonical list</li>
-<li>Picker does <strong>not</strong> filter to Armageddon-suitable
-factions</li>
-<li>Soft highlight: factions with documented Armageddon content get a
-small badge</li>
-<li>Legends / Forge World units are not in the picker; they’re added
-during NR import</li>
-</ul>
+<h2 id="faction-team-picker-notes">5. Faction + Team Picker Notes</h2>
+<p><strong>Faction:</strong> - 26 Wahapedia factions are the canonical
+list - Picker does <strong>not</strong> filter to Armageddon-suitable
+factions - Soft highlight: factions with documented Armageddon content
+get a small badge - Legends / Forge World units are not in the picker;
+they’re added during NR import</p>
+<p><strong>Team:</strong> - Teams are CM-defined per campaign (see PRD-1
+§5b) - Team picker is shown only when
+<code>Campaign.teamsEnabled = true</code> - Team picker never restricts
+40K faction choice (multi-faction teams are the norm) - Team switch
+mid-campaign requires CM approval (creates a “team_switch”
+<code>ApprovalRequest</code> per PRD-5)</p>
 <hr />
 <h2 id="critical-user-flows-player-sarah">6. Critical User Flows —
 Player (Sarah)</h2>

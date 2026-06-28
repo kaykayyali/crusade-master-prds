@@ -460,22 +460,115 @@ Own battle filings subject to the same submission gating</p>
 <p>Default behavior; CM cannot opt out (conflicts of interest require a
 co-CM, not a setting).</p>
 <hr />
-<h2 id="b.-custom-factions-future-schema-ready-now">5b. Custom Factions
-(future, schema-ready now)</h2>
-<p>The user wants the option for CMs to define custom factions later
-(homebrew chapters, custom Imperial Guard regiments, narrative-only
-factions). The schema is built to support this from day one:</p>
+<h2 id="b.-campaign-teams-not-40k-factions-a-distinct-concept">5b.
+Campaign Teams (not 40K Factions — a distinct concept)</h2>
+<p>Campaign factions in the app’s sense are <strong>teams of players
+within a campaign</strong>, <em>not</em> the 40K in-universe faction
+they play. The schema keeps these as two separate concepts to avoid the
+confusion in v3:</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 31%" />
+<col style="width: 20%" />
+<col style="width: 22%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>Definition</th>
+<th>Scope</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Faction</code></td>
+<td>40K in-universe army (Astra Militarum, Space Marines, Orks,
+etc.)</td>
+<td>Global, seeded</td>
+<td>Wahapedia (26 rows)</td>
+</tr>
+<tr class="even">
+<td><code>CampaignTeam</code></td>
+<td>Side of the narrative within a campaign</td>
+<td>Per-campaign, nullable</td>
+<td>CM-defined</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why this matters:</strong></p>
+<p>In an Armageddon-style campaign, players on the same side of the war
+are typically <strong>multiple 40K factions</strong> — Space Marines,
+Astra Militarum, Sisters of Battle, and Adeptus Mechanicus might all
+fight under “Imperium Defenders.” Conversely, Ork players might split
+across “Gorgutz’s WAAAGH!” and “Skari’s Kult.” The “who is on my team”
+question is about narrative sides, not 40K factions.</p>
+<p>Battles are scheduled both <em>intra-team</em> (rare, for narrative
+beat-battles between teammates) and <em>inter-team</em> (the main driver
+of campaign progress).</p>
+<p><strong>Schema (in PRD-0 §4):</strong></p>
 <ul>
-<li><code>Faction</code> is a database table, not a hard-coded enum</li>
-<li>Wahapedia’s 26 factions ship as the seed data</li>
-<li><code>Campaign.factionWhitelist: string[] | null</code> controls
-which factions are selectable in the campaign</li>
-<li>A CM creating a custom faction is a v1.x feature (UI for it is out
-of scope for v1; data model + APIs are ready)</li>
+<li><code>Campaign.teamsEnabled: boolean</code> — when false,
+free-for-all (no teams); when true, players must pick a team</li>
+<li><code>CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }</code>
+— the <code>narrativeLogFilter</code> controls which events the team’s
+players see (e.g., Defenders see all events; Invaders see only
+Inter-team battles + Inter-team events)</li>
+<li><code>CampaignMember.teamId?: CampaignTeam[&#39;id&#39;]</code> — nullable
+when <code>teamsEnabled = false</code></li>
+<li><code>Roster</code> itself does NOT carry team info (a player’s team
+is a member-level concept, not a roster-level concept; a player on
+Helsreach Defenders who switches to Hades Defenders keeps their
+army)</li>
 </ul>
-<p>The faction picker (PRD-2) shows seeded factions only in v1. CMs who
-want custom factions in v1 can edit the seed list via a future admin
-tool; otherwise v1.x ships the full UI.</p>
+<p><strong>Armageddon team templates (v1):</strong></p>
+<p>When the CM picks the Armageddon supplement during campaign creation,
+the system pre-fills 4 teams as suggestions:</p>
+<ol type="1">
+<li><strong>Helsreach Defenders</strong> (Imperial players fighting in
+Hive Helsreach)</li>
+<li><strong>Hades Defenders</strong> (Imperial players fighting in Hive
+Hades)</li>
+<li><strong>Gorgutz’s WAAAGH!</strong> (Ork players under Warlord
+Gorgutz Ironjaw)</li>
+<li><strong>Skari’s Kult of Speed</strong> (Ork players under Warlord
+Skari Bloodspear)</li>
+</ol>
+<p>The CM can use as-is, rename, merge, add, or delete. None of these
+teams restrict the player’s 40K faction — a “Helsreach Defender” can be
+Space Marines <em>or</em> Astra Militarum <em>or</em> Sisters. The team
+picker in PRD-2 lets players choose freely.</p>
+<p><strong>Custom teams in v1.x (schema-ready now, UI
+deferred):</strong></p>
+<p>The schema supports fully custom teams (a CM could create “Traitor
+Guard of the 83rd,” “Skitarii of Forge World Mordax,” etc.) from day
+one. The v1 UI exposes the Armageddon templates and standard CRUD
+(add/rename/delete/reorder/color). A v1.x addition adds arbitrary team
+creation flows for non-Armageddon supplements and homebrew
+campaigns.</p>
+<p><strong>Battles across teams:</strong></p>
+<ul>
+<li>The CM schedules inter-team battles (playerA on Helsreach
+vs. playerB on Gorgutz) — the most common kind</li>
+<li>Intra-team battles are allowed but rare (e.g., a “fallen-internal”
+beat-battle where a team member fights their own teammate to settle a
+dispute)</li>
+<li>Battle pairings in the inbox (PRD-1 §4.3.1) and battle scheduling
+(PRD-4) use team as a first-class filter</li>
+</ul>
+<p><strong>Per-team campaign metrics:</strong></p>
+<p>The campaign dashboard shows team-level rollups alongside
+per-player:</p>
+<ul>
+<li>Team leaderboard by total victories (inter-team only)</li>
+<li>Per-team aggregate roster health (last approved roster date, %
+active)</li>
+<li>Per-team RP totals (visible to all players; CMs can hide if they
+prefer)</li>
+<li>Per-team requisition spend rate</li>
+</ul>
+<p>These are aggregated views; the underlying events are per-player.</p>
 <hr />
 <h2 id="c.-discord-integration-future-not-in-v1">5c. Discord Integration
 (future, not in v1)</h2>

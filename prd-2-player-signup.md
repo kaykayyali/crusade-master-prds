@@ -45,16 +45,28 @@ Get a player from "I have an invite code" to "I'm a member of the campaign with 
 - If valid: account binds to campaign as `CampaignMember.role = 'player'`
 - If invalid: clear error ("Code not found", "Code expired", "Code already used", "Wrong tenant")
 
-### 3.3 Faction Picker
+### 3.3 Faction + Team Picker (two distinct picks)
 
-Searchable dropdown of all 26 Wahapedia factions. Each option shows:
-- Faction logo (from Wahapedia)
-- One-line description
-- Linked Armageddon-specific content flag (if any)
+When a player joins a campaign, they pick two things — a 40K faction and a campaign team (if the campaign has teams).
 
-After selection:
-- Create `CampaignMember.factionId`
-- Create an empty `Roster` (no draft, no approved)
+**Faction picker:**
+- Searchable dropdown of all 26 Wahapedia factions. Each option shows:
+  - Faction logo (from Wahapedia)
+  - One-line description
+  - Linked Armageddon-specific content flag (if any)
+- Sets `CampaignMember.factionId`
+
+**Team picker (only if `Campaign.teamsEnabled = true`):**
+- List of `CampaignTeam` rows for the campaign
+- Each team shown with: name, color, description, current player count
+- Sets `CampaignMember.teamId`
+- The picker does NOT filter the 40K faction picker — a Helsreach Defender can be any 40K faction
+
+**Free-for-all campaigns (`teamsEnabled = false`):**
+- Only the faction picker shows. Team picker step is skipped.
+
+After both picks complete:
+- Create empty `Roster` (no draft, no approved)
 - Player is redirected to "Import your first roster" CTA
 
 ### 3.4 First-Time Onboarding
@@ -84,8 +96,12 @@ flowchart TD
     G --> H[Authenticated, back on /join]
     H --> I{Invite valid?}
     I -->|No| J[Show error]
-    I -->|Yes| K[Pick faction]
-    K --> L[Create Roster shell]
+    I -->|Yes| K{Pick faction (always)}
+    K --> L{Campaign has teams?}
+    L -->|Yes| M[Pick team]
+    L -->|No| N[Skip]
+    M --> O[Create Roster shell]
+    N --> O
     L --> M[Redirected to /campaigns/{id}]
     M --> N{First time in this campaign?}
     N -->|Yes| O[Onboarding tour]
@@ -109,12 +125,19 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 
 ---
 
-## 5. Faction Picker Notes
+## 5. Faction + Team Picker Notes
 
+**Faction:**
 - 26 Wahapedia factions are the canonical list
 - Picker does **not** filter to Armageddon-suitable factions
 - Soft highlight: factions with documented Armageddon content get a small badge
 - Legends / Forge World units are not in the picker; they're added during NR import
+
+**Team:**
+- Teams are CM-defined per campaign (see PRD-1 §5b)
+- Team picker is shown only when `Campaign.teamsEnabled = true`
+- Team picker never restricts 40K faction choice (multi-faction teams are the norm)
+- Team switch mid-campaign requires CM approval (creates a "team_switch" `ApprovalRequest` per PRD-5)
 
 ---
 

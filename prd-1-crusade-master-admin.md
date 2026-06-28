@@ -176,16 +176,59 @@ Default behavior; CM cannot opt out (conflicts of interest require a co-CM, not 
 
 ---
 
-## 5b. Custom Factions (future, schema-ready now)
+## 5b. Campaign Teams (not 40K Factions — a distinct concept)
 
-The user wants the option for CMs to define custom factions later (homebrew chapters, custom Imperial Guard regiments, narrative-only factions). The schema is built to support this from day one:
+Campaign factions in the app's sense are **teams of players within a campaign**, *not* the 40K in-universe faction they play. The schema keeps these as two separate concepts to avoid the confusion in v3:
 
-- `Faction` is a database table, not a hard-coded enum
-- Wahapedia's 26 factions ship as the seed data
-- `Campaign.factionWhitelist: string[] | null` controls which factions are selectable in the campaign
-- A CM creating a custom faction is a v1.x feature (UI for it is out of scope for v1; data model + APIs are ready)
+| Concept | Definition | Scope | Source |
+|---------|-----------|-------|--------|
+| `Faction` | 40K in-universe army (Astra Militarum, Space Marines, Orks, etc.) | Global, seeded | Wahapedia (26 rows) |
+| `CampaignTeam` | Side of the narrative within a campaign | Per-campaign, nullable | CM-defined |
 
-The faction picker (PRD-2) shows seeded factions only in v1. CMs who want custom factions in v1 can edit the seed list via a future admin tool; otherwise v1.x ships the full UI.
+**Why this matters:**
+
+In an Armageddon-style campaign, players on the same side of the war are typically **multiple 40K factions** — Space Marines, Astra Militarum, Sisters of Battle, and Adeptus Mechanicus might all fight under "Imperium Defenders." Conversely, Ork players might split across "Gorgutz's WAAAGH!" and "Skari's Kult." The "who is on my team" question is about narrative sides, not 40K factions.
+
+Battles are scheduled both *intra-team* (rare, for narrative beat-battles between teammates) and *inter-team* (the main driver of campaign progress).
+
+**Schema (in PRD-0 §4):**
+
+- `Campaign.teamsEnabled: boolean` — when false, free-for-all (no teams); when true, players must pick a team
+- `CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }` — the `narrativeLogFilter` controls which events the team's players see (e.g., Defenders see all events; Invaders see only Inter-team battles + Inter-team events)
+- `CampaignMember.teamId?: CampaignTeam['id']` — nullable when `teamsEnabled = false`
+- `Roster` itself does NOT carry team info (a player's team is a member-level concept, not a roster-level concept; a player on Helsreach Defenders who switches to Hades Defenders keeps their army)
+
+**Armageddon team templates (v1):**
+
+When the CM picks the Armageddon supplement during campaign creation, the system pre-fills 4 teams as suggestions:
+
+1. **Helsreach Defenders** (Imperial players fighting in Hive Helsreach)
+2. **Hades Defenders** (Imperial players fighting in Hive Hades)
+3. **Gorgutz's WAAAGH!** (Ork players under Warlord Gorgutz Ironjaw)
+4. **Skari's Kult of Speed** (Ork players under Warlord Skari Bloodspear)
+
+The CM can use as-is, rename, merge, add, or delete. None of these teams restrict the player's 40K faction — a "Helsreach Defender" can be Space Marines *or* Astra Militarum *or* Sisters. The team picker in PRD-2 lets players choose freely.
+
+**Custom teams in v1.x (schema-ready now, UI deferred):**
+
+The schema supports fully custom teams (a CM could create "Traitor Guard of the 83rd," "Skitarii of Forge World Mordax," etc.) from day one. The v1 UI exposes the Armageddon templates and standard CRUD (add/rename/delete/reorder/color). A v1.x addition adds arbitrary team creation flows for non-Armageddon supplements and homebrew campaigns.
+
+**Battles across teams:**
+
+- The CM schedules inter-team battles (playerA on Helsreach vs. playerB on Gorgutz) — the most common kind
+- Intra-team battles are allowed but rare (e.g., a "fallen-internal" beat-battle where a team member fights their own teammate to settle a dispute)
+- Battle pairings in the inbox (PRD-1 §4.3.1) and battle scheduling (PRD-4) use team as a first-class filter
+
+**Per-team campaign metrics:**
+
+The campaign dashboard shows team-level rollups alongside per-player:
+
+- Team leaderboard by total victories (inter-team only)
+- Per-team aggregate roster health (last approved roster date, % active)
+- Per-team RP totals (visible to all players; CMs can hide if they prefer)
+- Per-team requisition spend rate
+
+These are aggregated views; the underlying events are per-player.
 
 ---
 

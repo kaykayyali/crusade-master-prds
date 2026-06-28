@@ -20,7 +20,15 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.1 (current) — Rule builder in scope + critical user flows
+### v3.2 (current) — Campaign Teams as first-class schema
+
+- **Distinction surfaced**: 40K `Faction` (seeded from Wahapedia) is now clearly separate from `CampaignTeam` (CM-defined per-campaign grouping of players). v3.1's "Custom Factions" note was conflating these.
+- **PRD-0**: schema adds `Campaign.teamsEnabled`, `CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }`, and `CampaignMember.teamId`. `Faction` is global; `CampaignTeam` is per-campaign; `Roster` does NOT carry team info (member-level concept).
+- **PRD-1 §5b**: rewritten. Teams are not factions — they are narrative sides within a campaign. Armageddon ships 4 template teams (Helsreach Defenders, Hades Defenders, Gorgutz's WAAAGH!, Skari's Kult of Speed); CMs can rename/edit. Battle pairing filters on team. Per-team dashboard rollups added.
+- **PRD-2**: player signup now has a two-step picker — 40K faction (always) + campaign team (only if `teamsEnabled = true`). Free-for-all campaigns skip the team step. Team switch mid-campaign requires CM approval (creates a `team_switch` `ApprovalRequest`).
+- **PRD-4**: `NarrativeEventEffect.FilterExpr` supports `teamId` as a first-class axis alongside `factionId`. The two are distinct dimensions; CM can target events to a specific team.
+
+### v3.1 — Rule builder in scope + critical user flows
 
 - **Rule builder UI moved into v1 scope** (was v1.x). Built-in rule types only, no custom DSL. 9 rule types ship: `max-n-of-type`, `max-x-pct-of-role`, `max-points-per-unit`, `wargear-restriction`, `unit-whitelist`, `unit-blacklist`, `custom-name-pattern`, `total-xp-cap`, `crusade-rp-floor`. Auto-generated config forms from JSON Schema. Live preview + test-against-existing-data before save.
 - **PRD-1: added CM critical user flows** with persona (Mike, IT pro, runs Wednesday night campaign, 3 hours/week on admin). 5 flows detailed: campaign setup, inbox triage day, roster approval with rule override, narrative event triggering, campaign health monitoring. Each flow has: trigger, why it matters, specific UI requirements, critical moment, edge case.

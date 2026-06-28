@@ -424,11 +424,24 @@ Events</h2>
 <div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> NarrativeEventEffect <span class="op">=</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_deduct&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span></code></pre></div>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// FilterExpr can match on:</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">//   - teamId:    affects only one campaign team (e.g., &quot;Helsreach Defenders&quot;)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">//   - factionId: affects only one 40K faction (e.g., &quot;Orks&quot;)</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">//   - memberIds: explicit player list</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">//   - (combinations of the above with AND/OR)</span></span></code></pre></div>
 <p>Armageddon templates: - <strong>“Yarrick’s Broadcast”</strong> — all
-Imperial factions +1 RP - <strong>“Ork WAAAGH!”</strong> — all non-Ork
-factions −1 RP - <strong>“Armageddon Stands”</strong> — campaign
+Imperial factions +1 RP (faction filter) - <strong>“Ork
+WAAAGH!”</strong> — all non-Ork factions −1 RP (faction filter,
+inverted) - <strong>“Armageddon Stands”</strong> — campaign
 announcement, no state change</p>
+<p>For team-based campaigns (PRD-1 §5b), CMs can target events to a
+specific campaign team (e.g., “Helsreach Defenders gain +1 RP for
+holding the wall this week”). The filter expression supports
+<code>teamId</code> as a first-class axis alongside
+<code>factionId</code> — these are distinct dimensions and both are
+honored by the filter engine.</p>
 <hr />
 <h2 id="public-narrative-log">8. Public Narrative Log</h2>
 <p>A scrubbed, readable narrative view of the campaign, derived from

@@ -143,8 +143,9 @@ User { id, tenantId, email, displayName, roles, createdAt }
 Roles = 'instance_admin' | 'cm' | 'player' | 'spectator'   // user can hold multiple
 
 // === Campaign ===
-Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt }
-CampaignMember { id, campaignId, userId, joinedAt, status, factionId }
+Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt, teamsEnabled: boolean }
+CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }
+CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId?: CampaignTeam['id'] }
 
 // === Roster (state machine) ===
 Roster { id, campaignId, ownerUserId, factionId, name, currentDraftId, currentApprovedId }

@@ -220,12 +220,20 @@ type NarrativeEventEffect =
   | { type: 'rp_grant', amount: number, filter?: FilterExpr }
   | { type: 'rp_deduct', amount: number, filter?: FilterExpr }
   | { type: 'campaign_announcement', message: string };
+
+// FilterExpr can match on:
+//   - teamId:    affects only one campaign team (e.g., "Helsreach Defenders")
+//   - factionId: affects only one 40K faction (e.g., "Orks")
+//   - memberIds: explicit player list
+//   - (combinations of the above with AND/OR)
 ```
 
 Armageddon templates:
-- **"Yarrick's Broadcast"** — all Imperial factions +1 RP
-- **"Ork WAAAGH!"** — all non-Ork factions −1 RP
+- **"Yarrick's Broadcast"** — all Imperial factions +1 RP (faction filter)
+- **"Ork WAAAGH!"** — all non-Ork factions −1 RP (faction filter, inverted)
 - **"Armageddon Stands"** — campaign announcement, no state change
+
+For team-based campaigns (PRD-1 §5b), CMs can target events to a specific campaign team (e.g., "Helsreach Defenders gain +1 RP for holding the wall this week"). The filter expression supports `teamId` as a first-class axis alongside `factionId` — these are distinct dimensions and both are honored by the filter engine.
 
 ---
 
