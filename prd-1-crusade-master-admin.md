@@ -878,3 +878,19 @@ Mike's success criteria for this app:
 4. **Two CMs edit settings concurrently**: last-write-wins with 5s debounce; second writer sees "someone else just edited" toast.
 5. **Tenant suspended mid-campaign**: all in-flight approvals auto-rejected with reason "tenant suspended"; campaigns frozen.
 6. **BullMQ worker dies mid-parse**: BullMQ job times out, re-queued; `RosterDraft.status` stays `parsing`; player notified after timeout.
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [CampaignState](../okf/concepts/campaign-state.md) — lifecycle state machine; full behavior on transitions
+- [CampaignPhase](../okf/concepts/campaign-phase.md) — CM-authored narrative periods
+- [CampaignTeam](../okf/concepts/campaign-team.md) — per-campaign narrative side
+- [Crusade Team Leader](../okf/concepts/crusade-team-leader.md) — TL role, removal workflow, gate at campaign start
+- [CrusadeForce](../okf/concepts/crusade-force.md) — CM unilateral approval on any kind (v3.27)
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — CM `crusade_force_manual_edit`
+- [ApprovalKind](../okf/concepts/approval-kind.md) — all kinds (CM unilateral), kinds routed to TL
+- [ApprovalSource](../okf/concepts/approval-source.md) — how CM approvals are recorded
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

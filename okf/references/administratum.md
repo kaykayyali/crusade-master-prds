@@ -6,7 +6,7 @@ resource: "https://administratum.app"
 tags:
   - competitor
   - paid
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # Administratum

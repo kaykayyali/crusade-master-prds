@@ -2,12 +2,12 @@
 type: Domain Concept
 title: HistoryEntry
 description: Append-only history record (v3.10). Generated on ApprovalRequest approval. Has HistoryEntryIndex for queryable snapshots. Required for Rollback semantics.
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-4-events-deltas.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-4-events-deltas.md"
 tags:
   - concept
   - history
   - v3.10
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # HistoryEntry

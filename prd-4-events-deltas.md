@@ -693,3 +693,22 @@ The campaign can be re-opened by the primary CM (status goes back to `started`) 
 4. **CM-triggered RP grant fails (player already at cap)**: clamped, system emits a warning event for the audit log.
 5. **Player attempts to add an honour not in the active supplement**: form-level warning; CM override at approval time.
 6. **Submitter loses their active RosterApproved mid-approval** (e.g., CM rolls it back): pending BattleUpdate fails the gating check; CM is notified to reject.
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [CampaignState](../okf/concepts/campaign-state.md) — campaign lifecycle events
+- [CampaignPhase](../okf/concepts/campaign-phase.md) — phase_created / activated / deactivated events
+- [CrusadeForce](../okf/concepts/crusade-force.md) — CrusadeForce.withdrawn event (v3.28)
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — version status transitions
+- [CrusadeArmy](../okf/concepts/crusade-army.md) — muster / deploy events
+- [BattleUpdate](../okf/concepts/battle-update.md) — post-battle submission events
+- [ApprovalKind](../okf/concepts/approval-kind.md) — approval lifecycle events
+- [HistoryEntry](../okf/concepts/history-entry.md) — generated on approval
+- [ChangesetGrouping](../okf/concepts/changeset-grouping.md) — G1–G7 groupings
+- [Rollback](../okf/concepts/rollback.md) — tombstone + compensating entry
+- [Notification](../okf/concepts/notification.md) — Event → Notification fanout
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

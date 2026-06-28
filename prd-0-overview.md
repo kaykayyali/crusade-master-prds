@@ -699,3 +699,24 @@ See CHANGELOG in README. Major: stack, multi-tenancy, MVP scope, roster state ma
 - ServoCrypt — closest open collaborative competitor
 - Hapi docs: https://hapi.dev
 - BullMQ docs: https://docs.bullmq.io
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [CrusadeForce](../okf/concepts/crusade-force.md) — player's army in a campaign; replaces Roster (v3.28)
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — immutable, monotonically-numbered OoB snapshot
+- [CrusadeArmy](../okf/concepts/crusade-army.md) — mustered subset of units for a specific battle
+- [CampaignState](../okf/concepts/campaign-state.md) — lifecycle state machine; created → started → ended → archived
+- [CampaignPhase](../okf/concepts/campaign-phase.md) — CM-authored narrative periods; cosmetic-only (v3.19)
+- [CampaignTeam](../okf/concepts/campaign-team.md) — per-campaign narrative side, mandatory
+- [Crusade Team Leader](../okf/concepts/crusade-team-leader.md) — player with delegated team-scoped approval authority
+- [ApprovalKind](../okf/concepts/approval-kind.md) — canonical enum of every approval-gated action
+- [ApprovalSource](../okf/concepts/approval-source.md) — how an ApprovalRequest was decided
+- [Notification](../okf/concepts/notification.md) — user-facing materialization of an Event
+- [HistoryEntry](../okf/concepts/history-entry.md) — append-only history record
+- [ChangesetGrouping](../okf/concepts/changeset-grouping.md) — G1–G7 configurable groupings
+- [Rollback](../okf/concepts/rollback.md) — tombstone + compensating entry pattern
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

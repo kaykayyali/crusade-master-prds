@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Roster Import, Approval, & Rule Compliance (v3.26)
+title: CrusadeForce Import, Approval, & Rule Compliance (v3.28)
 description: BullMQ pipeline + bs-roster-parser subprocess. Rule-compliance gating, team-narrative-alignment. NR-as-source-of-truth (v3.9). v3.24 added Vitest + testcontainers coverage.
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-3-army-export-versioning.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-3-army-export-versioning.md"
 tags:
   - prd
   - roster
@@ -11,7 +11,7 @@ tags:
   - v3.9
   - v3.24
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-3: Roster Import, Approval, & Rule Compliance (v3)

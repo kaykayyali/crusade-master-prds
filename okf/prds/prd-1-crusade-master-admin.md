@@ -2,7 +2,7 @@
 type: PRD
 title: Instance Admin & CM Administration (v3.26)
 description: Instance admin, CM dashboard, Crusade Administration Panel, Campaign Teams, Crusade Team Leader management + removal workflow + campaign-creation gate, lifecycle state machine (v3.18), Phases (v3.18, cosmetic-only v3.19), Audit Log Viewer.
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-1-crusade-master-admin.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-1-crusade-master-admin.md"
 tags:
   - prd
   - admin
@@ -12,7 +12,7 @@ tags:
   - v3.18
   - v3.23
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-1: Instance Admin & Crusade Master Administration (v3)

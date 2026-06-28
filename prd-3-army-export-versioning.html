@@ -1109,5 +1109,28 @@ job fails; <code>RosterDraft.status = &#39;failed&#39;</code> with stderr in
 MinIO + Postgres are all networked services; the worker is a separate
 container with no special affinity.</li>
 </ol>
+<h2 id="okf-cross-references">OKF Cross-References</h2>
+<p>This PRD’s concepts are documented as first-class entities in the OKF
+bundle at <a href="../okf"><code>okf/</code></a>. The most relevant:</p>
+<ul>
+<li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> —
+player’s army; lifecycle states</li>
+<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+— monotonically-numbered OoB snapshots</li>
+<li><a href="../okf/concepts/crusade-army.md">CrusadeArmy</a> — mustered
+subset for a battle</li>
+<li><a href="../okf/concepts/approval-kind.md">ApprovalKind</a> —
+crusade_force_update / crusade_force_creation kinds</li>
+<li><a href="../okf/references/rule-engine.md">Rule Engine</a> —
+configurable compliance check engine</li>
+<li><a href="../okf/references/bs-roster-parser.md">bs-roster-parser</a>
+— Python parser subprocess</li>
+<li><a href="../okf/references/new-recruit-json.md">New Recruit</a> —
+JSON export source (“Export Crusade Force”)</li>
+<li><a href="../okf/references/bullmq.md">BullMQ</a> — async parsing
+pipeline</li>
+</ul>
+<p>See <a href="../okf/index.md"><code>okf/index.md</code></a> for the
+full bundle.</p>
 </body>
 </html>

@@ -6,7 +6,7 @@ resource: "urn:okf:crusade-master:servocrypt"
 tags:
   - competitor
   - paid
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # ServoCrypt

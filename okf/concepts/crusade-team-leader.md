@@ -2,14 +2,14 @@
 type: Domain Concept
 title: Crusade Team Leader
 description: Player with delegated team-scoped approval authority (v3.11+). Multi-leader support + removal workflow with last-leader invariant + in-flight approval reassignment (v3.12). Campaign-creation team-leader gate (v3.13).
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-1-crusade-master-admin.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-1-crusade-master-admin.md"
 tags:
   - concept
   - role
   - v3.11
   - v3.12
   - v3.13
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # Crusade Team Leader

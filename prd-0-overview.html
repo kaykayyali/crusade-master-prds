@@ -1377,5 +1377,38 @@ tool)</li>
 <li>Hapi docs: https://hapi.dev</li>
 <li>BullMQ docs: https://docs.bullmq.io</li>
 </ul>
+<h2 id="okf-cross-references">OKF Cross-References</h2>
+<p>This PRD’s concepts are documented as first-class entities in the OKF
+bundle at <a href="../okf"><code>okf/</code></a>. The most relevant:</p>
+<ul>
+<li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> —
+player’s army in a campaign; replaces Roster (v3.28)</li>
+<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+— immutable, monotonically-numbered OoB snapshot</li>
+<li><a href="../okf/concepts/crusade-army.md">CrusadeArmy</a> — mustered
+subset of units for a specific battle</li>
+<li><a href="../okf/concepts/campaign-state.md">CampaignState</a> —
+lifecycle state machine; created → started → ended → archived</li>
+<li><a href="../okf/concepts/campaign-phase.md">CampaignPhase</a> —
+CM-authored narrative periods; cosmetic-only (v3.19)</li>
+<li><a href="../okf/concepts/campaign-team.md">CampaignTeam</a> —
+per-campaign narrative side, mandatory</li>
+<li><a href="../okf/concepts/crusade-team-leader.md">Crusade Team
+Leader</a> — player with delegated team-scoped approval authority</li>
+<li><a href="../okf/concepts/approval-kind.md">ApprovalKind</a> —
+canonical enum of every approval-gated action</li>
+<li><a href="../okf/concepts/approval-source.md">ApprovalSource</a> —
+how an ApprovalRequest was decided</li>
+<li><a href="../okf/concepts/notification.md">Notification</a> —
+user-facing materialization of an Event</li>
+<li><a href="../okf/concepts/history-entry.md">HistoryEntry</a> —
+append-only history record</li>
+<li><a href="../okf/concepts/changeset-grouping.md">ChangesetGrouping</a> —
+G1–G7 configurable groupings</li>
+<li><a href="../okf/concepts/rollback.md">Rollback</a> — tombstone +
+compensating entry pattern</li>
+</ul>
+<p>See <a href="../okf/index.md"><code>okf/index.md</code></a> for the
+full bundle.</p>
 </body>
 </html>

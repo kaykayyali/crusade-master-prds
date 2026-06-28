@@ -572,3 +572,19 @@ flowchart TD
 6. **CM switches the campaign's `point_cap` after a roster is approved**: existing approved rosters are retroactively checked; if a roster now exceeds the cap, the player is notified and must re-import.
 7. **Parser subprocess crashes (OOM, segfault)**: BullMQ job fails; `RosterDraft.status = 'failed'` with stderr in `parseError`; player can retry; no zombie state.
 8. **Worker runs on a different host than Hapi**: BullMQ + MinIO + Postgres are all networked services; the worker is a separate container with no special affinity.
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [CrusadeForce](../okf/concepts/crusade-force.md) — player's army; lifecycle states
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — monotonically-numbered OoB snapshots
+- [CrusadeArmy](../okf/concepts/crusade-army.md) — mustered subset for a battle
+- [ApprovalKind](../okf/concepts/approval-kind.md) — crusade_force_update / crusade_force_creation kinds
+- [Rule Engine](../okf/references/rule-engine.md) — configurable compliance check engine
+- [bs-roster-parser](../okf/references/bs-roster-parser.md) — Python parser subprocess
+- [New Recruit](../okf/references/new-recruit-json.md) — JSON export source ("Export Crusade Force")
+- [BullMQ](../okf/references/bullmq.md) — async parsing pipeline
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

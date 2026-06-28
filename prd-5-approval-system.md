@@ -1251,3 +1251,19 @@ flowchart TD
 5. **Submitter suspended mid-approval**: pending requests auto-rejected with reason "submitter suspended."
 6. **Active RosterApproved changes during approval**: drift detected; CM chooses re-validate, force-apply, or reject.
 7. **Notification email bounces**: status queued for retry; if persistent, in-app notification only.
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [ApprovalKind](../okf/concepts/approval-kind.md) — canonical enum (v3.27: faction_switch removed; v3.28: crusade_force_* renames)
+- [ApprovalSource](../okf/concepts/approval-source.md) — 3-value enum (v3.27)
+- [CrusadeForce](../okf/concepts/crusade-force.md) — crusade_force_update / manual_edit actions
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — crusade_force_revert / crusade_force_rollback
+- [HistoryEntry](../okf/concepts/history-entry.md) — generated on approval
+- [Rollback](../okf/concepts/rollback.md) — history_rollback kind
+- [CampaignState](../okf/concepts/campaign-state.md) — ended state suspends approval routing
+- [Notification](../okf/concepts/notification.md) — approval events fan out
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.
