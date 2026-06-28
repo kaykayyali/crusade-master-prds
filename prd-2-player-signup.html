@@ -203,19 +203,183 @@ the async parse → review → approval flow.</li>
 </ul>
 <hr />
 <h2 id="feature-modules">3. Feature Modules</h2>
-<h3 id="account-creation">3.1 Account Creation</h3>
+<h3 id="account-creation-v3.15-oauth-magic-link">3.1 Account Creation
+(v3.15: OAuth + Magic-Link)</h3>
+<p>Per the user’s direction, v1 uses external identity providers for
+authentication rather than building our own user system. Email
+magic-link remains a fallback. This is standard practice (Notion,
+Linear, Figma, Discord communities) and avoids us building password
+reset, MFA enrollment, OAuth refresh-token rotation, etc.</p>
+<p><strong>v1 supported auth providers:</strong></p>
+<ol type="1">
+<li><strong>Discord OAuth2</strong> (primary) — <code>identify</code> +
+<code>email</code> scopes. Returns: <code>id</code> (snowflake),
+<code>username</code>, <code>global_name</code>, <code>avatar</code>
+hash, <code>email</code>. See <a href="https://docs.discord.com/developers/topics/oauth2">Discord OAuth2
+docs</a>.</li>
+<li><strong>Email magic-link</strong> (fallback) — user enters email,
+system sends a one-time-use link. Link expires in 15 min.</li>
+</ol>
+<p><strong>v1.x / future providers:</strong> Google, Microsoft, GitHub.
+Standard OAuth2 / OIDC; the abstraction is provider-agnostic so adding
+more is a config change, not a code change.</p>
+<p><strong>Account creation flow:</strong></p>
+<pre class="mermaid"><code>flowchart TD
+    A[User clicks &#39;Sign in&#39;] --&gt; B{Provider choice}
+    B --&gt;|Discord| C[Discord OAuth dance]
+    B --&gt;|Email| D[User enters email]
+    C --&gt; E{User exists?}
+    D --&gt; E
+    E --&gt;|No| F[Create User row]
+    E --&gt;|Yes, but identity not linked| G[Link identity to User]
+    E --&gt;|Yes, identity already linked| H[Sign in]
+    F --&gt; I{Fill required profile fields}
+    G --&gt; I
+    H --&gt; J[Authenticated]
+    I --&gt; J</code></pre>
+<p><strong>Identity model (per-tenant):</strong></p>
 <ul>
-<li>Email + magic link (no password; per tenant SMTP)</li>
-<li>Display name (unique within the campaign, with collision
-suffixes)</li>
-<li>Optional avatar upload (stored in MinIO)</li>
-<li>Timezone (auto-detected, editable)</li>
-<li>Locale (en for MVP)</li>
+<li>A <code>User</code> row exists per tenant (PRD-0 §3.4). A single
+person can have multiple <code>User</code> rows across tenants.</li>
+<li>Each <code>User</code> has one or more <code>Identity</code> rows
+linked to it:
+<ul>
+<li><code>Identity { id, userId, provider, providerSubjectId, providerData, linkedAt }</code></li>
+<li><code>provider</code>: <code>&#39;discord&#39; | &#39;email&#39; | ...</code></li>
+<li><code>providerSubjectId</code>: e.g., Discord snowflake id, or the
+email address for magic-link</li>
+<li><code>providerData</code>: provider-specific claims (avatar hash,
+username, etc., JSON)</li>
+</ul></li>
+<li>An identity is linked when the OAuth provider returns a verified
+email that matches an existing User’s email (within the same tenant). If
+emails don’t match (e.g., the user has no verified email), a new User is
+created.</li>
+</ul>
+<p><strong>Identity linking at sign-in:</strong></p>
+<ol type="1">
+<li>User signs in via Discord OAuth. Discord returns
+<code>email: user@example.com</code> (verified).</li>
+<li>System queries: <code>User</code> in this tenant where
+<code>email = user@example.com</code>?</li>
+<li>If found: link the Discord identity to that User (add
+<code>Identity</code> row).</li>
+<li>If not: create new <code>User</code> + <code>Identity</code> +
+magic-link identity (so user can also sign in via email later).</li>
+<li>If the user has multiple <code>User</code> rows across tenants,
+they’re prompted to switch tenants (PRD-2 §3.5).</li>
+</ol>
+<p><strong>Profile fields:</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Field</th>
+<th>Source</th>
+<th>Editable?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Email</td>
+<td>OAuth provider OR set during magic-link signup</td>
+<td>Not directly editable (would require re-connecting OAuth provider or
+changing the magic-link identity)</td>
+</tr>
+<tr class="even">
+<td>Display name</td>
+<td>OAuth <code>global_name</code> (Discord) or user-entered
+(magic-link)</td>
+<td>✅ Editable in account page (overrides provider value for in-app
+display)</td>
+</tr>
+<tr class="odd">
+<td>Avatar</td>
+<td>OAuth <code>avatar</code> hash (Discord) or user-uploaded</td>
+<td>✅ Editable in account page (override with custom upload)</td>
+</tr>
+<tr class="even">
+<td>Timezone</td>
+<td>Auto-detected from browser</td>
+<td>✅ Editable in account page</td>
+</tr>
+<tr class="odd">
+<td>Locale</td>
+<td>Default <code>en</code></td>
+<td>✅ Editable in account page</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Multi-tenant considerations:</strong></p>
+<ul>
+<li>Each <code>User</code> is scoped to one tenant (PRD-0 §3.4).</li>
+<li>Discord OAuth returns <code>email</code> but not tenant. The tenant
+is determined by <strong>invite link domain</strong> (e.g.,
+<code>crusade.example.com/campaigns/aurelian</code> lands in the
+<code>example.com</code> tenant).</li>
+<li>If the invite is tenant-agnostic (a generic sign-in link), the user
+is prompted to select which tenant to sign in to (rare; usually users
+have one).</li>
+<li>Magic-link emails include the tenant slug in the link, so the magic
+link itself is tenant-scoped.</li>
+</ul>
+<p><strong>Auth provider configuration (PRD-0 §3.4 + tenant
+settings):</strong></p>
+<ul>
+<li><strong>Instance-level defaults</strong>: an Instance Admin
+configures OAuth client id/secret at the instance level. Used by default
+for all tenants unless overridden.</li>
+<li><strong>Per-tenant override</strong>: a tenant can configure its own
+Discord OAuth app (e.g., branded “Sign in with Discord” experience).
+Stored as
+<code>Tenant.oauthConfig: { discord: { clientId, clientSecret } }</code>.</li>
+<li><strong>Email magic-link</strong>: SMTP credentials are tenant-level
+(per PRD-0 §3.4).</li>
+</ul>
+<p><strong>OAuth research notes (v3.15):</strong></p>
+<p>Discord OAuth scopes used: - <code>identify</code> — returns
+<code>/users/@me</code> user object (without email) - <code>email</code>
+— adds the user’s email to the user object (verified by Discord)</p>
+<p>Discord user object fields we’ll use: - <code>id</code> — snowflake,
+stable per Discord user, used as <code>providerSubjectId</code> -
+<code>username</code> — Discord handle - <code>global_name</code> —
+display name (preferred over <code>username</code>) -
+<code>avatar</code> — hash for building the Discord CDN avatar URL -
+<code>email</code> — verified email address</p>
+<p>Standard pattern for OAuth + magic-link hybrid auth (Linear, Notion):
+1. OAuth is the primary auth (low friction, identity already
+established) 2. Magic-link is the fallback (for users without Discord,
+or for sensitive operations) 3. Identity linking: when OAuth returns a
+verified email that matches an existing magic-link account, the system
+links them. The user can then sign in via either method. 4. For
+sensitive operations (e.g., deleting account, changing email), the user
+must re-authenticate via the same method they used to create the account
+(or via a more secure method, e.g., re-do OAuth if they signed up via
+magic-link).</p>
+<p><strong>Open questions (research notes — for v1.x
+refinement):</strong></p>
+<ul>
+<li>Should we support <strong>account merging across tenants</strong>
+(one human = one User across all tenants in the instance)? Current
+design: one User per tenant. Merging would require global user identity.
+<strong>Defer to v1.x.</strong></li>
+<li><strong>OAuth refresh tokens</strong>: Discord OAuth access tokens
+expire in 7 days; for ongoing sessions, we’d need refresh tokens. For
+MVP, re-auth after 7 days is acceptable; <strong>consider refresh tokens
+for v1.x</strong>.</li>
+<li><strong>Discord guild verification</strong>: PRD-5 §3 future Discord
+integration may want to verify a user is in a specific guild before
+granting CM roles. <strong>Defer.</strong></li>
 </ul>
 <p><strong>Tenant assignment</strong>: every new account is tied to one
 tenant. If a player needs to be in multiple tenants, they sign up
 separately in each — the email can be the same; the <code>User</code>
-rows are per-tenant.</p>
+rows are per-tenant. The invite link carries the tenant slug, so the
+user is automatically routed to the right tenant.</p>
 <h3 id="join-via-invite">3.2 Join via Invite</h3>
 <ul>
 <li>Single text field: “Paste invite code or link”</li>
@@ -636,9 +800,22 @@ the user’s experience everywhere</strong>, not per-campaign.</p>
 +---------------------------------------------------+</code></pre>
 <h3 id="d.1-account-page-sections-in-detail">5d.1 Account page sections
 in detail</h3>
-<p><strong>PROFILE</strong> — display name (the only required user-level
-field), avatar (optional, uploaded to MinIO per PRD-0), email (locked
-once verified; change requires re-verification per Q4).</p>
+<p><strong>IDENTITIES</strong> — the auth providers linked to this
+<code>User</code> account (PRD-2 §3.1 v3.15). Shows:</p>
+<ul>
+<li>Discord: linked or “Link Discord” button. If linked, shows Discord
+username + avatar (from OAuth). Unlink option.</li>
+<li>Email: shows the linked email address. “Send magic link to verify”
+button if not yet verified; “Change email” is via re-verification with
+the new email.</li>
+</ul>
+<p>The user MUST have at least one identity at all times. If they unlink
+their only identity, they’re prompted to add another before completing
+the action. This prevents accidental lockout.</p>
+<p><strong>PROFILE</strong> — display name (overrides the OAuth
+provider’s <code>global_name</code> for in-app display), avatar
+(overrides the OAuth avatar if the user uploaded a custom one to MinIO),
+timezone, locale.</p>
 <p><strong>NOTIFICATIONS</strong> — per-user notification loudness
 defaults. Three channels: in-app toast, in-app notification list, email.
 Email is loud-only (you only get emails for <code>loud</code>
@@ -649,19 +826,25 @@ and <code>quiet</code> notifications still arrive. <code>loud</code>
 notifications fired during quiet hours queue for delivery at the end of
 the window. The user can override per-campaign (per §5e).</p>
 <p><strong>SECURITY</strong> — session management (revoke active
-sessions), MFA enrollment (TOTP), recent login activity. v1 ships
-session list + MFA opt-in; <strong>MFA enforcement</strong> (mandatory
-for CM roles) is v1.x.</p>
+sessions), OAuth re-auth for sensitive operations, recent login
+activity. <strong>MFA (TOTP) opt-in</strong> is v1; <strong>MFA
+enforcement</strong> (mandatory for CM roles) is v1.x.</p>
 <p><strong>TENANTS &amp; CAMPAIGNS</strong> — list of all campaigns the
 user is a member of, across all tenants they’re a member of. Each row
 shows the campaign name, role, team (if applicable), and the join date.
 Actions: open campaign, leave campaign.</p>
 <p><strong>DANGER ZONE</strong> — data export (JSON dump of all the
-user’s data) and account deletion. Account deletion requires email
-confirmation and CM approval (per PRD-1 §4.2: when a user requests
-deletion, all their <code>CampaignMember</code> rows are removed;
-pending approvals they filed are auto-withdrawn; their rosters are
-archived for 30 days then hard-deleted).</p>
+user’s data) and account deletion. Account deletion requires re-auth
+(proves the user owns the account) and CM approval for any active
+campaigns (per PRD-1 §4.2: when a user requests deletion, all their
+<code>CampaignMember</code> rows are soft-archived; pending approvals
+they filed are auto-withdrawn; their rosters are soft-archived for 30
+days then hard-deleted).</p>
+<p><strong>Per v3.15 data model:</strong> nothing is hard-deleted unless
+explicitly required (account deletion after the 30-day archive window).
+Team leader grants, audit log entries, history entries — all soft-delete
+via timestamp columns (<code>revokedAt</code>, <code>archivedAt</code>).
+The system preserves history.</p>
 <h3 id="d.2-per-role-settings-visibility">5d.2 Per-role settings
 visibility</h3>
 <ul>

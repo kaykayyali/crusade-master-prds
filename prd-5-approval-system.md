@@ -414,27 +414,36 @@ When a roster is approved, `RosterApproved.snapshot` becomes the canonical state
 
 ---
 
-## 5. Inbox UX (v3.13)
+## 5. Inbox UX (v3.15: campaign-scoped, authority-filtered)
 
-The inbox is **role-aware**. Three views:
+Per user: **the inbox for a team is not scoped to a user — it's scoped to the campaign.** Events and deltas are campaign-scoped. The UI for any user is the same campaign inbox, filtered by the user's authority at the API level. The system tracks the user at every approval point (`reviewerUserId`); past approvals stand even if the user's role changes.
 
-- **Primary CM inbox**: every `ApprovalRequest` in the campaign, all teams.
-- **Crusade Team Leader inbox**: only `ApprovalRequest`s affecting their team, AND only for kinds the primary CM has enabled for team-leader authority (PRD-1 §4.4).
-- **Player inbox**: doesn't exist. Players file approvals; they don't review them. (Notifications arrive via toast + notification list page; see §6.)
+**One inbox, many views:**
 
-**Primary CM inbox layout:**
+There is a single campaign inbox — the queue of all `ApprovalRequest` rows for the campaign where `status = 'pending'`. Every user with access to the campaign sees this queue, filtered by their authority:
+
+- **Primary CM**: sees the entire queue (all teams, all kinds). Filter UI is for narrowing, not gating.
+- **Crusade Team Leader**: sees the queue filtered to items affecting their team (per PRD-5 §3.2 team-scope enforcement). Filter UI for narrowing further.
+- **Player**: no inbox access (read-only access is on the player dashboard's "MY PENDING APPROVALS" card — PRD-2 §5c.2). Players file approvals; they don't review them.
+
+**Authority filtering is enforced at the API level.** Every API call to the inbox queries the queue and applies the user's authority filter before returning rows. The UI cannot bypass this — if Alice (Helsreach TL) somehow tricks the UI into requesting Hades items, the API returns 403.
+
+**Soft-delete + tracking principle:** nothing is hard-deleted. When a TL is removed (PRD-1 §4.2) or changes teams, their past approvals stand and reference them by userId. The system tracks the user at every approval point. Audit log entries are immutable (PRD-1 §4.6).
+
+**Inbox layout (unified, with per-user filtering at the API):**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Inbox (CM)                       [Filter ▾] [Bulk ▾] [⚙]    │
+│ Inbox (Aurelian Crusade)     [Filter ▾] [Bulk ▾] [⚙]    │
 ├─────────────────────────────────────────────────────────────┤
-│ 7 pending · 0 claimed by you                                │
-│ Tabs: [All] [Roster] [Battle] [Requisition] [Rollback]      │
-│        [Settings] ·  (each tab shows count)                │
+│ 13 pending · 0 claimed by you                                │
+│ Filters: [Authority: All ▼] [Team ▼] [Kind ▼] [Player ▼]   │
+│          [Age: Today ▼] [Status: Pending ▼]                 │
+│ Tabs: [All (13)] [Roster (5)] [Battle (3)] [Requisition (1)]│
+│        [Rollback (0)] [Settings (2)] [Cross-team (1)]       │
 ├─────────────────────────────────────────────────────────────┤
 │ ☐ Roster approval — jake42 (Helsreach Defenders)            │
-│   Submitted 1h ago · Campaign: Aurelian Crusade            │
-│   Diff: +2 units, −1 unit, 3 wargear swaps                 │
+│   Submitted 1h ago · Diff: +2 units, −1 unit, 3 wargear   │
 │   Rule checks: 1 warn (Legends unit — needs override)       │
 │   [View Diff] [Approve] [Reject] [Override & Approve]      │
 ├─────────────────────────────────────────────────────────────┤
@@ -537,9 +546,9 @@ Click a row → opens a **right-side detail panel** (does not navigate away from
 
 The inbox header shows a count of unread notifications from the campaign's recent activity feed (PRD-5 §6). Clicking the bell opens a side panel with the recent activity; the inbox itself stays focused on approvals.
 
-### 5.4 Worked Example — Team Leader Inbox (v3.14)
+### 5.4 Worked Example — Campaign Inbox (v3.15: campaign-scoped)
 
-Concrete walkthrough showing the kind-filter logic in action.
+Concrete walkthrough showing the campaign-scoped inbox + authority-filtering in action.
 
 **Setup:**
 
@@ -554,32 +563,42 @@ Concrete walkthrough showing the kind-filter logic in action.
   - ❌ disabled for TLs: `requisition_purchase` (CM-gifted), `team_switch`, `roster_manual_edit`, `requisition_rp_override`, `mass_reban`, `campaign_announcement`, `point_cap_change`, `custom`
 - **`Campaign.teamLeaderApprovalMode`**: `'any'` (default — any one team leader on a team can approve)
 
-**Inbox state — current pending approvals across the campaign:**
+**The campaign has 13 pending `ApprovalRequest`s.** The campaign inbox is a single queue. Different users see different subsets, filtered at the API by their authority. Past approvals are tracked by user — if Alice approves something and then loses her TL role, her past approvals stand and reference her userId in `reviewerUserId`.
 
-| # | Kind | Submitter | Affected team | Age | Alice can act? |
-|---|---|---|---|---|---|
-| 1 | `roster_approval` | jake42 (Helsreach) | Helsreach | 1h | ✅ Yes |
-| 2 | `roster_approval` | sarah_k (Helsreach) | Helsreach | 2h | ✅ Yes |
-| 3 | `roster_approval` | tom_h (Helsreach) | Helsreach | 4h | ✅ Yes |
-| 4 | `post_battle_update` | jake42 (Helsreach) | Helsreach | 30m | ✅ Yes |
-| 5 | `post_battle_update` | sarah_k (Helsreach) | Helsreach | 1h | ✅ Yes |
-| 6 | `post_battle_update` (routine, no anomalies) | jake42 (Helsreach) | Helsreach | 6h | ✅ Yes (or auto-approved) |
-| 7 | `requisition_purchase` (CM-gifted) | sarah_k (Helsreach) | Helsreach | 3h | ❌ No — routes to Mike |
-| 8 | `team_switch` (Hades → Helsreach) | mike_h (Hades) | cross-team | 2h | ❌ No — routes to Mike |
-| 9 | `roster_approval` | zara_b (Hades) | Hades | 1h | ❌ No — Alice is on Helsreach only |
-| 10 | `faction_switch` | zara_b (Hades) | Hades | 3h | ❌ No — wrong team |
-| 11 | `mass_reban` | Mike (CM-only kind) | cross-team | 12h | ❌ No |
-| 12 | `campaign_announcement` | Mike (CM-only kind) | cross-team | 1d | ❌ No |
-| 13 | `rp_adjustment` | tom_h (Helsreach) | Helsreach | 5h | ✅ Yes |
+**Inbox state (the underlying queue):**
 
-**Alice's "Actionable" tab (default):**
+| # | Kind | Submitter | Affected team | Age |
+|---|---|---|---|---|
+| 1 | `roster_approval` | jake42 (Helsreach) | Helsreach | 1h |
+| 2 | `roster_approval` | sarah_k (Helsreach) | Helsreach | 2h |
+| 3 | `roster_approval` | tom_h (Helsreach) | Helsreach | 4h |
+| 4 | `post_battle_update` | jake42 (Helsreach) | Helsreach | 30m |
+| 5 | `post_battle_update` | sarah_k (Helsreach) | Helsreach | 1h |
+| 6 | `post_battle_update` (routine) | jake42 (Helsreach) | Helsreach | 6h |
+| 7 | `requisition_purchase` (CM-gifted) | sarah_k (Helsreach) | Helsreach | 3h |
+| 8 | `team_switch` (Hades → Helsreach) | mike_h (Hades) | cross-team | 2h |
+| 9 | `roster_approval` | zara_b (Hades) | Hades | 1h |
+| 10 | `faction_switch` | zara_b (Hades) | Hades | 3h |
+| 11 | `mass_reban` | Mike | cross-team | 12h |
+| 12 | `campaign_announcement` | Mike | cross-team | 1d |
+| 13 | `rp_adjustment` | tom_h (Helsreach) | Helsreach | 5h |
+
+### Alice's view (Helsreach Team Leader)
+
+API applies two filters:
+1. **Team scope**: only items affecting Helsreach Defenders → items #1–7, #13 (8 items).
+2. **Kind authority**: only items for kinds Alice is authorized for → of those 8, items #1–6 and #13 (7 items actionable); #7 is Helsreach but is `requisition_purchase` which TLs can't approve.
+
+UI presents Alice's "Actionable" tab = 7 items (where she can act). UI's "All team items" tab = 8 items (her team scope, regardless of actionability).
 
 ```
 +--------------------------------------------------------+
-| Inbox (Team Leader — Helsreach Defenders)  [Actionable] |
-| Tabs: [Actionable (5)] [All team items (8)] [Archive] |
+| Inbox (Aurelian Crusade)  Authority: Actionable for me |
+| Filters: [Authority: Actionable ▼] [Team: Helsreach ▼] |
+| Tabs: [All (13)] [Roster (5)] [Battle (3)] ...         |
+|        [My team (8)] [Actionable for me (7)]           |
 +--------------------------------------------------------+
-| 5 pending                                              |
+| 7 actionable (8 in team scope)                         |
 +--------------------------------------------------------+
 | ☐ Roster approval — jake42                            |
 |   1h ago · Diff: +2 units, -1 unit, 3 wargear swaps   |
@@ -597,21 +616,81 @@ Concrete walkthrough showing the kind-filter logic in action.
 |   30m ago · Result: W · +3 XP, 1 OoA test             |
 |   [View] [Approve] [Reject]                           |
 |                                                        |
+| ☐ Post-battle update — sarah_k                         |
+|   1h ago · Result: W · +3 XP                          |
+|   [View] [Approve] [Reject]                           |
+|                                                        |
+| ☐ Post-battle update — jake42 (routine, auto-approve) |
+|   6h ago · auto-approved (shows recently-decided)    |
+|   [View] (read-only — already decided)                |
+|                                                        |
 | ☐ RP adjustment — tom_h                                |
 |   5h ago · -2 RP (Leman Russ destruction)             |
 |   [View] [Approve] [Reject]                           |
 +--------------------------------------------------------+
 ```
 
-5 items. All Helsreach players. All kinds Alice is authorized for. Action buttons enabled.
-
-**Alice's "All team items" tab:**
+Alice's "Actionable" filter gives 7 items. If she switches the filter to "All items in my team scope," she sees 8 — item #7 (the CM-gifted requisition) appears with action buttons disabled:
 
 ```
 +--------------------------------------------------------+
-| Inbox (Team Leader — Helsreach Defenders) [All items] |
+| (continuing from above)                                 |
+|                                                        |
+| ⓘ Requisition purchase — sarah_k (CM-gifted)           |
+|   3h ago · Helsreach · Mike is reviewing               |
+|   [View] (read-only — Mike's call)                     |
+|   [Approve] [Reject] [Override] -- disabled, greyed out|
 +--------------------------------------------------------+
-| 8 pending (5 actionable + 3 read-only)                 |
+```
+
+The disabled buttons make it explicit: Alice sees the item (transparency — is anything stuck waiting for the CM?) but cannot act. Hovering on a disabled button shows a tooltip: "This kind requires CM approval per PRD-1 §4.4."
+
+### Bob's view (Hades Team Leader)
+
+API filter: team scope = Hades Defenders only → items #9, #10 (2 items). Bob's "Actionable for me" = both (assuming Bob has the default TL authority kinds, which include `faction_switch`).
+
+### Carol + Dave's view (Gorgutz co-leaders)
+
+API filter: team scope = Gorgutz's WAAAGH! only → no items currently pending for their team. Their inbox is empty.
+
+### Mike's view (Primary CM)
+
+API: no authority filter (CM sees everything). Mike sees all 13 items across all teams. Mike can also see Alice's actions (the audit log records `reviewerUserId: alice`).
+
+### Mid-flight authority change
+
+If Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k's roster) open:
+
+1. Alice still sees item #2 with "Approve" enabled (intent at filing time wins per Q2 default; the policy in effect at filing time applies).
+2. If Alice approves, the approval stands; `approvalSource: 'cm_review'`, `reviewerUserId: alice`. The decision is permanent.
+3. After Alice approves, item #2 leaves the queue. New `roster_approval` requests go directly to Mike's queue.
+4. The audit log records the authority change timestamp separately from the approval action — both are queryable.
+
+If Mike ENABLES `roster_manual_edit` for TLs (it was off):
+
+1. New `roster_manual_edit` requests on Helsreach appear in Alice's "Actionable" tab.
+2. In-flight requests filed BEFORE the change stay with Mike.
+
+### Player view (e.g., Sarah on Helsreach)
+
+Sarah doesn't have an inbox. On her dashboard (PRD-2 §5c.2), "MY PENDING APPROVALS" shows the status of approvals she's filed. She sees: "Your roster v18 is pending Mike's review (2h ago)." That's the player-facing read-only status — no action buttons, no inbox queue.
+
+### Tracking user at every approval point
+
+Every `ApprovalRequest.decidedByUserId` is recorded with the user's ID at decision time. If Alice approves something and then:
+- Loses her TL role (PRD-1 §4.2): her past approvals stand. The decision references her userId.
+- Changes teams: same — past decisions stand.
+- Account is deleted (PRD-2 §5d.1 DANGER ZONE): her past approvals still reference her userId; her display name appears as "Deleted User" in the audit log (no PII exposure after deletion).
+
+Soft-delete throughout (PRD-2 §5d.1): nothing is hard-deleted unless explicitly required. Team leader grants, audit log entries, history entries — all carry `revokedAt` / `archivedAt` timestamps rather than being removed.
+
+### Authority filter is API-enforced
+
+Alice cannot trick the UI into requesting Hades items. Every API call to the inbox applies the authority filter at the server:
+- Query: `SELECT * FROM approval_requests WHERE campaign_id = ? AND status = 'pending' AND (team_id IN (alice's_teams) OR (cm authority)) AND (kind IN (alice's_authorized_kinds) OR (cm authority))`
+- RLS policies add a redundant check at the database level.
+
+A direct API request from Alice asking for item #9 (a Hades roster approval) returns 403 — even if the UI somehow sent the request, the data is not returned.
 +--------------------------------------------------------+
 | Actionable (5): see above                              |
 |                                                        |

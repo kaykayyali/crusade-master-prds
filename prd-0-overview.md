@@ -128,6 +128,34 @@ Multi-tenant on a single Docker instance:
 - A user belongs to one tenant (per-`User` row); a CM can be CM of multiple campaigns within their tenant
 - Instance Admin is the only cross-tenant role
 
+### 3.4.1 Identity Model (v3.15)
+
+Per-tenant auth via external identity providers. One `User` row per (tenant, person). One person can have multiple `User` rows across tenants. Each `User` has one or more `Identity` rows linking it to auth providers (Discord OAuth, email magic-link, etc.).
+
+```ts
+User { id, tenantId, email, displayName, globalRoles }
+Identity { id, userId, provider: 'discord' | 'email' | 'google' | ..., providerSubjectId, providerData, linkedAt }
+```
+
+- `User.email`: the primary verified email for the user in this tenant. Used for identity-linking across providers and for magic-link fallback.
+- `Identity.providerSubjectId`: e.g., Discord snowflake id, or the email address for magic-link identities.
+- `Identity.providerData`: provider-specific claims stored as JSON (avatar hash, username, etc.). Refreshed on each sign-in.
+
+**Identity linking at sign-in (per PRD-2 §3.1):**
+
+1. User signs in via OAuth. Provider returns `email` (verified).
+2. System queries `User` in this tenant where `email = ?`.
+3. If found: link the new `Identity` to that `User`.
+4. If not: create `User` + the new `Identity` + an email magic-link `Identity` (so the user can also sign in via email later).
+
+**Per-tenant OAuth config (v3.15):**
+
+- `Tenant.oauthConfig: { discord?: { clientId, clientSecret }, google?: ..., microsoft?: ... }`
+- Instance-level defaults configured by Instance Admin (used when a tenant has no override).
+- Magic-link always uses tenant-level SMTP (per PRD-0 §3.4).
+
+See PRD-2 §3.1 for the full account-creation flow with diagrams and PRD-2 §5d.1 for the account-page IDENTITIES section where users manage their linked providers.
+
 ### 3.5 Wahapedia Integration
 
 - Nightly BullMQ-delayed job refreshes `https://wahapedia.ru/wh40k10ed/*.csv` and export spec XLSX

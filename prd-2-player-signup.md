@@ -34,15 +34,102 @@ Get a player from "I have an invite code" to "I'm a member of the campaign with 
 
 ## 3. Feature Modules
 
-### 3.1 Account Creation
+### 3.1 Account Creation (v3.15: OAuth + Magic-Link)
 
-- Email + magic link (no password; per tenant SMTP)
-- Display name (unique within the campaign, with collision suffixes)
-- Optional avatar upload (stored in MinIO)
-- Timezone (auto-detected, editable)
-- Locale (en for MVP)
+Per the user's direction, v1 uses external identity providers for authentication rather than building our own user system. Email magic-link remains a fallback. This is standard practice (Notion, Linear, Figma, Discord communities) and avoids us building password reset, MFA enrollment, OAuth refresh-token rotation, etc.
 
-**Tenant assignment**: every new account is tied to one tenant. If a player needs to be in multiple tenants, they sign up separately in each — the email can be the same; the `User` rows are per-tenant.
+**v1 supported auth providers:**
+
+1. **Discord OAuth2** (primary) — `identify` + `email` scopes. Returns: `id` (snowflake), `username`, `global_name`, `avatar` hash, `email`. See [Discord OAuth2 docs](https://docs.discord.com/developers/topics/oauth2).
+2. **Email magic-link** (fallback) — user enters email, system sends a one-time-use link. Link expires in 15 min.
+
+**v1.x / future providers:** Google, Microsoft, GitHub. Standard OAuth2 / OIDC; the abstraction is provider-agnostic so adding more is a config change, not a code change.
+
+**Account creation flow:**
+
+```mermaid
+flowchart TD
+    A[User clicks 'Sign in'] --> B{Provider choice}
+    B -->|Discord| C[Discord OAuth dance]
+    B -->|Email| D[User enters email]
+    C --> E{User exists?}
+    D --> E
+    E -->|No| F[Create User row]
+    E -->|Yes, but identity not linked| G[Link identity to User]
+    E -->|Yes, identity already linked| H[Sign in]
+    F --> I{Fill required profile fields}
+    G --> I
+    H --> J[Authenticated]
+    I --> J
+```
+
+**Identity model (per-tenant):**
+
+- A `User` row exists per tenant (PRD-0 §3.4). A single person can have multiple `User` rows across tenants.
+- Each `User` has one or more `Identity` rows linked to it:
+  - `Identity { id, userId, provider, providerSubjectId, providerData, linkedAt }`
+  - `provider`: `'discord' | 'email' | ...`
+  - `providerSubjectId`: e.g., Discord snowflake id, or the email address for magic-link
+  - `providerData`: provider-specific claims (avatar hash, username, etc., JSON)
+- An identity is linked when the OAuth provider returns a verified email that matches an existing User's email (within the same tenant). If emails don't match (e.g., the user has no verified email), a new User is created.
+
+**Identity linking at sign-in:**
+
+1. User signs in via Discord OAuth. Discord returns `email: user@example.com` (verified).
+2. System queries: `User` in this tenant where `email = user@example.com`?
+3. If found: link the Discord identity to that User (add `Identity` row).
+4. If not: create new `User` + `Identity` + magic-link identity (so user can also sign in via email later).
+5. If the user has multiple `User` rows across tenants, they're prompted to switch tenants (PRD-2 §3.5).
+
+**Profile fields:**
+
+| Field | Source | Editable? |
+|---|---|---|
+| Email | OAuth provider OR set during magic-link signup | Not directly editable (would require re-connecting OAuth provider or changing the magic-link identity) |
+| Display name | OAuth `global_name` (Discord) or user-entered (magic-link) | ✅ Editable in account page (overrides provider value for in-app display) |
+| Avatar | OAuth `avatar` hash (Discord) or user-uploaded | ✅ Editable in account page (override with custom upload) |
+| Timezone | Auto-detected from browser | ✅ Editable in account page |
+| Locale | Default `en` | ✅ Editable in account page |
+
+**Multi-tenant considerations:**
+
+- Each `User` is scoped to one tenant (PRD-0 §3.4).
+- Discord OAuth returns `email` but not tenant. The tenant is determined by **invite link domain** (e.g., `crusade.example.com/campaigns/aurelian` lands in the `example.com` tenant).
+- If the invite is tenant-agnostic (a generic sign-in link), the user is prompted to select which tenant to sign in to (rare; usually users have one).
+- Magic-link emails include the tenant slug in the link, so the magic link itself is tenant-scoped.
+
+**Auth provider configuration (PRD-0 §3.4 + tenant settings):**
+
+- **Instance-level defaults**: an Instance Admin configures OAuth client id/secret at the instance level. Used by default for all tenants unless overridden.
+- **Per-tenant override**: a tenant can configure its own Discord OAuth app (e.g., branded "Sign in with Discord" experience). Stored as `Tenant.oauthConfig: { discord: { clientId, clientSecret } }`.
+- **Email magic-link**: SMTP credentials are tenant-level (per PRD-0 §3.4).
+
+**OAuth research notes (v3.15):**
+
+Discord OAuth scopes used:
+- `identify` — returns `/users/@me` user object (without email)
+- `email` — adds the user's email to the user object (verified by Discord)
+
+Discord user object fields we'll use:
+- `id` — snowflake, stable per Discord user, used as `providerSubjectId`
+- `username` — Discord handle
+- `global_name` — display name (preferred over `username`)
+- `avatar` — hash for building the Discord CDN avatar URL
+- `email` — verified email address
+
+Standard pattern for OAuth + magic-link hybrid auth (Linear, Notion):
+1. OAuth is the primary auth (low friction, identity already established)
+2. Magic-link is the fallback (for users without Discord, or for sensitive operations)
+3. Identity linking: when OAuth returns a verified email that matches an existing magic-link account, the system links them. The user can then sign in via either method.
+4. For sensitive operations (e.g., deleting account, changing email), the user must re-authenticate via the same method they used to create the account (or via a more secure method, e.g., re-do OAuth if they signed up via magic-link).
+
+**Open questions (research notes — for v1.x refinement):**
+
+- Should we support **account merging across tenants** (one human = one User across all tenants in the instance)? Current design: one User per tenant. Merging would require global user identity. **Defer to v1.x.**
+- **OAuth refresh tokens**: Discord OAuth access tokens expire in 7 days; for ongoing sessions, we'd need refresh tokens. For MVP, re-auth after 7 days is acceptable; **consider refresh tokens for v1.x**.
+- **Discord guild verification**: PRD-5 §3 future Discord integration may want to verify a user is in a specific guild before granting CM roles. **Defer.**
+
+**Tenant assignment**: every new account is tied to one tenant. If a player needs to be in multiple tenants, they sign up separately in each — the email can be the same; the `User` rows are per-tenant. The invite link carries the tenant slug, so the user is automatically routed to the right tenant.
 
 ### 3.2 Join via Invite
 
@@ -345,17 +432,26 @@ Per-user settings that travel with the user across campaigns and tenants. Lives 
 
 ### 5d.1 Account page sections in detail
 
-**PROFILE** — display name (the only required user-level field), avatar (optional, uploaded to MinIO per PRD-0), email (locked once verified; change requires re-verification per Q4).
+**IDENTITIES** — the auth providers linked to this `User` account (PRD-2 §3.1 v3.15). Shows:
+
+- Discord: linked or "Link Discord" button. If linked, shows Discord username + avatar (from OAuth). Unlink option.
+- Email: shows the linked email address. "Send magic link to verify" button if not yet verified; "Change email" is via re-verification with the new email.
+
+The user MUST have at least one identity at all times. If they unlink their only identity, they're prompted to add another before completing the action. This prevents accidental lockout.
+
+**PROFILE** — display name (overrides the OAuth provider's `global_name` for in-app display), avatar (overrides the OAuth avatar if the user uploaded a custom one to MinIO), timezone, locale.
 
 **NOTIFICATIONS** — per-user notification loudness defaults. Three channels: in-app toast, in-app notification list, email. Email is loud-only (you only get emails for `loud` notifications; this prevents email spam for routine events).
 
 **Quiet hours** — suppresses `loud` notifications during a window (e.g., 22:00–08:00). `normal` and `quiet` notifications still arrive. `loud` notifications fired during quiet hours queue for delivery at the end of the window. The user can override per-campaign (per §5e).
 
-**SECURITY** — session management (revoke active sessions), MFA enrollment (TOTP), recent login activity. v1 ships session list + MFA opt-in; **MFA enforcement** (mandatory for CM roles) is v1.x.
+**SECURITY** — session management (revoke active sessions), OAuth re-auth for sensitive operations, recent login activity. **MFA (TOTP) opt-in** is v1; **MFA enforcement** (mandatory for CM roles) is v1.x.
 
 **TENANTS & CAMPAIGNS** — list of all campaigns the user is a member of, across all tenants they're a member of. Each row shows the campaign name, role, team (if applicable), and the join date. Actions: open campaign, leave campaign.
 
-**DANGER ZONE** — data export (JSON dump of all the user's data) and account deletion. Account deletion requires email confirmation and CM approval (per PRD-1 §4.2: when a user requests deletion, all their `CampaignMember` rows are removed; pending approvals they filed are auto-withdrawn; their rosters are archived for 30 days then hard-deleted).
+**DANGER ZONE** — data export (JSON dump of all the user's data) and account deletion. Account deletion requires re-auth (proves the user owns the account) and CM approval for any active campaigns (per PRD-1 §4.2: when a user requests deletion, all their `CampaignMember` rows are soft-archived; pending approvals they filed are auto-withdrawn; their rosters are soft-archived for 30 days then hard-deleted).
+
+**Per v3.15 data model:** nothing is hard-deleted unless explicitly required (account deletion after the 30-day archive window). Team leader grants, audit log entries, history entries — all soft-delete via timestamp columns (`revokedAt`, `archivedAt`). The system preserves history.
 
 ### 5d.2 Per-role settings visibility
 

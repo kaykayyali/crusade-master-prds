@@ -952,29 +952,52 @@ Truth</h3>
 becomes the canonical state. Future imports diff against this snapshot.
 The Timeline (PRD-4) records what was approved when.</p>
 <hr />
-<h2 id="inbox-ux-v3.13">5. Inbox UX (v3.13)</h2>
-<p>The inbox is <strong>role-aware</strong>. Three views:</p>
+<h2 id="inbox-ux-v3.15-campaign-scoped-authority-filtered">5. Inbox UX
+(v3.15: campaign-scoped, authority-filtered)</h2>
+<p>Per user: <strong>the inbox for a team is not scoped to a user — it’s
+scoped to the campaign.</strong> Events and deltas are campaign-scoped.
+The UI for any user is the same campaign inbox, filtered by the user’s
+authority at the API level. The system tracks the user at every approval
+point (<code>reviewerUserId</code>); past approvals stand even if the
+user’s role changes.</p>
+<p><strong>One inbox, many views:</strong></p>
+<p>There is a single campaign inbox — the queue of all
+<code>ApprovalRequest</code> rows for the campaign where
+<code>status = &#39;pending&#39;</code>. Every user with access to the campaign
+sees this queue, filtered by their authority:</p>
 <ul>
-<li><strong>Primary CM inbox</strong>: every
-<code>ApprovalRequest</code> in the campaign, all teams.</li>
-<li><strong>Crusade Team Leader inbox</strong>: only
-<code>ApprovalRequest</code>s affecting their team, AND only for kinds
-the primary CM has enabled for team-leader authority (PRD-1 §4.4).</li>
-<li><strong>Player inbox</strong>: doesn’t exist. Players file
-approvals; they don’t review them. (Notifications arrive via toast +
-notification list page; see §6.)</li>
+<li><strong>Primary CM</strong>: sees the entire queue (all teams, all
+kinds). Filter UI is for narrowing, not gating.</li>
+<li><strong>Crusade Team Leader</strong>: sees the queue filtered to
+items affecting their team (per PRD-5 §3.2 team-scope enforcement).
+Filter UI for narrowing further.</li>
+<li><strong>Player</strong>: no inbox access (read-only access is on the
+player dashboard’s “MY PENDING APPROVALS” card — PRD-2 §5c.2). Players
+file approvals; they don’t review them.</li>
 </ul>
-<p><strong>Primary CM inbox layout:</strong></p>
+<p><strong>Authority filtering is enforced at the API level.</strong>
+Every API call to the inbox queries the queue and applies the user’s
+authority filter before returning rows. The UI cannot bypass this — if
+Alice (Helsreach TL) somehow tricks the UI into requesting Hades items,
+the API returns 403.</p>
+<p><strong>Soft-delete + tracking principle:</strong> nothing is
+hard-deleted. When a TL is removed (PRD-1 §4.2) or changes teams, their
+past approvals stand and reference them by userId. The system tracks the
+user at every approval point. Audit log entries are immutable (PRD-1
+§4.6).</p>
+<p><strong>Inbox layout (unified, with per-user filtering at the
+API):</strong></p>
 <pre><code>┌─────────────────────────────────────────────────────────────┐
-│ Inbox (CM)                       [Filter ▾] [Bulk ▾] [⚙]    │
+│ Inbox (Aurelian Crusade)     [Filter ▾] [Bulk ▾] [⚙]    │
 ├─────────────────────────────────────────────────────────────┤
-│ 7 pending · 0 claimed by you                                │
-│ Tabs: [All] [Roster] [Battle] [Requisition] [Rollback]      │
-│        [Settings] ·  (each tab shows count)                │
+│ 13 pending · 0 claimed by you                                │
+│ Filters: [Authority: All ▼] [Team ▼] [Kind ▼] [Player ▼]   │
+│          [Age: Today ▼] [Status: Pending ▼]                 │
+│ Tabs: [All (13)] [Roster (5)] [Battle (3)] [Requisition (1)]│
+│        [Rollback (0)] [Settings (2)] [Cross-team (1)]       │
 ├─────────────────────────────────────────────────────────────┤
 │ ☐ Roster approval — jake42 (Helsreach Defenders)            │
-│   Submitted 1h ago · Campaign: Aurelian Crusade            │
-│   Diff: +2 units, −1 unit, 3 wargear swaps                 │
+│   Submitted 1h ago · Diff: +2 units, −1 unit, 3 wargear   │
 │   Rule checks: 1 warn (Legends unit — needs override)       │
 │   [View Diff] [Approve] [Reject] [Override &amp; Approve]      │
 ├─────────────────────────────────────────────────────────────┤
@@ -1131,9 +1154,10 @@ indicator in inbox header</h3>
 campaign’s recent activity feed (PRD-5 §6). Clicking the bell opens a
 side panel with the recent activity; the inbox itself stays focused on
 approvals.</p>
-<h3 id="worked-example-team-leader-inbox-v3.14">5.4 Worked Example —
-Team Leader Inbox (v3.14)</h3>
-<p>Concrete walkthrough showing the kind-filter logic in action.</p>
+<h3 id="worked-example-campaign-inbox-v3.15-campaign-scoped">5.4 Worked
+Example — Campaign Inbox (v3.15: campaign-scoped)</h3>
+<p>Concrete walkthrough showing the campaign-scoped inbox +
+authority-filtering in action.</p>
 <p><strong>Setup:</strong></p>
 <ul>
 <li><strong>Campaign</strong>: Aurelian Crusade (Armageddon, primary CM
@@ -1166,16 +1190,20 @@ PRD-1 §4.4 defaults):
 <code>&#39;any&#39;</code> (default — any one team leader on a team can
 approve)</li>
 </ul>
-<p><strong>Inbox state — current pending approvals across the
-campaign:</strong></p>
-<table style="width:100%;">
+<p><strong>The campaign has 13 pending
+<code>ApprovalRequest</code>s.</strong> The campaign inbox is a single
+queue. Different users see different subsets, filtered at the API by
+their authority. Past approvals are tracked by user — if Alice approves
+something and then loses her TL role, her past approvals stand and
+reference her userId in <code>reviewerUserId</code>.</p>
+<p><strong>Inbox state (the underlying queue):</strong></p>
+<table>
 <colgroup>
-<col style="width: 16%" />
-<col style="width: 16%" />
-<col style="width: 16%" />
-<col style="width: 16%" />
-<col style="width: 16%" />
-<col style="width: 16%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1184,7 +1212,6 @@ campaign:</strong></p>
 <th>Submitter</th>
 <th>Affected team</th>
 <th>Age</th>
-<th>Alice can act?</th>
 </tr>
 </thead>
 <tbody>
@@ -1194,7 +1221,6 @@ campaign:</strong></p>
 <td>jake42 (Helsreach)</td>
 <td>Helsreach</td>
 <td>1h</td>
-<td>✅ Yes</td>
 </tr>
 <tr class="even">
 <td>2</td>
@@ -1202,7 +1228,6 @@ campaign:</strong></p>
 <td>sarah_k (Helsreach)</td>
 <td>Helsreach</td>
 <td>2h</td>
-<td>✅ Yes</td>
 </tr>
 <tr class="odd">
 <td>3</td>
@@ -1210,7 +1235,6 @@ campaign:</strong></p>
 <td>tom_h (Helsreach)</td>
 <td>Helsreach</td>
 <td>4h</td>
-<td>✅ Yes</td>
 </tr>
 <tr class="even">
 <td>4</td>
@@ -1218,7 +1242,6 @@ campaign:</strong></p>
 <td>jake42 (Helsreach)</td>
 <td>Helsreach</td>
 <td>30m</td>
-<td>✅ Yes</td>
 </tr>
 <tr class="odd">
 <td>5</td>
@@ -1226,15 +1249,13 @@ campaign:</strong></p>
 <td>sarah_k (Helsreach)</td>
 <td>Helsreach</td>
 <td>1h</td>
-<td>✅ Yes</td>
 </tr>
 <tr class="even">
 <td>6</td>
-<td><code>post_battle_update</code> (routine, no anomalies)</td>
+<td><code>post_battle_update</code> (routine)</td>
 <td>jake42 (Helsreach)</td>
 <td>Helsreach</td>
 <td>6h</td>
-<td>✅ Yes (or auto-approved)</td>
 </tr>
 <tr class="odd">
 <td>7</td>
@@ -1242,7 +1263,6 @@ campaign:</strong></p>
 <td>sarah_k (Helsreach)</td>
 <td>Helsreach</td>
 <td>3h</td>
-<td>❌ No — routes to Mike</td>
 </tr>
 <tr class="even">
 <td>8</td>
@@ -1250,7 +1270,6 @@ campaign:</strong></p>
 <td>mike_h (Hades)</td>
 <td>cross-team</td>
 <td>2h</td>
-<td>❌ No — routes to Mike</td>
 </tr>
 <tr class="odd">
 <td>9</td>
@@ -1258,7 +1277,6 @@ campaign:</strong></p>
 <td>zara_b (Hades)</td>
 <td>Hades</td>
 <td>1h</td>
-<td>❌ No — Alice is on Helsreach only</td>
 </tr>
 <tr class="even">
 <td>10</td>
@@ -1266,23 +1284,20 @@ campaign:</strong></p>
 <td>zara_b (Hades)</td>
 <td>Hades</td>
 <td>3h</td>
-<td>❌ No — wrong team</td>
 </tr>
 <tr class="odd">
 <td>11</td>
 <td><code>mass_reban</code></td>
-<td>Mike (CM-only kind)</td>
+<td>Mike</td>
 <td>cross-team</td>
 <td>12h</td>
-<td>❌ No</td>
 </tr>
 <tr class="even">
 <td>12</td>
 <td><code>campaign_announcement</code></td>
-<td>Mike (CM-only kind)</td>
+<td>Mike</td>
 <td>cross-team</td>
 <td>1d</td>
-<td>❌ No</td>
 </tr>
 <tr class="odd">
 <td>13</td>
@@ -1290,16 +1305,27 @@ campaign:</strong></p>
 <td>tom_h (Helsreach)</td>
 <td>Helsreach</td>
 <td>5h</td>
-<td>✅ Yes</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Alice’s “Actionable” tab (default):</strong></p>
+<h3 id="alices-view-helsreach-team-leader">Alice’s view (Helsreach Team
+Leader)</h3>
+<p>API applies two filters: 1. <strong>Team scope</strong>: only items
+affecting Helsreach Defenders → items #1–7, #13 (8 items). 2.
+<strong>Kind authority</strong>: only items for kinds Alice is
+authorized for → of those 8, items #1–6 and #13 (7 items actionable); #7
+is Helsreach but is <code>requisition_purchase</code> which TLs can’t
+approve.</p>
+<p>UI presents Alice’s “Actionable” tab = 7 items (where she can act).
+UI’s “All team items” tab = 8 items (her team scope, regardless of
+actionability).</p>
 <pre><code>+--------------------------------------------------------+
-| Inbox (Team Leader — Helsreach Defenders)  [Actionable] |
-| Tabs: [Actionable (5)] [All team items (8)] [Archive] |
+| Inbox (Aurelian Crusade)  Authority: Actionable for me |
+| Filters: [Authority: Actionable ▼] [Team: Helsreach ▼] |
+| Tabs: [All (13)] [Roster (5)] [Battle (3)] ...         |
+|        [My team (8)] [Actionable for me (7)]           |
 +--------------------------------------------------------+
-| 5 pending                                              |
+| 7 actionable (8 in team scope)                         |
 +--------------------------------------------------------+
 | ☐ Roster approval — jake42                            |
 |   1h ago · Diff: +2 units, -1 unit, 3 wargear swaps   |
@@ -1317,317 +1343,308 @@ campaign:</strong></p>
 |   30m ago · Result: W · +3 XP, 1 OoA test             |
 |   [View] [Approve] [Reject]                           |
 |                                                        |
+| ☐ Post-battle update — sarah_k                         |
+|   1h ago · Result: W · +3 XP                          |
+|   [View] [Approve] [Reject]                           |
+|                                                        |
+| ☐ Post-battle update — jake42 (routine, auto-approve) |
+|   6h ago · auto-approved (shows recently-decided)    |
+|   [View] (read-only — already decided)                |
+|                                                        |
 | ☐ RP adjustment — tom_h                                |
 |   5h ago · -2 RP (Leman Russ destruction)             |
 |   [View] [Approve] [Reject]                           |
 +--------------------------------------------------------+</code></pre>
-<p>5 items. All Helsreach players. All kinds Alice is authorized for.
-Action buttons enabled.</p>
-<p><strong>Alice’s “All team items” tab:</strong></p>
+<p>Alice’s “Actionable” filter gives 7 items. If she switches the filter
+to “All items in my team scope,” she sees 8 — item #7 (the CM-gifted
+requisition) appears with action buttons disabled:</p>
 <pre><code>+--------------------------------------------------------+
-| Inbox (Team Leader — Helsreach Defenders) [All items] |
-+--------------------------------------------------------+
-| 8 pending (5 actionable + 3 read-only)                 |
-+--------------------------------------------------------+
-| Actionable (5): see above                              |
-|                                                        |
-| Read-only (3):                                         |
+| (continuing from above)                                 |
 |                                                        |
 | ⓘ Requisition purchase — sarah_k (CM-gifted)           |
 |   3h ago · Helsreach · Mike is reviewing               |
 |   [View] (read-only — Mike&#39;s call)                     |
-|                                                        |
-| ⓘ Team switch — mike_h (Hades → Helsreach)            |
-|   2h ago · Cross-team · Mike is reviewing              |
-|   [View] (read-only — Mike&#39;s call)                     |
-|                                                        |
-| ⓘ Post-battle update — jake42 (routine, auto-approve) |
-|   6h ago · Helsreach · auto-approved 2h ago             |
-|   [View] (read-only — already decided)                 |
+|   [Approve] [Reject] [Override] -- disabled, greyed out|
 +--------------------------------------------------------+</code></pre>
-<p>3 read-only items. Alice sees them for transparency (“is anything
-stuck waiting for the CM?”) but can’t act. Items show who has them.</p>
-<p><strong>What Alice does NOT see (in her inbox at all):</strong></p>
-<ul>
-<li>Items 9–10 (Hades Defenders’ players) — wrong team</li>
-<li>Items 11–12 (CM-only kinds) — <code>mass_reban</code>,
-<code>campaign_announcement</code></li>
-</ul>
-<p>These don’t appear in Alice’s inbox at all. They go directly to
-Mike.</p>
-<p><strong>Mid-flight authority change scenario:</strong></p>
+<p>The disabled buttons make it explicit: Alice sees the item
+(transparency — is anything stuck waiting for the CM?) but cannot act.
+Hovering on a disabled button shows a tooltip: “This kind requires CM
+approval per PRD-1 §4.4.”</p>
+<h3 id="bobs-view-hades-team-leader">Bob’s view (Hades Team Leader)</h3>
+<p>API filter: team scope = Hades Defenders only → items #9, #10 (2
+items). Bob’s “Actionable for me” = both (assuming Bob has the default
+TL authority kinds, which include <code>faction_switch</code>).</p>
+<h3 id="carol-daves-view-gorgutz-co-leaders">Carol + Dave’s view
+(Gorgutz co-leaders)</h3>
+<p>API filter: team scope = Gorgutz’s WAAAGH! only → no items currently
+pending for their team. Their inbox is empty.</p>
+<h3 id="mikes-view-primary-cm">Mike’s view (Primary CM)</h3>
+<p>API: no authority filter (CM sees everything). Mike sees all 13 items
+across all teams. Mike can also see Alice’s actions (the audit log
+records <code>reviewerUserId: alice</code>).</p>
+<h3 id="mid-flight-authority-change">Mid-flight authority change</h3>
 <p>If Mike disables <code>roster_approval</code> for TLs while Alice has
-item #2 (sarah_k’s roster) open in her detail view:</p>
+item #2 (sarah_k’s roster) open:</p>
 <ol type="1">
-<li>Alice still sees item #2 with “Approve” enabled (the policy in
-effect at filing time still applies per Q2 default).</li>
+<li>Alice still sees item #2 with “Approve” enabled (intent at filing
+time wins per Q2 default; the policy in effect at filing time
+applies).</li>
 <li>If Alice approves, the approval stands;
 <code>approvalSource: &#39;cm_review&#39;</code>,
-<code>reviewerUserId: alice</code>.</li>
-<li>If Alice refreshes, her “Actionable” tab count drops to 4 (item #2
-was the last; new <code>roster_approval</code> requests now route
-directly to Mike).</li>
-<li>Mike’s inbox gets all new <code>roster_approval</code> requests
-going forward.</li>
+<code>reviewerUserId: alice</code>. The decision is permanent.</li>
+<li>After Alice approves, item #2 leaves the queue. New
+<code>roster_approval</code> requests go directly to Mike’s queue.</li>
+<li>The audit log records the authority change timestamp separately from
+the approval action — both are queryable.</li>
 </ol>
-<p>If Mike ENABLES <code>roster_manual_edit</code> for TLs (it was off
-by default):</p>
+<p>If Mike ENABLES <code>roster_manual_edit</code> for TLs (it was
+off):</p>
 <ol type="1">
-<li>New <code>roster_manual_edit</code> requests on Helsreach now appear
-in Alice’s “Actionable” tab.</li>
-<li>In-flight <code>roster_manual_edit</code> requests that were already
-filed before the change are NOT retroactively routed to Alice — they
-stay with Mike (intent at filing time).</li>
+<li>New <code>roster_manual_edit</code> requests on Helsreach appear in
+Alice’s “Actionable” tab.</li>
+<li>In-flight requests filed BEFORE the change stay with Mike.</li>
 </ol>
-<p><strong>Bob’s view (Team Leader of Hades Defenders):</strong></p>
-<p>Bob’s actionable tab shows only items affecting Hades Defenders (item
-#9, item #10). He doesn’t see Helsreach items at all (per RLS +
-team-isolation policies).</p>
-<p><strong>Carol’s view (Team Leader of Gorgutz’s WAAAGH!):</strong></p>
-<p>Carol’s actionable tab shows only items affecting Gorgutz’s WAAAGH!
-(none currently in this example). Her team has co-leader Dave — with
-<code>teamLeaderApprovalMode: &#39;any&#39;</code>, either can approve. If Carol
-picks up an item and Dave also approves, the second approval is recorded
-but the request is already decided.</p>
-<p><strong>Mike’s view (Primary CM):</strong></p>
-<p>Mike’s inbox shows ALL 13 items across all teams. He can approve any
-of them. His tab counts: - All: 13 - Roster approvals: 5 (3 Helsreach +
-1 Hades + 1 already-decided-but-recent) - Battle: 3 (2 Helsreach routine
-+ 1 Helsreach pending) - Requisition: 1 - Rollback: 0 - Settings
-(mass_reban, campaign_announcement, etc.): 2 - Cross-team: 1
-(team_switch) - Recently decided: 0</p>
-<p>Mike can also see Alice’s actions (audit log records
-<code>reviewerUserId: alice</code> when Alice approves something).</p>
-<h3 id="inbox-sortfilter-details-v3.13">5.5 Inbox sort/filter details
-(v3.13)</h3>
-<p>When the CM clicks the sort dropdown, options are:</p>
-<ul>
-<li><strong>Oldest first</strong> (default, FIFO)</li>
-<li><strong>Newest first</strong></li>
-<li><strong>By submitter</strong> (alphabetical)</li>
-<li><strong>By team</strong> (then by age within team)</li>
-<li><strong>By kind</strong> (then by age within kind)</li>
-</ul>
-<p>Filter chips at the top of the inbox are additive (multiple filters
-AND together):</p>
-<ul>
-<li>Campaign (when CM has multiple)</li>
-<li>Team</li>
-<li>Kind</li>
-<li>Submitter</li>
-<li>Age: Today / This week / Older</li>
-<li>Status: Pending / Recently decided (last 24h)</li>
-<li>Authority: Actionable for me / All items (TL inbox only)</li>
-</ul>
-<hr />
-<h2 id="drift-detection">6. Drift Detection</h2>
-<h2 id="drift-detection-1">6. Drift Detection</h2>
-<p>If the current state has changed since submission (e.g., the player
-imported a new RosterDraft while approval was pending), the CM sees a
-“Drift detected” warning. Side-by-side: original vs. recomputed.</p>
-<p>Options: - <strong>Re-validate</strong> — ask the player to resubmit
-- <strong>Force-apply</strong> — apply the original intent anyway, with
-audit log - <strong>Reject</strong> — reject as stale</p>
-<hr />
-<h2 id="reversibility">7. Reversibility</h2>
-<p>Every approved change is reversible within a configurable window
-(default 7 days, per campaign setting). Rollback creates a new set of
-events that exactly invert the originals.</p>
-<p>For destructive approvals (e.g., RosterApproval that included a unit
-that no longer has provenance), rollback requires typed
-confirmation.</p>
-<hr />
-<h2 id="notifications-ux-v3.13">8. Notifications UX (v3.13)</h2>
-<p>Notifications are derived from the Event outbox via a
-<code>notification-fanout-job</code>. Each notification has a
-<code>loudness</code> class that determines delivery channels and UI
-prominence:</p>
-<table>
+<h3 id="player-view-e.g.-sarah-on-helsreach">Player view (e.g., Sarah on
+Helsreach)</h3>
+<p>Sarah doesn’t have an inbox. On her dashboard (PRD-2 §5c.2), “MY
+PENDING APPROVALS” shows the status of approvals she’s filed. She sees:
+“Your roster v18 is pending Mike’s review (2h ago).” That’s the
+player-facing read-only status — no action buttons, no inbox queue.</p>
+<h3 id="tracking-user-at-every-approval-point">Tracking user at every
+approval point</h3>
+<p>Every <code>ApprovalRequest.decidedByUserId</code> is recorded with
+the user’s ID at decision time. If Alice approves something and then: -
+Loses her TL role (PRD-1 §4.2): her past approvals stand. The decision
+references her userId. - Changes teams: same — past decisions stand. -
+Account is deleted (PRD-2 §5d.1 DANGER ZONE): her past approvals still
+reference her userId; her display name appears as “Deleted User” in the
+audit log (no PII exposure after deletion).</p>
+<p>Soft-delete throughout (PRD-2 §5d.1): nothing is hard-deleted unless
+explicitly required. Team leader grants, audit log entries, history
+entries — all carry <code>revokedAt</code> / <code>archivedAt</code>
+timestamps rather than being removed.</p>
+<h3 id="authority-filter-is-api-enforced">Authority filter is
+API-enforced</h3>
+<p>Alice cannot trick the UI into requesting Hades items. Every API call
+to the inbox applies the authority filter at the server: - Query:
+<code>SELECT * FROM approval_requests WHERE campaign_id = ? AND status = &#39;pending&#39; AND (team_id IN (alice&#39;s_teams) OR (cm authority)) AND (kind IN (alice&#39;s_authorized_kinds) OR (cm authority))</code>
+- RLS policies add a redundant check at the database level.</p>
+<p>A direct API request from Alice asking for item #9 (a Hades roster
+approval) returns 403 — even if the UI somehow sent the request, the
+data is not returned. +——————————————————–+ | Actionable (5): see above
+| | | | Read-only (3): | | | | ⓘ Requisition purchase — sarah_k
+(CM-gifted) | | 3h ago · Helsreach · Mike is reviewing | | [View]
+(read-only — Mike’s call) | | | | ⓘ Team switch — mike_h (Hades →
+Helsreach) | | 2h ago · Cross-team · Mike is reviewing | | [View]
+(read-only — Mike’s call) | | | | ⓘ Post-battle update — jake42
+(routine, auto-approve) | | 6h ago · Helsreach · auto-approved 2h ago |
+| [View] (read-only — already decided) | +——————————————————–+</p>
+<pre><code>
+3 read-only items. Alice sees them for transparency (&quot;is anything stuck waiting for the CM?&quot;) but can&#39;t act. Items show who has them.
+
+**What Alice does NOT see (in her inbox at all):**
+
+- Items 9–10 (Hades Defenders&#39; players) — wrong team
+- Items 11–12 (CM-only kinds) — `mass_reban`, `campaign_announcement`
+
+These don&#39;t appear in Alice&#39;s inbox at all. They go directly to Mike.
+
+**Mid-flight authority change scenario:**
+
+If Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k&#39;s roster) open in her detail view:
+
+1. Alice still sees item #2 with &quot;Approve&quot; enabled (the policy in effect at filing time still applies per Q2 default).
+2. If Alice approves, the approval stands; `approvalSource: &#39;cm_review&#39;`, `reviewerUserId: alice`.
+3. If Alice refreshes, her &quot;Actionable&quot; tab count drops to 4 (item #2 was the last; new `roster_approval` requests now route directly to Mike).
+4. Mike&#39;s inbox gets all new `roster_approval` requests going forward.
+
+If Mike ENABLES `roster_manual_edit` for TLs (it was off by default):
+
+1. New `roster_manual_edit` requests on Helsreach now appear in Alice&#39;s &quot;Actionable&quot; tab.
+2. In-flight `roster_manual_edit` requests that were already filed before the change are NOT retroactively routed to Alice — they stay with Mike (intent at filing time).
+
+**Bob&#39;s view (Team Leader of Hades Defenders):**
+
+Bob&#39;s actionable tab shows only items affecting Hades Defenders (item #9, item #10). He doesn&#39;t see Helsreach items at all (per RLS + team-isolation policies).
+
+**Carol&#39;s view (Team Leader of Gorgutz&#39;s WAAAGH!):**
+
+Carol&#39;s actionable tab shows only items affecting Gorgutz&#39;s WAAAGH! (none currently in this example). Her team has co-leader Dave — with `teamLeaderApprovalMode: &#39;any&#39;`, either can approve. If Carol picks up an item and Dave also approves, the second approval is recorded but the request is already decided.
+
+**Mike&#39;s view (Primary CM):**
+
+Mike&#39;s inbox shows ALL 13 items across all teams. He can approve any of them. His tab counts:
+- All: 13
+- Roster approvals: 5 (3 Helsreach + 1 Hades + 1 already-decided-but-recent)
+- Battle: 3 (2 Helsreach routine + 1 Helsreach pending)
+- Requisition: 1
+- Rollback: 0
+- Settings (mass_reban, campaign_announcement, etc.): 2
+- Cross-team: 1 (team_switch)
+- Recently decided: 0
+
+Mike can also see Alice&#39;s actions (audit log records `reviewerUserId: alice` when Alice approves something).
+
+### 5.5 Inbox sort/filter details (v3.13)
+
+When the CM clicks the sort dropdown, options are:
+
+- **Oldest first** (default, FIFO)
+- **Newest first**
+- **By submitter** (alphabetical)
+- **By team** (then by age within team)
+- **By kind** (then by age within kind)
+
+Filter chips at the top of the inbox are additive (multiple filters AND together):
+
+- Campaign (when CM has multiple)
+- Team
+- Kind
+- Submitter
+- Age: Today / This week / Older
+- Status: Pending / Recently decided (last 24h)
+- Authority: Actionable for me / All items (TL inbox only)
+
+---
+
+## 6. Drift Detection
+
+## 6. Drift Detection
+
+If the current state has changed since submission (e.g., the player imported a new RosterDraft while approval was pending), the CM sees a &quot;Drift detected&quot; warning. Side-by-side: original vs. recomputed.
+
+Options:
+- **Re-validate** — ask the player to resubmit
+- **Force-apply** — apply the original intent anyway, with audit log
+- **Reject** — reject as stale
+
+---
+
+## 7. Reversibility
+
+Every approved change is reversible within a configurable window (default 7 days, per campaign setting). Rollback creates a new set of events that exactly invert the originals.
+
+For destructive approvals (e.g., RosterApproval that included a unit that no longer has provenance), rollback requires typed confirmation.
+
+---
+
+## 8. Notifications UX (v3.13)
+
+Notifications are derived from the Event outbox via a `notification-fanout-job`. Each notification has a `loudness` class that determines delivery channels and UI prominence:
+
+| Loudness | In-app | Email | Use case |
+|---|---|---|---|
+| `loud` | Toast (auto-dismiss 8s) + bell badge + email | Yes | Approvals decided, roster rollbacks, narrative events with campaign-wide effect |
+| `normal` | Bell badge + notification list page | No (in-app only) | Battle reports approved, requisition history entries |
+| `quiet` | Notification list page only | No | Audit events (CM self-edits, team leader grants), system health (BullMQ worker restarted) |
+
+### 8.1 Toast UX
+
+Toast appears bottom-right (desktop) or full-width top (mobile). Content:
+</code></pre>
+<table style="width:64%;">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 63%" />
 </colgroup>
-<thead>
-<tr class="header">
-<th>Loudness</th>
-<th>In-app</th>
-<th>Email</th>
-<th>Use case</th>
-</tr>
-</thead>
 <tbody>
 <tr class="odd">
-<td><code>loud</code></td>
-<td>Toast (auto-dismiss 8s) + bell badge + email</td>
-<td>Yes</td>
-<td>Approvals decided, roster rollbacks, narrative events with
-campaign-wide effect</td>
-</tr>
-<tr class="even">
-<td><code>normal</code></td>
-<td>Bell badge + notification list page</td>
-<td>No (in-app only)</td>
-<td>Battle reports approved, requisition history entries</td>
-</tr>
-<tr class="odd">
-<td><code>quiet</code></td>
-<td>Notification list page only</td>
-<td>No</td>
-<td>Audit events (CM self-edits, team leader grants), system health
-(BullMQ worker restarted)</td>
+<td>✓ Mike approved your roster update 1 unit added, 3 wargear swaps
+[View] [×]</td>
 </tr>
 </tbody>
 </table>
-<h3 id="toast-ux">8.1 Toast UX</h3>
-<p>Toast appears bottom-right (desktop) or full-width top (mobile).
-Content:</p>
-<pre><code>+---------------------------------------------+
-| ✓ Mike approved your roster update          |
-|   1 unit added, 3 wargear swaps             |
-|   [View]  [×]                               |
-+---------------------------------------------+</code></pre>
-<p>Auto-dismisses after 8 seconds (<code>loud</code> only). User can
-dismiss manually with ×. Multiple toasts stack with a max of 3 visible;
-older ones queue.</p>
-<h3 id="bell-badge-notification-list">8.2 Bell badge + notification
-list</h3>
-<p>The header bell icon shows an unread count. Click → side panel slides
-in from the right:</p>
-<pre><code>+---------------------------------------------+
-| Notifications                  [Mark all read]|
-+---------------------------------------------+
-| Today                                          |
-| ✓ Mike approved your roster update    2h     |
-|   [View roster]                               |
-| ! CM requested changes on your roster 4h     |
-|   [View request]                              |
-|                                              |
-| Yesterday                                     |
-| ✓ Battle 12 update approved by Mike    1d    |
-| ✗ Requisition &quot;Replace Destroyed Unit&quot;       |
-|   needs more RP — auto-rejected        2d    |
-+---------------------------------------------+</code></pre>
-<p>Each notification links to the source record (the approval, the
-roster, the event). “Mark all read” clears the badge. Notifications stay
-in the list for 30 days then archive.</p>
-<h3 id="notification-list-page-full">8.3 Notification list page
-(full)</h3>
-<p>For long-term history: <code>/notifications</code> page shows all
-notifications in reverse-chronological order. Filterable by: - Kind
-(approvals, events, audit) - Campaign - Read/unread - Date range</p>
-<p>Useful for “what happened to my army last month?” — the player can
-scroll back through their army’s story from their perspective.</p>
-<h3 id="email-notifications">8.4 Email notifications</h3>
-<p>Email is sent only for <code>loud</code> notifications by default. CM
-can adjust per-user preference (PRD-2 §3.5 — user settings page). Email
-content mirrors the toast but includes a “View in app” CTA.</p>
-<p>Email delivery goes through BullMQ <code>notification-job</code>
-(already documented) — the user-facing email is generated from the
-<code>Notification</code> row, not directly from the Event.</p>
-<h3 id="self-approval-notification-loudness-v3.13">8.5 Self-approval
-notification loudness (v3.13)</h3>
-<p>When the CM-as-player self-approves their own delta (PRD-1 §5), the
-resulting notification is <code>quiet</code> (no toast, no email).
-Rationale: the CM already knows what they did; notifying themselves is
-noise. The audit log still records the action.</p>
-<p>When a Team Leader approves another player’s request on their team,
-the notification to the player is <code>loud</code> (player benefits
-from knowing). The notification to the team leader is
-<code>normal</code> (they just did it).</p>
-<hr />
-<h2 id="campaign-level-approval-policies">9. Campaign-Level Approval
-Policies</h2>
-<h2 id="campaign-level-approval-policies-1">9. Campaign-Level Approval
-Policies</h2>
-<table>
+<pre><code>
+Auto-dismisses after 8 seconds (`loud` only). User can dismiss manually with ×. Multiple toasts stack with a max of 3 visible; older ones queue.
+
+### 8.2 Bell badge + notification list
+
+The header bell icon shows an unread count. Click → side panel slides in from the right:
+</code></pre>
+<table style="width:64%;">
 <colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
+<col style="width: 63%" />
 </colgroup>
-<thead>
-<tr class="header">
-<th>Policy</th>
-<th>Effect</th>
-</tr>
-</thead>
 <tbody>
 <tr class="odd">
-<td><code>auto_approve_routine_battle_updates: bool</code></td>
-<td>Auto-approve battle updates with no anomalies</td>
+<td>Notifications [Mark all read]</td>
 </tr>
 <tr class="even">
-<td><code>auto_approve_first_roster: bool</code></td>
-<td>First RosterApproved for a player is auto-approved; default off</td>
-</tr>
-<tr class="odd">
-<td><code>require_battle_report: bool</code></td>
-<td>Battle updates must include a markdown report ≥ 200 chars; default
-on</td>
-</tr>
-<tr class="even">
-<td><code>lock_ooa_modifications: bool</code></td>
-<td>Players cannot manually edit OoA results</td>
-</tr>
-<tr class="odd">
-<td><code>bulk_approve_max_batch_size: int</code></td>
-<td>Cap on how many approvals the CM can act on in one bulk action
-(default 50); prevents accidental mega-actions</td>
+<td><p>Today ✓ Mike approved your roster update 2h [View roster] ! CM
+requested changes on your roster 4h [View request]</p>
+<p>Yesterday ✓ Battle 12 update approved by Mike 1d ✗ Requisition
+“Replace Destroyed Unit” needs more RP — auto-rejected 2d</p></td>
 </tr>
 </tbody>
 </table>
-<h3 id="approval-batching-model">9.1 Approval Batching Model</h3>
-<p>Per PRD-4 §4.1, each player in a battle files their own
-<code>BattleUpdate</code>. The batching model is
-<strong>per-ApprovalRequest</strong>, not per-battle:</p>
-<ul>
-<li><strong>1v1 battle</strong> = 2 BattleUpdates = 2 ApprovalRequests
-(<code>post_battle_update</code> × 2)</li>
-<li><strong>4-player free-for-all</strong> = 4 BattleUpdates = 4
-ApprovalRequests</li>
-<li>Each <code>post_battle_update</code> approval carries the player’s
-per-unit deltas for that battle only</li>
-</ul>
-<p>The CM inbox treats each ApprovalRequest as a row. Batching happens
-via:</p>
-<ol type="1">
-<li><strong>Auto-approve</strong>
-(<code>auto_approve_routine_battle_updates</code>): routine
-BattleUpdates (no OoA failures, no requisition, no disputes)
-auto-approve at submission time, never entering the inbox.</li>
-<li><strong>Bulk approve (inbox)</strong>: CM selects N rows and clicks
-“Approve N selected” (PRD-1 §6b Flow 2). The bulk action refuses if any
-selected item is non-routine; non-routine items are skipped with a clear
-reason. Max batch size capped by
-<code>bulk_approve_max_batch_size</code>.</li>
-<li><strong>Battle-context grouping</strong>: the inbox groups
-BattleUpdates from the same Battle under a “Battle 22” expandable row,
-so the CM sees them as one battle-context but approves them as separate
-requests. Disputed BattleUpdates (e.g., both players claim victory per
-<code>post_battle_update.disputed</code>) surface with a dispute
-flag.</li>
-</ol>
-<p><strong>Why per-player approvals, not per-battle:</strong> the user
-observed that battle updates are sent in via supplement-specific forms,
-and each player fills their own form (sometimes on a single shared
-sheet, sometimes separately). Modeling as per-player approvals keeps: -
-The audit trail clean (who claimed what) - Dispute detection automatic
-(system detects conflicting results) - Bulk-approve ergonomic (a routine
-1v1 battle’s 2 approvals bulk-approve in one click; a routine 4-player
-game bulk-approves all 4 in one click) - Future flexibility (Nachmund’s
-4-player BattleRecord Sheets map naturally to 4 ApprovalRequests)</p>
-<p><strong>Batching does NOT collapse across kinds.</strong> A CM cannot
-bulk-approve a mix of <code>post_battle_update</code> +
-<code>roster_approval</code> + <code>requisition_purchase</code> in one
-click — the inbox filters by kind, and the CM bulk-acts within one kind
-only. | <code>require_two_approvals: bool</code> | Battle updates that
-destroy units need two CM approvals | |
-<code>override_window_days: int</code> | Days within which an approval
-can be rolled back; default 7 |</p>
-<hr />
-<h2 id="user-flow-roster-approval">10. User Flow: Roster Approval</h2>
-<pre class="mermaid"><code>flowchart TD
+<pre><code>
+Each notification links to the source record (the approval, the roster, the event). &quot;Mark all read&quot; clears the badge. Notifications stay in the list for 30 days then archive.
+
+### 8.3 Notification list page (full)
+
+For long-term history: `/notifications` page shows all notifications in reverse-chronological order. Filterable by:
+- Kind (approvals, events, audit)
+- Campaign
+- Read/unread
+- Date range
+
+Useful for &quot;what happened to my army last month?&quot; — the player can scroll back through their army&#39;s story from their perspective.
+
+### 8.4 Email notifications
+
+Email is sent only for `loud` notifications by default. CM can adjust per-user preference (PRD-2 §3.5 — user settings page). Email content mirrors the toast but includes a &quot;View in app&quot; CTA.
+
+Email delivery goes through BullMQ `notification-job` (already documented) — the user-facing email is generated from the `Notification` row, not directly from the Event.
+
+### 8.5 Self-approval notification loudness (v3.13)
+
+When the CM-as-player self-approves their own delta (PRD-1 §5), the resulting notification is `quiet` (no toast, no email). Rationale: the CM already knows what they did; notifying themselves is noise. The audit log still records the action.
+
+When a Team Leader approves another player&#39;s request on their team, the notification to the player is `loud` (player benefits from knowing). The notification to the team leader is `normal` (they just did it).
+
+---
+
+## 9. Campaign-Level Approval Policies
+
+## 9. Campaign-Level Approval Policies
+
+| Policy | Effect |
+|--------|--------|
+| `auto_approve_routine_battle_updates: bool` | Auto-approve battle updates with no anomalies |
+| `auto_approve_first_roster: bool` | First RosterApproved for a player is auto-approved; default off |
+| `require_battle_report: bool` | Battle updates must include a markdown report ≥ 200 chars; default on |
+| `lock_ooa_modifications: bool` | Players cannot manually edit OoA results |
+| `bulk_approve_max_batch_size: int` | Cap on how many approvals the CM can act on in one bulk action (default 50); prevents accidental mega-actions |
+
+### 9.1 Approval Batching Model
+
+Per PRD-4 §4.1, each player in a battle files their own `BattleUpdate`. The batching model is **per-ApprovalRequest**, not per-battle:
+
+- **1v1 battle** = 2 BattleUpdates = 2 ApprovalRequests (`post_battle_update` × 2)
+- **4-player free-for-all** = 4 BattleUpdates = 4 ApprovalRequests
+- Each `post_battle_update` approval carries the player&#39;s per-unit deltas for that battle only
+
+The CM inbox treats each ApprovalRequest as a row. Batching happens via:
+
+1. **Auto-approve** (`auto_approve_routine_battle_updates`): routine BattleUpdates (no OoA failures, no requisition, no disputes) auto-approve at submission time, never entering the inbox.
+2. **Bulk approve (inbox)**: CM selects N rows and clicks &quot;Approve N selected&quot; (PRD-1 §6b Flow 2). The bulk action refuses if any selected item is non-routine; non-routine items are skipped with a clear reason. Max batch size capped by `bulk_approve_max_batch_size`.
+3. **Battle-context grouping**: the inbox groups BattleUpdates from the same Battle under a &quot;Battle 22&quot; expandable row, so the CM sees them as one battle-context but approves them as separate requests. Disputed BattleUpdates (e.g., both players claim victory per `post_battle_update.disputed`) surface with a dispute flag.
+
+**Why per-player approvals, not per-battle:** the user observed that battle updates are sent in via supplement-specific forms, and each player fills their own form (sometimes on a single shared sheet, sometimes separately). Modeling as per-player approvals keeps:
+- The audit trail clean (who claimed what)
+- Dispute detection automatic (system detects conflicting results)
+- Bulk-approve ergonomic (a routine 1v1 battle&#39;s 2 approvals bulk-approve in one click; a routine 4-player game bulk-approves all 4 in one click)
+- Future flexibility (Nachmund&#39;s 4-player BattleRecord Sheets map naturally to 4 ApprovalRequests)
+
+**Batching does NOT collapse across kinds.** A CM cannot bulk-approve a mix of `post_battle_update` + `roster_approval` + `requisition_purchase` in one click — the inbox filters by kind, and the CM bulk-acts within one kind only.
+| `require_two_approvals: bool` | Battle updates that destroy units need two CM approvals |
+| `override_window_days: int` | Days within which an approval can be rolled back; default 7 |
+
+---
+
+## 10. User Flow: Roster Approval
+
+```mermaid
+flowchart TD
     A[Player submits RosterDraft] --&gt; B[Create ApprovalRequest kind=roster_approval]
     B --&gt; C[Enqueue notification-job for CM]
     C --&gt; D[CM sees in inbox]

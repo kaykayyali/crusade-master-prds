@@ -20,7 +20,38 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.14 (current) — 4 page surfaces + TL inbox worked example
+### v3.15 (current) — OAuth + magic-link auth + campaign-scoped inbox
+
+Three significant architecture shifts:
+
+**1. OAuth + magic-link authentication (PRD-0 §3.4.1, PRD-2 §3.1).**
+Per user: user fields and account-level fields need to be adjustable. One approach: use OAuth providers — Discord is one option. Regular email flows also possible. Research and refine.
+
+- v1 supports **Discord OAuth2** (`identify` + `email` scopes) and **email magic-link** as a fallback.
+- New `Identity` table (PRD-0 §3.4.1): one `User` per (tenant, person); one `User` can have multiple `Identity` rows linking to multiple auth providers.
+- Identity linking at sign-in: when OAuth returns a verified email matching an existing `User` in the tenant, the new identity is linked to that user (otherwise new user + identity).
+- Per-tenant OAuth config (`Tenant.oauthConfig`) — instance-level defaults, tenant can override.
+- Profile fields table updated: email from OAuth (locked); display name + avatar are user-editable overrides.
+- Research notes captured for v1.x refinement: account merging across tenants, OAuth refresh tokens (Discord access tokens expire 7d), Discord guild verification for CM role-grant.
+
+**2. Inbox is campaign-scoped + authority-filtered (PRD-5 §5).**
+Per user: events/deltas are campaign-scoped, filtered by the user's authority. Enforced at the API level. We track users at all approval points and reference the user who made the decision. Soft-delete (archive) only; we don't delete data.
+
+- **One campaign inbox, many views.** Every user with access sees the same queue, filtered by their authority at the API layer.
+- **Authority filter is API-enforced** (not just UI). Alice cannot trick the UI into requesting Hades items — the server query has a WHERE clause on team + kind authority; RLS adds redundant check.
+- **User tracked at every approval point** via `ApprovalRequest.reviewerUserId`. Past approvals stand even if the user's role changes.
+- **Soft-delete throughout.** Team leader grants (`TeamLeader.revokedAt`), audit log entries, history entries — all carry archive timestamps, never hard-deleted unless explicitly required (e.g., account-deletion 30-day window).
+- **Worked example rewritten.** Alice's "Actionable" tab + "All team items" tab reframe as filters on the same campaign inbox. Authority filter chip + Team filter chip + Player filter chip. Disabled action buttons (with tooltips) for unauthorized kinds.
+
+**3. TL default view: see all pending approvals, action only authorized ones (PRD-5 §5.4).**
+Per user: team leaders should see all pending approvals, and only be able to action ones for which they have authority. The UI should have a filter for showing actionable items, and filtering by player.
+
+- Default tab for TLs: "My team" (8 items — full team scope)
+- Filter chip: "Authority: Actionable for me" narrows to 7 items (where Alice can act)
+- Filter chip: by player (e.g., show only sarah_k's items)
+- Action buttons disabled for unauthorized kinds, with tooltip explanation
+
+### v3.14 — 4 page surfaces + TL inbox worked example
 
 Per user direction: users need an **account page** + a **campaign-scoped player page** + a **roster page** + **specialized views for their generated crusade cards**. Added all four as PRD-2 §5d–§5g.
 
