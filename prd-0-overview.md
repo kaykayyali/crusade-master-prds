@@ -144,11 +144,22 @@ Roles = 'instance_admin' | 'cm' | 'player' | 'spectator'   // user can hold mult
 
 // === Campaign ===
 Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt, teamsEnabled: boolean }
-CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }
+CampaignTeam {
+  id, campaignId, name, description, color, narrativeLogFilter,
+  // Narrative intent: which 40K factions fit this team's story. NOT enforced
+  // by the app — the rule engine surfaces a soft warn, and the CM has final
+  // approval on every roster. Books (e.g., Armageddon) ship with these pre-filled.
+  expectedFactionIds: string[] | null
+}
 CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId?: CampaignTeam['id'] }
 
 // === Roster (state machine) ===
-Roster { id, campaignId, ownerUserId, factionId, name, currentDraftId, currentApprovedId }
+Roster {
+  id, campaignId, ownerUserId, factionId, name,
+  teamId,                                  // snapshotted from CampaignMember at creation;
+                                          // re-associating to a new team requires CM action
+  currentDraftId, currentApprovedId
+}
 RosterDraft {
   id, rosterId,
   sourceJsonBlobId,                  // MinIO key
@@ -159,7 +170,14 @@ RosterDraft {
   createdAt,
   parseError?: string,
 }
-RosterApproved { id, rosterId, sourceDraftId, approvedAt, approvedByUserId, snapshot, pointLimit, activeRosterApprovedId? }
+RosterApproved {
+  id, rosterId, sourceDraftId, approvedAt, approvedByUserId,
+  snapshot, pointLimit,
+  // Snapshotted at approval time so the historical record keeps the team/faction
+  // alignment even if the player later switches teams or factions.
+  factionId, teamId,
+  activeRosterApprovedId?
+}
 RosterApprovalHistory { rosterId, approvedId, approvedAt, approvedByUserId }  // chron. list
 
 // === Crusade state (lives on RosterApproved or on app-extracted draft data) ===

@@ -644,6 +644,14 @@ gallery”):</strong></p>
 <td>Player must have at least N RP at approval time</td>
 <td><code>n: integer</code></td>
 </tr>
+<tr class="even">
+<td><code>team-narrative-alignment</code></td>
+<td>Roster’s 40K faction should fit the team’s narrative (per
+<code>CampaignTeam.expectedFactionIds</code>); <strong>warn only — never
+fail</strong>. The CM has final approval on roster fit (PRD-1 §5b).</td>
+<td><code>expected_faction_ids: string[]</code> (auto-populated from the
+team’s <code>expectedFactionIds</code>, editable per-rule-instance)</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Adding a custom rule (CM flow):</strong></p>

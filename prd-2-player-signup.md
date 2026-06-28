@@ -59,8 +59,21 @@ When a player joins a campaign, they pick two things — a 40K faction and a cam
 **Team picker (only if `Campaign.teamsEnabled = true`):**
 - List of `CampaignTeam` rows for the campaign
 - Each team shown with: name, color, description, current player count
+- Each team shows its `expectedFactionIds` as a hint: "typically plays Imperial factions" or "typically plays Orks" (derived from the count of expected factions; details behind a tooltip)
 - Sets `CampaignMember.teamId`
-- The picker does NOT filter the 40K faction picker — a Helsreach Defender can be any 40K faction
+- The picker does NOT filter the 40K faction picker — any player can pick any team regardless of faction
+
+**Narrative-fit hint (when faction and team don't match expectedFactionIds):**
+
+If a player picks a faction that's NOT in their chosen team's `expectedFactionIds`, the picker shows a soft warning before they submit:
+
+> "Helsreach Defenders typically plays Imperial factions (per the Armageddon book). Mike has final approval — you can proceed, but Mike may want to discuss the narrative fit. Continue?"
+
+The player can click "Continue anyway" or "Pick a different team." The app does **not block**. The CM's approval workflow is the enforcement point.
+
+If `expectedFactionIds` is null (CM hasn't set any), no hint is shown.
+
+If `CampaignTeam.expectedFactionIds` is set and the player's faction IS in the list, a green check is shown: "✓ fits Helsreach Defenders' Imperial narrative."
 
 **Free-for-all campaigns (`teamsEnabled = false`):**
 - Only the faction picker shows. Team picker step is skipped.

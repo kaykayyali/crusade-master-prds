@@ -200,18 +200,46 @@ Battles are scheduled both *intra-team* (rare, for narrative beat-battles betwee
 
 **Armageddon team templates (v1):**
 
-When the CM picks the Armageddon supplement during campaign creation, the system pre-fills 4 teams as suggestions:
+When the CM picks the Armageddon supplement during campaign creation, the system pre-fills 4 teams as suggestions, each with `expectedFactionIds` seeded from the Armageddon book's narrative:
 
 1. **Helsreach Defenders** (Imperial players fighting in Hive Helsreach)
+   - `expectedFactionIds: [Astra Militarum, Space Marines, Sisters of Battle, Adeptus Mechanicus, Imperial Knights, Imperial Agents, Adepta Sororitas]`
 2. **Hades Defenders** (Imperial players fighting in Hive Hades)
+   - `expectedFactionIds: [same Imperial list]`
 3. **Gorgutz's WAAAGH!** (Ork players under Warlord Gorgutz Ironjaw)
+   - `expectedFactionIds: [Orks]`
 4. **Skari's Kult of Speed** (Ork players under Warlord Skari Bloodspear)
+   - `expectedFactionIds: [Orks]`
 
-The CM can use as-is, rename, merge, add, or delete. None of these teams restrict the player's 40K faction — a "Helsreach Defender" can be Space Marines *or* Astra Militarum *or* Sisters. The team picker in PRD-2 lets players choose freely.
+The CM can use as-is, rename, merge, add, delete, or override `expectedFactionIds`.
+
+**Narrative intent vs enforcement — the guiding light:**
+
+`CampaignTeam.expectedFactionIds` is **narrative intent, not enforcement**. The user clarified the relationship:
+
+- The **Armageddon book** (and other Crusade supplements) provide narrative reference — "Helsreach Defenders fight for the Imperium, so they typically play Imperial factions."
+- The **CM has final approval** on every roster. If Sarah wants to play Orks on Helsreach Defenders for narrative reasons (a renegade Ork warband ambushing the hive), Mike can approve that.
+- **The app surfaces the hint, never blocks.** A player picking a faction outside their team's expected list sees a soft warning but is not prevented from joining or submitting a roster. The CM's approval workflow is where narrative fit gets adjudicated.
+
+How the hint surfaces:
+1. **Team picker (PRD-2)**: each team shows "typically plays Imperial factions" or "typically plays Orks" based on the expectedFactionIds count. If a player picks a mismatched faction, the picker shows: "Helsreach Defenders usually plays Imperial factions. Mike has final approval — you can proceed, but Mike may want to discuss the narrative fit."
+2. **Roster rule check (PRD-3 §6.4)**: the `team-narrative-alignment` built-in rule runs on every RosterDraft. If `Roster.factionId ∉ CampaignTeam.expectedFactionIds`, the rule produces a **warn** (not a fail). The CM sees this in the approval inbox; if Mike wants to approve anyway, he clicks "Override & Approve" with a reason.
+3. **Narrative log**: when the CM approves a roster with a narrative-alignment warn override, the audit log records the override reason. Players on the same team can see "Sarah's Helsreach roster (Orks) — approved by Mike with note: 'Ork renegade arc for narrative; conflict resolved in battle 4.'"
 
 **Custom teams in v1.x (schema-ready now, UI deferred):**
 
-The schema supports fully custom teams (a CM could create "Traitor Guard of the 83rd," "Skitarii of Forge World Mordax," etc.) from day one. The v1 UI exposes the Armageddon templates and standard CRUD (add/rename/delete/reorder/color). A v1.x addition adds arbitrary team creation flows for non-Armageddon supplements and homebrew campaigns.
+The schema supports fully custom teams (a CM could create "Traitor Guard of the 83rd," "Skitarii of Forge World Mordax," etc.) from day one. The v1 UI exposes the Armageddon templates and standard CRUD (add/rename/delete/reorder/color/edit expectedFactionIds). A v1.x addition adds arbitrary team creation flows for non-Armageddon supplements and homebrew campaigns.
+
+**Switching teams:**
+
+When a player switches campaign teams (e.g., Helsreach → Hades), the change requires CM approval and creates a `team_switch` `ApprovalRequest` (PRD-5). On approval:
+
+- `CampaignMember.teamId` updates
+- The player's `Roster.teamId` follows by default (the roster moves with the player); the CM can choose to keep the roster on the old team (frozen) or create a new roster, captured in the approval decision
+- An audit log event `roster.reassigned` is emitted
+- The next roster approval will run `team-narrative-alignment` against the new team's expectedFactionIds (so a roster that was approved under Helsreach's Imperial narrative might warn under Hades's narrative — even though Hades has the same list, other teams might differ)
+
+This keeps the "the books provide narrative reference, the CM has final approval" model honest: switching teams re-runs the narrative check against the new team's narrative intent.
 
 **Battles across teams:**
 

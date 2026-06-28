@@ -274,6 +274,7 @@ CM-definable rules ship in v1. **Built-in rule types only** for v1; no custom DS
 | `custom-name-pattern` | Custom unit names must match a regex | `pattern: string` (regex), `flags: string` (e.g. 'i') |
 | `total-xp-cap` | No unit may have more than N XP at approval time | `n: integer` |
 | `crusade-rp-floor` | Player must have at least N RP at approval time | `n: integer` |
+| `team-narrative-alignment` | Roster's 40K faction should fit the team's narrative (per `CampaignTeam.expectedFactionIds`); **warn only — never fail**. The CM has final approval on roster fit (PRD-1 §5b). | `expected_faction_ids: string[]` (auto-populated from the team's `expectedFactionIds`, editable per-rule-instance) |
 
 **Adding a custom rule (CM flow):**
 

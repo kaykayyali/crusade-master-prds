@@ -20,7 +20,17 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.2 (current) — Campaign Teams as first-class schema
+### v3.3 (current) — Narrative intent vs enforcement
+
+The user clarified the team's relationship to factions: a campaign team has *narrative intent* (which 40K factions fit its story), but the **CM has final approval** — the app does not enforce. The Armageddon book (and other Crusade supplements) provide narrative reference; the CM's approval is the actual gate.
+
+- **PRD-0 schema**: `CampaignTeam.expectedFactionIds: string[] | null` (narrative intent, editable by CM). `Roster.teamId` (roster is bound to a team directly, snapshotted at creation). `RosterApproved.factionId` + `RosterApproved.teamId` (snapshotted at approval, preserved historically).
+- **PRD-1 §5b**: Armageddon templates pre-fill `expectedFactionIds` from the book. Helsreach/Hades Defenders expect Imperial factions; Gorgutz/Skari expect Orks. The CM can edit per their campaign. The hint surfaces in three places — team picker (PRD-2), roster rule check (PRD-3 `team-narrative-alignment`), and the narrative log (audit-trail of CM overrides).
+- **PRD-3 rule gallery**: new built-in `team-narrative-alignment` rule. Default severity: **warn only**. Never fails. CM overrides are the actual enforcement point. Configurable per-rule-instance.
+- **PRD-2 team picker**: shows "typically plays Imperial factions" hint per team. Mismatched faction + team → soft warning, player can continue. No blocking.
+- **Team switching (PRD-1 §5b)**: requires CM approval (`team_switch` ApprovalRequest). On approval, Roster's teamId follows by default; CM can choose to freeze the old roster or create a new one. The `team-narrative-alignment` rule re-runs against the new team's expectedFactionIds on next approval.
+
+### v3.2 — Campaign Teams as first-class schema
 
 - **Distinction surfaced**: 40K `Faction` (seeded from Wahapedia) is now clearly separate from `CampaignTeam` (CM-defined per-campaign grouping of players). v3.1's "Custom Factions" note was conflating these.
 - **PRD-0**: schema adds `Campaign.teamsEnabled`, `CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }`, and `CampaignMember.teamId`. `Faction` is global; `CampaignTeam` is per-campaign; `Roster` does NOT carry team info (member-level concept).
