@@ -1,43 +1,40 @@
-# PRD-1: Instance Admin & Crusade Master Administration (v2)
+# PRD-1: Instance Admin & Crusade Master Administration (v3)
 
-> Instance administration (Docker-first-run, tenant provisioning, global settings) plus the CM-facing campaign lifecycle and member management.
+> Instance administration (Docker-first-run, tenant provisioning) plus the CM-facing campaign lifecycle and member management. v3: stack updated to Hapi/Node/TS.
 
 ---
 
 ## 1. Goals
 
-Enable a single Instance Admin to bootstrap a self-hosted Docker instance and provision tenants. Within each tenant, enable a Crusade Master to run one or more campaigns end-to-end without depending on a third-party service.
-
-**Success metrics:**
-- A new Docker instance can be bootstrapped in < 5 minutes
-- A new tenant can be created in < 2 minutes
-- A CM can launch a fully-configured campaign with 8 players in < 15 minutes
+- New Docker instance bootstrapped in < 5 minutes
+- New tenant created in < 2 minutes
+- A CM can launch a fully-configured Armageddon campaign with 8 players in < 15 minutes
 
 ---
 
 ## 2. User Stories
 
 ### Instance Admin
-- I can bootstrap the instance via env-var config or a first-run wizard.
-- I can create / disable / delete tenants.
-- I can see system-wide metrics (tenants, campaigns, storage, error rates).
-- I can moderate abuse (suspend a tenant, suspend a user globally).
+- Bootstrap the instance via env-var config or a first-run wizard
+- Create / disable / delete tenants
+- See system-wide metrics
+- Moderate abuse
 
 ### Crusade Master
-- I can create a new campaign within my tenant, choose Armageddon, configure house rules.
-- I can generate an invite code/link scoped to my tenant.
-- I can see all rosters in my campaign at a glance, with the approval queue highlighted.
-- I can pause, archive, or end a campaign.
-- I can override any data the system holds, with audit trail.
-- I can be a player in my own campaign.
+- Create a new campaign, choose *Crusade: Armageddon*, configure house rules
+- Generate an invite code/link scoped to my tenant
+- See all rosters, with the approval queue highlighted
+- Pause, archive, or end a campaign
+- Override any data the system holds, with audit trail
+- Be a player in my own campaign
 
 ---
 
-## 3. Instance Administration (NEW in v2)
+## 3. Instance Administration
 
 ### 3.1 First-Run Bootstrap
 
-Two paths, configurable at deploy time:
+Two paths:
 
 **Path A: Env-var bootstrap** (recommended for production):
 ```bash
@@ -48,15 +45,15 @@ SMTP_PORT=587
 SMTP_USER=...
 SMTP_PASS=...
 PUBLIC_BASE_URL=https://crusade.example.com
+DEFAULT_TENANT_SLUG=default
 ```
 
-On first boot, the app creates:
-- One Tenant with `slug = 'default'`
-- One User with `role = 'instance_admin'` and `tenantId = 'default'`
-- Magic-link login flow with the configured SMTP
+On first boot, the Hapi process:
+- Creates the default Tenant
+- Creates the Instance Admin User with magic-link login
+- Bootstraps the BullMQ workers (parse-job, diff-job, rule-check-job, etc.)
 
 **Path B: First-run wizard** (recommended for local dev):
-- Server starts with no admin user
 - First visitor to the URL is offered a setup form: email, display name, tenant name
 - After submit, the setup form is permanently removed
 
@@ -78,15 +75,15 @@ On first boot, the app creates:
 
 The instance admin sees:
 - Active tenants (last-30-day activity)
-- Total campaigns / total rosters / total approved rosters / total pending approvals
+- Total campaigns / rosters / approvals
 - Storage: Postgres size, MinIO bucket size
-- Error rate from FastAPI logs
-- Background job health (Wahapedia refresh, NR import queue)
+- BullMQ queue depths and failure rates
+- Worker health (last successful parse timestamp, etc.)
 
 ### 3.4 Moderation
 
 - Suspend a tenant: blocks all logins for users in that tenant; data retained
-- Hard-delete a tenant: 30-day grace period, then cascade (campaigns, rosters, events)
+- Hard-delete a tenant: 30-day grace period, then cascade
 - Suspend a user globally: blocks login across all tenants; data retained
 
 ---
@@ -98,20 +95,20 @@ The instance admin sees:
 | Field | Type | Notes |
 |-------|------|-------|
 | name | string | 3-60 chars |
-| supplement | enum | `armageddon` for MVP (other 4 deferred) |
+| supplement | enum | `armageddon` for MVP |
 | point_cap | int | Default 2000, range 500–3000 |
 | max_games_per_player_per_week | int | Default 2 |
 | ooa_test_variant | enum | `standard` (D6 ≤ 3 fails) or `lenient` (D6 ≤ 2 fails) |
-| require_approved_roster_for_battles | bool | Default **true** (hard gate, per user direction) |
-| allow_manual_roster_edits | bool | Default false (JSON import is the canonical path) |
-| custom_house_rules | markdown | Free text, rendered on campaign page |
+| require_approved_roster_for_battles | bool | Default **true** |
+| allow_manual_roster_edits | bool | Default false (JSON import is canonical) |
+| custom_house_rules | markdown | Free text |
 | start_date | date | When battles can begin being filed |
 
 **Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
 
 ### 4.2 Member Management
 
-- CM sees: `displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (draft/pending/approved)`
+- CM sees: `displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (parsing|pending_review|pending_approval|approved|failed)`
 - CM can: invite (via email or link), remove, suspend, promote to co-CM
 - Players can self-serve removal
 - Co-CMs have all CM rights except: deleting the campaign, transferring ownership, changing the supplement
@@ -121,34 +118,34 @@ The instance admin sees:
 CM dashboard surfaces:
 1. **Pending approvals count** (clickable → PRD-5 inbox)
 2. **Active campaigns** (cards: # players, # battles, # pending updates, # pending roster approvals)
-3. **Recent activity feed** (last 20 events across CM's campaigns)
-4. **Roster health overview** — for each player: "last approved roster date", "draft pending review", "no roster yet"
-5. **Narrative log preview** (auto-aggregated from approved battle events)
-6. **Errata alert** — banner when Wahapedia refresh affected units in this campaign
+3. **Recent activity feed** (last 20 events)
+4. **Roster health overview** — per player: "last approved roster date", "draft pending review", "no roster yet", "parse failed"
+5. **BullMQ health** — queue depth, recent failures (so the CM knows if a stuck import is a real player issue vs. infra)
+6. **Narrative log preview**
+7. **Errata alert** — banner when Wahapedia refresh affected units in this campaign
 
 ### 4.4 Campaign Settings
 
 Editable: point cap, max games/week, OoA variant, house rules.
 
-**Supplement changes are locked** for MVP. Switching supplements mid-campaign would invalidate active approved rosters; not supported in v1. If a CM wants to retire a campaign and start a new one with a different supplement, they archive + create new.
+**Supplement changes are locked** for MVP. Switching supplements would invalidate active approved rosters; not supported.
 
-Deletable: archive (soft delete) or hard-delete. Hard-delete requires typed confirmation of campaign name and is logged to instance audit.
+Deletable: archive (soft) or hard-delete (typed confirmation required).
 
 ### 4.5 Override Tool
 
-CMs can edit any field on any record, with required reason text. Every override writes to the audit log and shows in the affected player's notification.
+CMs can edit any field on any record, with required reason text. Every override writes to the audit log and surfaces in the affected player's notification.
 
 ---
 
 ## 5. CM-as-Player
 
-A CM is allowed to be a player in their own campaign. When they do:
+A CM is allowed to be a player in their own campaign:
+- "Playing in your own campaign" badge shown next to their name
+- Own roster approvals must be approved by a co-CM (or auto-approve with audit if no co-CM)
+- Own battle filings subject to the same submission gating
 
-- A "playing in your own campaign" badge is shown next to their name in all member lists
-- Their own roster approvals must be approved by a co-CM (if one exists) or auto-approved with audit-log entry (if no co-CM)
-- Their own battle filings are subject to the same submission gating as everyone else
-
-This is the default behavior; the CM cannot opt out (avoiding conflicts of interest requires a co-CM, not a setting).
+Default behavior; CM cannot opt out (conflicts of interest require a co-CM, not a setting).
 
 ---
 
@@ -157,17 +154,17 @@ This is the default behavior; the CM cannot opt out (avoiding conflicts of inter
 ```mermaid
 flowchart TD
     A[Docker container starts] --> B{Env vars set?}
-    B -->|Yes| C[Bootstrap instance + tenant + admin from env]
+    B -->|Yes| C[Bootstrap tenant + admin from env]
     B -->|No| D[First-run wizard]
     D --> E[Admin fills: email, name, tenant]
     C --> F[Admin receives magic link]
     E --> F
     F --> G[Admin lands in instance dashboard]
-    G --> H[Admin creates tenant or uses default]
-    H --> I[Admin promotes first CM or acts as CM]
+    G --> H[Create additional tenant or use default]
+    H --> I[Promote first CM or act as CM]
     I --> J[CM creates campaign, picks Armageddon]
     J --> K[CM invites players via code/email]
-    K --> L[Players join, import rosters, see approval flow]
+    K --> L[Players join, upload JSON, see async parse + diff + approval flow]
 ```
 
 ---
@@ -185,10 +182,10 @@ flowchart TD
 
 - **PRD-0**: `Tenant`, `User`, `Campaign`, `CampaignMember`, `CrusadeSupplement`
 - **PRD-5**: approval inbox link
-- **PRD-3**: roster approval status surfaces in CM dashboard
-- **PRD-4**: event feed surfaces in CM dashboard
-- **Auth infra**: magic-link email delivery (SMTP), role gating
-- **Infra**: Docker Compose file, MinIO bucket provisioning, Postgres RLS policies
+- **PRD-3**: roster approval status surfaces in dashboard
+- **PRD-4**: event feed surfaces in dashboard
+- **Auth infra**: SMTP for magic-link delivery
+- **Infra**: Docker Compose file, MinIO bucket provisioning, Postgres RLS policies, BullMQ workers
 
 ---
 
@@ -196,19 +193,19 @@ flowchart TD
 
 | Metric | Target |
 |--------|--------|
-| Instance bootstrap time | < 5 min (env-var path) |
+| Instance bootstrap time | < 5 min |
 | Tenant creation time | < 2 min |
 | Campaign creation time (with 8 invites sent) | < 15 min |
 | Campaigns per active CM | > 1 |
-| CM override usage rate | < 5% of unit changes (otherwise approval flow is broken) |
+| CM override usage rate | < 5% of unit changes |
 
 ---
 
 ## 10. Edge Cases
 
-1. **Instance Admin deleted / lost access**: the env-var path stores admin email but no password. Recovery requires re-running the bootstrap env-var block, which is idempotent and resets the admin user.
-2. **CM is also a player, no co-CM**: own roster / battle approvals auto-apply with an audit-log entry marked `self_approved: true`.
-3. **All players leave a campaign**: campaign goes dormant; auto-archive after 90 days.
+1. **Instance Admin lost access**: env-var path stores admin email; recovery requires re-running the bootstrap block, which is idempotent and resets the admin user.
+2. **CM is also a player, no co-CM**: own approvals auto-apply with audit log entry `self_approved: true`.
+3. **All players leave a campaign**: dormant; auto-archive after 90 days.
 4. **Two CMs edit settings concurrently**: last-write-wins with 5s debounce; second writer sees "someone else just edited" toast.
 5. **Tenant suspended mid-campaign**: all in-flight approvals auto-rejected with reason "tenant suspended"; campaigns frozen.
-6. **CMs running campaigns across two tenants** (e.g., moves between jobs): CM must be re-invited to the new tenant; campaigns don't migrate.
+6. **BullMQ worker dies mid-parse**: BullMQ job times out, re-queued; `RosterDraft.status` stays `parsing`; player notified after timeout.

@@ -1,12 +1,12 @@
-# PRD-2: Player Sign-Up (v2)
+# PRD-2: Player Sign-Up (v3)
 
-> Player onboarding within a tenant: account creation, invite-code join, faction choice. Tightly scoped to the MVP.
+> Player onboarding within a tenant. v3: stack updated to Hapi/Node/TS; minor content changes.
 
 ---
 
 ## 1. Goals
 
-Get a player from "I have an invite code" to "I'm a member of the campaign with no roster yet" in under 5 minutes, with no required manual data entry beyond email and display name.
+Get a player from "I have an invite code" to "I'm a member of the campaign with no roster yet" in under 5 minutes.
 
 **Success metric**: Median time from invite acceptance to first draft roster import attempt < 5 minutes.
 
@@ -18,7 +18,7 @@ Get a player from "I have an invite code" to "I'm a member of the campaign with 
 - **As a player with an invite code**, I can enter it and land inside the campaign.
 - **As a player**, I can pick my faction from a searchable list of all 26 Wahapedia factions.
 - **As a returning player**, I can join additional campaigns in the same tenant via new invite codes.
-- **As a player**, I get a guided first-tour explaining the import → approval → play flow.
+- **As a player**, I get a guided first-tour explaining the async parse → review → approval flow.
 
 ---
 
@@ -32,7 +32,7 @@ Get a player from "I have an invite code" to "I'm a member of the campaign with 
 - Timezone (auto-detected, editable)
 - Locale (en for MVP)
 
-**Tenant assignment**: every new account is tied to one tenant. If a player needs to be in multiple tenants (rare), they sign up separately in each — the email can be the same; the `User` rows are per-tenant.
+**Tenant assignment**: every new account is tied to one tenant. If a player needs to be in multiple tenants, they sign up separately in each — the email can be the same; the `User` rows are per-tenant.
 
 ### 3.2 Join via Invite
 
@@ -62,10 +62,11 @@ After selection:
 Modal flow shown on first login to a campaign:
 
 1. **"Welcome"** — 1-line pitch + "Got it"
-2. **"The flow"** — import → diff → CM approval → approved → play; 3-step explainer
-3. **"Roster gating"** — "you can't file battle results until your roster is CM-approved; submit early"
-4. **"Import your roster"** — direct link to PRD-3 importer
-5. **"You're set"** — dashboard with empty roster
+2. **"The flow"** — upload → BullMQ parse (a few seconds) → review the diff → CM approval → play
+3. **"Async expectations"** — "imports take ~30 seconds; you'll get a notification when ready"
+4. **"Roster gating"** — "you can't file battle results until your roster is CM-approved; submit early"
+5. **"Import your roster"** — direct link to PRD-3 importer
+6. **"You're set"** — dashboard with empty roster
 
 ---
 
@@ -102,18 +103,18 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 
 ### 4.3 Branch: Invite Code Edge Cases
 
-- **Expired**: CM controls expiry (default 14 days). Expired codes show clear message with "Request new invite from your CM" button (sends in-app notification to CM).
-- **Used (max-uses reached)**: "This invite has been fully used. Ask your CM for a new one."
-- **Wrong tenant**: "This invite is for a different campaign group. If you don't have an account in that group, you'll need to be invited there separately."
+- **Expired**: CM controls expiry (default 14 days). Clear message with "Request new invite from your CM" button.
+- **Used (max-uses reached)**: "This invite has been fully used."
+- **Wrong tenant**: "This invite is for a different campaign group."
 
 ---
 
 ## 5. Faction Picker Notes
 
-- 26 Wahapedia factions are the canonical list.
-- The picker **does not** filter to Armageddon-suitable factions (player choice is respected; the CM's house rules determine what's actually legal).
-- Soft highlight: factions with documented Armageddon content get a small badge.
-- Legends / Forge World units are not in the picker (faction choice only); they're added during NR import.
+- 26 Wahapedia factions are the canonical list
+- Picker does **not** filter to Armageddon-suitable factions
+- Soft highlight: factions with documented Armageddon content get a small badge
+- Legends / Forge World units are not in the picker; they're added during NR import
 
 ---
 
@@ -121,7 +122,7 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 
 - Cross-tenant single sign-on
 - Player-to-player direct messaging
-- Spectator sign-up (spectators are public-link-based, no auth)
+- Spectator sign-up (spectators are public-link-based)
 - OAuth login (env-var OIDC config possible but out of MVP)
 
 ---
@@ -143,14 +144,14 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 | Invite-to-roster-imported time | < 5 min median |
 | Drop-off at faction picker | < 10% |
 | Players completing onboarding tour | > 80% |
-| Magic-link delivery success | > 99% (incl. retry on bounce) |
+| Magic-link delivery success | > 99% |
 
 ---
 
 ## 9. Edge Cases
 
 1. **Two players pick same display name in same campaign**: append `#2`, `#3` etc. Non-blocking warning.
-2. **Player joins, then CM removes them**: player loses access; roster data retained for 30 days for dispute, then hard-deleted.
+2. **Player joins, then CM removes them**: player loses access; roster data retained for 30 days, then hard-deleted.
 3. **Player wants to switch faction mid-campaign**: requires CM approval (per PRD-5), creates a new Roster while keeping the old one as a snapshot.
-4. **Email bounces**: account marked `email_unverified`; cannot file battle updates until resolved. Banner on dashboard.
-5. **Player tries to join with code from a tenant they have no account in**: error with a "create an account in this tenant" link, which restarts the flow at `D`.
+4. **Email bounces**: account marked `email_unverified`; cannot file battle updates until resolved.
+5. **Player tries to join with code from a tenant they have no account in**: error with a "create an account in this tenant" link.

@@ -222,32 +222,30 @@
 <header id="title-block-header">
 <h1 class="title">prd-0-overview</h1>
 </header>
-<h1 id="prd-0-crusade-master-app-overview-v2">PRD-0: Crusade Master App
-— Overview (v2)</h1>
+<h1 id="prd-0-crusade-master-app-overview-v3">PRD-0: Crusade Master App
+— Overview (v3)</h1>
 <blockquote>
-<p>Shared architecture, data model, MVP scope, and links to subsystem
-PRDs. v2 reflects the locked tech stack, multi-tenant model, and
-Armageddon-only MVP.</p>
+<p>Shared architecture, data model, MVP scope. v3 reflects the locked
+stack (Hapi/Node/TS, BullMQ + Python parser subprocess, configurable
+rules engine).</p>
 </blockquote>
 <hr />
 <h2 id="background-and-goals">1. Background and Goals</h2>
 <h3 id="background">1.1 Background</h3>
 <p>Warhammer 40,000 Crusade is a narrative play mode where units gain
-experience, ranks, and battle honors across linked games. Running a
-group Crusade (typically 4–16 players over weeks/months) requires a
-“Crusade Master” to:</p>
-<ul>
-<li>Coordinate match pairings and scheduling</li>
-<li>Verify post-battle updates and roster changes</li>
-<li>Enforce house rules and adjudicate disputes</li>
-<li>Maintain a consistent narrative arc</li>
-</ul>
-<p>Players typically prep their lists in New Recruit. NR handles list
-construction well but offers no enforcement tooling: nothing tells a CM
-“this player added a unit without a requisition,” “this roster exceeds
-the campaign point cap,” or “this battle was filed against an
-out-of-date roster.” The app’s job is the <strong>enforcement and
-timeline</strong> layer on top of NR.</p>
+experience, ranks, and battle honors across linked games. Group Crusade
+administration requires a “Crusade Master” to coordinate, verify, and
+enforce rules across 4–16 players over weeks/months.</p>
+<p>Players prep their lists in New Recruit. NR handles list construction
+and basic UI rule checks, but offers no <strong>enforcement</strong>
+tooling: nothing tells a CM “this player added a unit without a
+requisition,” “this roster exceeds the campaign point cap,” or “this
+battle was filed against an out-of-date roster.”</p>
+<p>The user’s existing <code>bs-roster-parser</code> Python library
+already handles the messy BattleScribe / New Recruit JSON parsing. The
+app is the <strong>enforcement, diff, and timeline layer</strong> that
+consumes the parser’s output, runs configurable rule checks, and
+produces a queryable event timeline.</p>
 <h3 id="goals">1.2 Goals</h3>
 <table>
 <colgroup>
@@ -264,20 +262,19 @@ timeline</strong> layer on top of NR.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Business</strong>: replace ad-hoc Crusade administration
-(paper / spreadsheets / Discord)</td>
-<td>Self-hosted instances running ≥ 1 active campaign</td>
-<td>50+ instances within 6 months of v1</td>
+<td><strong>Business</strong>: self-hosted multi-tenant app</td>
+<td>Instances running ≥ 1 active campaign</td>
+<td>50+ within 6 months of v1</td>
 </tr>
 <tr class="even">
 <td><strong>User (CM)</strong>: cut per-battle admin time</td>
-<td>Time CM spends processing a post-battle update</td>
-<td>&lt; 2 min per battle</td>
+<td>Time CM spends per post-battle update</td>
+<td>&lt; 2 min</td>
 </tr>
 <tr class="odd">
 <td><strong>User (Player)</strong>: roster compliance before
 submission</td>
-<td>% of battle filings that pass first-try approval</td>
+<td>% of battle filings passing first-try approval</td>
 <td>&gt; 85%</td>
 </tr>
 <tr class="even">
@@ -288,66 +285,54 @@ submission</td>
 </tbody>
 </table>
 <h3 id="mvp-scope">1.3 MVP Scope</h3>
-<p><strong>Crusade supplement</strong>: <em>Crusade: Armageddon</em>
-(10th Edition, 128pp, June 2025). Armageddon is the only supplement
-supported at MVP.</p>
-<p><strong>Edition</strong>: 10th Edition only. The app does not model
-11th-edition rules; users running 11th-ed content are out of scope.</p>
-<p><strong>Crusade supplements explicitly out of MVP</strong> (data
-model is schema-ready for all 5, but UI is Armageddon-only): -
-<em>Crusade: Leviathan</em> (launch book, June 2023) - <em>Crusade:
-Tyrannic War</em> (2023) - <em>Crusade: Pariah Nexus</em> (Jan 2024) -
-<em>Crusade: Nachmund Gauntlet</em> (Feb 2025)</p>
+<ul>
+<li><strong>Crusade supplement</strong>: <em>Crusade: Armageddon</em>
+(10th Edition, 128pp, June 2025) — the only supplement supported at
+MVP</li>
+<li><strong>Edition</strong>: 10th Edition only</li>
+<li><strong>Other 10th-ed supplements</strong> (Leviathan, Tyrannic War,
+Pariah Nexus, Nachmund Gauntlet) are out of scope at MVP; data model is
+schema-ready, UI is not</li>
+</ul>
 <hr />
 <h2 id="user-types">2. User Types</h2>
 <table>
 <colgroup>
-<col style="width: 17%" />
-<col style="width: 41%" />
-<col style="width: 41%" />
+<col style="width: 46%" />
+<col style="width: 53%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>User</th>
-<th>What they do</th>
-<th>Tenant scope</th>
+<th>Scope</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><strong>Instance Admin</strong></td>
-<td>Operates the self-hosted Docker instance. Created at first-run via
-env-var bootstrap or wizard. Manages global settings, sees all tenants
-for abuse moderation</td>
-<td>All tenants on the instance</td>
+<td>All tenants on the self-hosted Docker instance</td>
 </tr>
 <tr class="even">
 <td><strong>Crusade Master (CM)</strong></td>
-<td>Owns one or more campaigns within their tenant. Approves roster
-changes, adjudicates disputes, triggers narrative events, manages
-campaign lifecycle</td>
-<td>One tenant, can be CM of multiple campaigns</td>
+<td>One tenant, can own multiple campaigns; can also be a Player</td>
 </tr>
 <tr class="odd">
 <td><strong>Player</strong></td>
-<td>Joins campaigns in their tenant. Imports rosters (JSON), files
-post-battle updates, requests requisitions, plays in battles</td>
 <td>One tenant, can join multiple campaigns</td>
 </tr>
 <tr class="even">
 <td><strong>Spectator (read-only)</strong></td>
-<td>Views public campaign narrative, leaderboard, public rosters</td>
-<td>Cross-tenant if campaign is set public</td>
+<td>Public campaigns (cross-tenant if
+<code>allow_cross_tenant_spectators: true</code>)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>A user can hold multiple roles</strong> (e.g., Instance Admin
-+ CM + Player). A CM can also be a player in their own campaign — this
-is allowed and a “playing in your own campaign” badge is shown to other
-members.</p>
+<p>A user can hold multiple roles. A CM playing in their own campaign
+gets a “playing in your own campaign” badge; their own approvals
+self-approve with audit log if no co-CM exists.</p>
 <hr />
 <h2 id="architecture">3. Architecture</h2>
-<h3 id="tech-stack-locked">3.1 Tech Stack (locked)</h3>
+<h3 id="tech-stack-locked-v3">3.1 Tech Stack (locked v3)</h3>
 <table>
 <colgroup>
 <col style="width: 31%" />
@@ -364,13 +349,14 @@ members.</p>
 <tbody>
 <tr class="odd">
 <td>Frontend</td>
-<td>Vite + (Vue or React, TBD)</td>
-<td>TypeScript, Tailwind, IndexedDB cache</td>
+<td><strong>Vite + Vue 3</strong> + TypeScript + Tailwind + Pinia</td>
+<td>Vue chosen for Hapi integration ergonomics; revisable</td>
 </tr>
 <tr class="even">
 <td>Backend</td>
-<td>FastAPI (Python 3.12)</td>
-<td>Async, Pydantic v2, SQLAlchemy 2.x</td>
+<td><strong><span class="citation" data-cites="hapi/hapi">@hapi/hapi</span></strong> (Node.js 22 LTS) +
+TypeScript</td>
+<td>Hapi 21.x; plugin-based</td>
 </tr>
 <tr class="odd">
 <td>Database</td>
@@ -380,149 +366,202 @@ members.</p>
 <tr class="even">
 <td>Object storage</td>
 <td>MinIO</td>
-<td>S3-compatible; for NR export blobs, generated PDFs, avatars</td>
+<td>S3-compatible; for raw JSON blobs, generated PDFs, avatars</td>
 </tr>
 <tr class="odd">
-<td>Auth</td>
-<td>Magic-link email (or OIDC via env-var config)</td>
-<td>No passwords</td>
+<td>Queue</td>
+<td><strong>BullMQ</strong> + Redis 7</td>
+<td>Async roster parsing, rule checks, notifications</td>
 </tr>
 <tr class="even">
-<td>Background jobs</td>
-<td>APScheduler or Celery + Redis</td>
-<td>NR import parsing, Wahapedia refresh, rule-compliance engine</td>
+<td>Auth</td>
+<td>Magic-link email (or OIDC via env-var)</td>
+<td>No passwords</td>
 </tr>
 <tr class="odd">
+<td><strong>Parser</strong></td>
+<td><strong>Python 3.10+ subprocess</strong> running
+<code>bs-roster-parser</code></td>
+<td>User’s existing library; not rewritten in TS</td>
+</tr>
+<tr class="even">
 <td>Deployment</td>
-<td>Docker Compose (single-node MVP), Docker Swarm or k8s for
-multi-node</td>
+<td>Docker Compose (single-node MVP)</td>
 <td>Self-hosted</td>
+</tr>
+<tr class="odd">
+<td>Background worker</td>
+<td>Node/TS process running BullMQ consumers</td>
+<td>One or more, scales independently</td>
 </tr>
 </tbody>
 </table>
 <h3 id="components">3.2 Components</h3>
 <pre><code>┌──────────────────────────────────────────────────────────────┐
-│                  Frontend (Vite SPA)                         │
-│  Vite + Vue/React + TypeScript + Tailwind + IndexedDB        │
+│                  Frontend (Vite + Vue 3 SPA)                  │
+│  TypeScript + Tailwind + Pinia + IndexedDB cache             │
 └──────────────────┬───────────────────────────────────────────┘
                    │ HTTPS / JSON
 ┌──────────────────▼───────────────────────────────────────────┐
-│               FastAPI backend (single process MVP)           │
-│  Routers: auth, campaigns, rosters, battles, approvals,      │
-│           events, admin                                      │
-│  Background workers: NR parsing, Wahapedia refresh,           │
-│                      rule-compliance engine                  │
+│                  Hapi backend (Node 22, TypeScript)          │
+│  Plugins: auth, campaigns, rosters, battles, approvals,      │
+│           events, admin                                       │
 └──┬───────────────┬───────────────────┬───────────────┬───────┘
    │               │                   │               │
 ┌──▼──────┐  ┌─────▼──────┐  ┌─────────▼──────┐  ┌─────▼────┐
-│Postgres │  │   MinIO    │  │  Redis (cache, │  │  SMTP    │
-│+ RLS    │  │ (S3 API)   │  │   job queue)   │  │  (magic  │
-│         │  │            │  │                │  │   link)  │
-└─────────┘  └────────────┘  └────────────────┘  └──────────┘</code></pre>
-<h3 id="tenancy-model">3.3 Tenancy Model</h3>
+│Postgres │  │   MinIO    │  │  Redis +       │  │  SMTP    │
+│+ RLS    │  │ (S3 API)   │  │  BullMQ        │  │ (magic   │
+│         │  │            │  │                │  │  link)   │
+└─────────┘  └────────────┘  └───────┬────────┘  └──────────┘
+                                     │
+                          ┌──────────▼──────────┐
+                          │  Worker process(es) │
+                          │  (Node/TS, BullMQ)  │
+                          │  - parse-job        │
+                          │  - rule-check-job   │
+                          │  - wahapedia-refresh│
+                          │  - email-sender     │
+                          └──────────┬──────────┘
+                                     │ subprocess
+                          ┌──────────▼──────────┐
+                          │  Python parser      │
+                          │  bs-roster-parser   │
+                          │  via stdio JSON     │
+                          └─────────────────────┘</code></pre>
+<h3 id="roster-import-pipeline-the-load-bearing-flow">3.3 Roster Import
+Pipeline (the load-bearing flow)</h3>
+<pre class="mermaid"><code>flowchart LR
+    A[Player uploads .json] --&gt; B[Hapi: validate, store blob in MinIO]
+    B --&gt; C[BullMQ: enqueue parse-job with blobId + rosterId]
+    C --&gt; D[Worker: download blob]
+    D --&gt; E[Worker: spawn python -m bs_roster_parser with stdin]
+    E --&gt; F[Python: emit RosterSummary.to_dict on stdout]
+    F --&gt; G[Worker: parse stdout JSON]
+    G --&gt; H[Worker: app-side pass for Order of Battle / requisitions]
+    H --&gt; I[Worker: write RosterDraft to Postgres]
+    I --&gt; J[Worker: enqueue diff-job with new + lastApproved]
+    J --&gt; K[Worker diff: compute Delta set]
+    K --&gt; L[Worker rule-check: run configured rules]
+    L --&gt; M[Worker: write RuleCheck records, update RosterDraft.status=pending_review]
+    M --&gt; N[Worker: notify player (in-app + email)]</code></pre>
+<p>Each step is idempotent and re-runnable on failure. The blob in MinIO
+is the source of truth — re-running the pipeline from any step is a
+no-op or a re-process, never a re-upload.</p>
+<h3 id="tenancy-model">3.4 Tenancy Model</h3>
 <p>Multi-tenant on a single Docker instance:</p>
 <ul>
 <li>Every domain table has <code>tenant_id UUID NOT NULL</code> with
 row-level security policies</li>
-<li>Tenants are isolated; no cross-tenant queries except via Instance
-Admin role</li>
-<li>Each tenant has its own CM(s), campaigns, members</li>
-<li>A user belongs to one tenant (their account is provisioned with a
-<code>tenant_id</code> at signup)</li>
-<li>The Wahapedia cache and reference data (units, factions,
-supplements) are shared across all tenants on the instance
-(read-only)</li>
+<li>Wahapedia data, parser output schema, and reference data are shared
+across all tenants</li>
+<li>A user belongs to one tenant (per-<code>User</code> row); a CM can
+be CM of multiple campaigns within their tenant</li>
+<li>Instance Admin is the only cross-tenant role</li>
 </ul>
-<h3 id="wahapedia-integration">3.4 Wahapedia Integration</h3>
+<h3 id="wahapedia-integration">3.5 Wahapedia Integration</h3>
 <ul>
-<li>Nightly job fetches
-<code>https://wahapedia.ru/wh40k10ed/*.csv</code> and the export spec
+<li>Nightly BullMQ-delayed job refreshes
+<code>https://wahapedia.ru/wh40k10ed/*.csv</code> and export spec
 XLSX</li>
-<li>Diff against the cached version</li>
-<li>Updated data is republished to all tenants</li>
-<li>Per-tenant override is <strong>not</strong> supported (everyone sees
-the same Wahapedia snapshot)</li>
+<li>Cached, diff’d, republished to all tenants</li>
+<li>Per-tenant override not supported</li>
 </ul>
 <hr />
 <h2 id="shared-data-model">4. Shared Data Model</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// === Tenancy ===</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Tenant { id<span class="op">,</span> name<span class="op">,</span> slug<span class="op">,</span> createdAt<span class="op">,</span> settings }</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>User { id<span class="op">,</span> tenantId<span class="op">,</span> email<span class="op">,</span> displayName<span class="op">,</span> role<span class="op">,</span> createdAt }</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>Role <span class="op">=</span> <span class="st">&#39;instance_admin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;player&#39;</span> <span class="op">|</span> <span class="st">&#39;spectator&#39;</span>   <span class="co">// user can hold multiple</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Campaign ===</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> tenantId<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> settings<span class="op">,</span> createdAt }</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>CampaignMember { id<span class="op">,</span> campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId }</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (the key new model — see PRD-3 for state machine) ===</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>Roster { id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span> currentDraftId<span class="op">,</span> currentApprovedId }</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>RosterDraft { id<span class="op">,</span> rosterId<span class="op">,</span> sourceJsonBlobId<span class="op">,</span> status<span class="op">,</span> createdAt<span class="op">,</span> ackByPlayerAt }</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>RosterApproved { id<span class="op">,</span> rosterId<span class="op">,</span> sourceDraftId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId<span class="op">,</span> snapshot<span class="op">,</span> pointLimit }</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>RosterApprovalHistory { rosterId<span class="op">,</span> approvedId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId }   <span class="co">// chron. list</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade state (lives on RosterApproved snapshot) ===</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>CrusadeForceState { supplementId<span class="op">,</span> supplyLimit<span class="op">?,</span> logisticsPoints<span class="op">?,</span> battleTally<span class="op">,</span> victories<span class="op">,</span> requisitions<span class="op">,</span> <span class="op">...</span> }</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>Battle { id<span class="op">,</span> campaignId<span class="op">,</span> playerAId<span class="op">,</span> playerBId<span class="op">,</span> scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId<span class="op">,</span> approvedRosterIdA<span class="op">,</span> approvedRosterIdB }</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status }</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (the unified delta model — see PRD-4) ===</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility }</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">// === Rule compliance ===</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details<span class="op">,</span> refDraftId }</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval (see PRD-5) ===</span></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash }</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
-<p><strong>Identifiers</strong>: UUIDv7 (time-ordered) for efficient
-audit-log scans.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// === Tenancy ===</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>Tenant { id<span class="op">,</span> name<span class="op">,</span> slug<span class="op">,</span> createdAt<span class="op">,</span> settings }</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>User { id<span class="op">,</span> tenantId<span class="op">,</span> email<span class="op">,</span> displayName<span class="op">,</span> roles<span class="op">,</span> createdAt }</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>Roles <span class="op">=</span> <span class="st">&#39;instance_admin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;player&#39;</span> <span class="op">|</span> <span class="st">&#39;spectator&#39;</span>   <span class="co">// user can hold multiple</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Campaign ===</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> tenantId<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> settings<span class="op">,</span> createdAt }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>CampaignMember { id<span class="op">,</span> campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId }</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (state machine) ===</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>Roster { id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span> currentDraftId<span class="op">,</span> currentApprovedId }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>RosterDraft {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> rosterId<span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  sourceJsonBlobId<span class="op">,</span>                  <span class="co">// MinIO key</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  sourceParserVersion<span class="op">,</span>               <span class="co">// e.g. &#39;bs-roster-parser@1.0.0&#39;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  parserOutputJson<span class="op">,</span>                  <span class="co">// the RosterSummary.to_dict() snapshot</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  appParseOutputJson<span class="op">,</span>                <span class="co">// app-side extraction (Order of Battle, requisitions, honours)</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;parsing&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_review&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_approval&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  parseError<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>RosterApproved { id<span class="op">,</span> rosterId<span class="op">,</span> sourceDraftId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId<span class="op">,</span> snapshot<span class="op">,</span> pointLimit<span class="op">,</span> activeRosterApprovedId<span class="op">?</span> }</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>RosterApprovalHistory { rosterId<span class="op">,</span> approvedId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId }  <span class="co">// chron. list</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade state (lives on RosterApproved or on app-extracted draft data) ===</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>CrusadeForceState { supplementId<span class="op">,</span> supplyLimit<span class="op">?,</span> logisticsPoints<span class="op">?,</span> battleTally<span class="op">,</span> victories<span class="op">,</span> requisitions<span class="op">,</span> alignment<span class="op">?,</span> <span class="op">...</span> }</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>Battle {</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  playerAId<span class="op">,</span> playerBId<span class="op">,</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId<span class="op">,</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  approvedRosterIdA<span class="op">,</span> approvedRosterIdB  <span class="co">// pinned at battle time</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status }</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a><span class="co">// === Rule engine ===</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>RuleDefinition { id<span class="op">,</span> tenantId<span class="op">,</span> scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span> authorUserId<span class="op">?,</span> campaignId<span class="op">?,</span> ruleKey<span class="op">,</span> config<span class="op">,</span> enabled<span class="op">,</span> severity }</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> draftId<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details }</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (unified timeline) ===</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<p><strong>Identifiers</strong>: UUIDv7.</p>
 <hr />
 <h2 id="subsystem-prds">5. Subsystem PRDs</h2>
 <table>
 <colgroup>
-<col style="width: 13%" />
-<col style="width: 29%" />
-<col style="width: 56%" />
+<col style="width: 18%" />
+<col style="width: 40%" />
+<col style="width: 40%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>PRD</th>
 <th>Subsystem</th>
-<th>v2 changes from v1</th>
+<th>v3 change</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>PRD-1</td>
-<td>Instance Admin &amp; Crusade Master Administration</td>
-<td>Added instance admin role; multi-tenant model</td>
+<td>Instance Admin &amp; CM Administration</td>
+<td>Stack mentions Hapi; minor</td>
 </tr>
 <tr class="even">
 <td>PRD-2</td>
 <td>Player Sign-Up</td>
-<td>Tenant-bounded; invite-code scoped to tenant</td>
+<td>Stack mentions Hapi; minor</td>
 </tr>
 <tr class="odd">
 <td>PRD-3</td>
 <td>Roster Import, Approval, &amp; Rule Compliance</td>
-<td><strong>Major rewrite</strong> — state machine,
-diff-to-player-first, NR JSON only</td>
+<td><strong>Major rewrite</strong> — BullMQ pipeline, parser integration
+contract, configurable rule engine</td>
 </tr>
 <tr class="even">
 <td>PRD-4</td>
 <td>Events, Submissions, &amp; Timeline</td>
-<td><strong>Major rewrite</strong> — submission gating, timeline
-model</td>
+<td>Async pipeline acknowledged in event flow</td>
 </tr>
 <tr class="odd">
 <td>PRD-5</td>
 <td>Approval System</td>
-<td>Added <code>roster_approval</code> kind</td>
+<td>Now feeds from rule-check results from the worker</td>
 </tr>
 </tbody>
 </table>
@@ -544,7 +583,7 @@ model</td>
 <tbody>
 <tr class="odd">
 <td>Time-to-first-approved-roster</td>
-<td>Player joins → first RosterApproved exists</td>
+<td>Player joins → first RosterApproved</td>
 <td>&lt; 30 min</td>
 </tr>
 <tr class="even">
@@ -559,23 +598,28 @@ model</td>
 </tr>
 <tr class="even">
 <td>Rule-check catch rate</td>
-<td>Rule violations caught by automated engine vs. manual CM review</td>
+<td>Rule violations caught automatically vs. by CM manual review</td>
 <td>&gt; 95%</td>
 </tr>
 <tr class="odd">
-<td>Tenant density</td>
-<td>Campaigns per tenant at steady state</td>
-<td>&gt; 2</td>
+<td>Parse pipeline throughput</td>
+<td>Roster imports completed per minute per worker</td>
+<td>&gt; 30</td>
 </tr>
 <tr class="even">
-<td>Data freshness (Wahapedia)</td>
-<td>Time from Wahapedia update to reflected in app</td>
-<td>&lt; 24h</td>
+<td>Parse pipeline latency</td>
+<td>Player uploads → RosterDraft ready</td>
+<td>&lt; 30s p95</td>
 </tr>
 <tr class="odd">
-<td>Player retention</td>
-<td>% of players still filing updates at week 8</td>
-<td>&gt; 60%</td>
+<td>Data freshness (Wahapedia)</td>
+<td>Time from Wahapedia update to reflected</td>
+<td>&lt; 24h</td>
+</tr>
+<tr class="even">
+<td>Tenant density</td>
+<td>Campaigns per tenant</td>
+<td>&gt; 2</td>
 </tr>
 </tbody>
 </table>
@@ -585,15 +629,12 @@ model</td>
 <li>❌ Matched Play / non-Crusade 40K rules</li>
 <li>❌ Tournament pairings engine</li>
 <li>❌ Mobile native apps (web-only, mobile-responsive)</li>
-<li>❌ Real-time push (email + in-app only for MVP)</li>
-<li>❌ 9th-ed Crusade support</li>
-<li>❌ 11th-edition rules support</li>
-<li>❌ Other Games Workshop systems (Age of Sigmar, Kill Team, Horus
-Heresy)</li>
-<li>❌ NR URL fetch / scraping (JSON upload only, per user
-direction)</li>
-<li>❌ PDF generation as deliverable (HTML printable versions are
-fine)</li>
+<li>❌ Real-time push (email + in-app only)</li>
+<li>❌ 9th-ed Crusade support, 11th-edition rules</li>
+<li>❌ Other Games Workshop systems (AoS, Kill Team, HH)</li>
+<li>❌ NR URL fetch / scraping (JSON upload only)</li>
+<li>❌ Rewriting the Python parser in TypeScript (subprocess is the
+contract)</li>
 </ul>
 <hr />
 <h2 id="open-questions">8. Open Questions</h2>
@@ -612,21 +653,28 @@ fine)</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Frontend: Vue or React?</td>
-<td>Vue (better FastAPI integration story)</td>
-<td>TBD by frontend lead</td>
+<td>ORM choice (Prisma vs Drizzle vs Kysely)</td>
+<td>TBD by backend lead — Drizzle recommended for Hapi + strict
+typing</td>
+<td>TBD</td>
 </tr>
 <tr class="even">
-<td>Email provider for magic links</td>
-<td>SMTP via env vars; supports SES/Postmark/Resend</td>
+<td>Frontend: Vue 3 vs React?</td>
+<td>Vue 3 (better Hapi integration)</td>
 <td>TBD</td>
 </tr>
 <tr class="odd">
-<td>Multi-node deployment story</td>
-<td>Document Docker Swarm in v1.1</td>
+<td>Sidecar Python vs subprocess per job?</td>
+<td>Subprocess per job (simpler ops; promote to sidecar if latency
+demands)</td>
 <td>TBD</td>
 </tr>
 <tr class="even">
+<td>Multi-node deployment</td>
+<td>Single-node MVP; Docker Swarm docs in v1.1</td>
+<td>TBD</td>
+</tr>
+<tr class="odd">
 <td>Cross-tenant spectator campaigns</td>
 <td>Disabled by default; per-campaign toggle</td>
 <td>TBD</td>
@@ -634,7 +682,7 @@ fine)</li>
 </tbody>
 </table>
 <hr />
-<h2 id="v2-changes-from-v1">9. v2 Changes from v1</h2>
+<h2 id="v2-v3-changes">9. v2 → v3 Changes</h2>
 <table>
 <colgroup>
 <col style="width: 54%" />
@@ -648,51 +696,52 @@ fine)</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Added Vite + FastAPI + Postgres + MinIO stack</td>
-<td>Per user direction</td>
+<td>Backend: FastAPI (Python) → <strong><span class="citation" data-cites="hapi/hapi">@hapi/hapi</span> (Node 22,
+TypeScript)</strong></td>
+<td>Per user — “I strongly prefer a node/typescript system”</td>
 </tr>
 <tr class="even">
-<td>Added instance admin role</td>
-<td>Multi-tenant self-hosted model</td>
+<td>Added <strong>BullMQ + Redis</strong> for async pipeline</td>
+<td>Per user — “I think we use a queue to parse them. Maybe BullMQ”</td>
 </tr>
 <tr class="odd">
-<td>Removed 11th-ed references and “edition transition” concerns</td>
-<td><em>Crusade: Armageddon</em> is 10th-ed, June 2025; the 11th-ed
-launch box is a different product</td>
+<td>Added <strong>Python parser as subprocess</strong> called from Node
+worker</td>
+<td>Per user — existing <code>bs-roster-parser</code> library is Python,
+“can be adapted”</td>
 </tr>
 <tr class="even">
-<td>MVP = Armageddon only (was: Armageddon first, others follow)</td>
-<td>Per user direction</td>
+<td>Added <strong>configurable rule engine</strong> with CM-defined and
+crusade-defined rules</td>
+<td>Per user — “These rules need to also be configurable later by the cm
+and by crusade”</td>
 </tr>
 <tr class="odd">
-<td>Removed NR URL fetch path</td>
-<td>Per user direction (JSON upload only)</td>
-</tr>
-<tr class="even">
-<td>Renamed “Crusade Master Approval System” framing</td>
-<td>Now a unified approval system with multiple kinds</td>
-</tr>
-<tr class="odd">
-<td>Roster state machine: draft → pending → approved</td>
-<td>Per user direction (gating principle)</td>
-</tr>
-<tr class="even">
-<td>Event model reframed as timeline-of-state-transitions</td>
-<td>Per user direction (events = deltas)</td>
+<td>PRD-3 parse pipeline re-architected: upload → MinIO → BullMQ →
+worker → python → diff → rule-check → notify</td>
+<td>The async pipeline is the load-bearing flow</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="references">10. References</h2>
+<h2 id="v1-v2-changes-for-history">10. v1 → v2 changes (for
+history)</h2>
+<p>See CHANGELOG in README. Major: stack, multi-tenancy, MVP scope,
+roster state machine, submission gating, event timeline.</p>
+<hr />
+<h2 id="references">11. References</h2>
 <ul>
 <li><em>Crusade: Armageddon</em>, Games Workshop, June 2025, 128pp,
-10th-edition supplement (Lexicanum, Bell of Lost Souls, multiple
-retailers)</li>
+10th-edition supplement</li>
 <li>Wahapedia × 10th-ed Crusade data reference (companion research
 doc)</li>
+<li><code>bs-roster-parser</code> Python library (the user’s existing
+tool)</li>
 <li>New Recruit JSON export format (BattleScribe schema dialect)</li>
 <li>Administratum (Goonhammer) — closest commercial competitor</li>
 <li>ServoCrypt — closest open collaborative competitor</li>
+<li>Hapi docs: https://hapi.dev</li>
+<li>BullMQ docs: https://docs.bullmq.io</li>
 </ul>
 </body>
 </html>

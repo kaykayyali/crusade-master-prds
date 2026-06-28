@@ -152,6 +152,69 @@
     div.column{display: inline-block; vertical-align: top; width: 50%;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
 </head>
@@ -159,26 +222,25 @@
 <header id="title-block-header">
 <h1 class="title">prd-3-army-export-versioning</h1>
 </header>
-<h1 id="prd-3-roster-import-approval-rule-compliance-v2">PRD-3: Roster
-Import, Approval, &amp; Rule Compliance (v2)</h1>
+<h1 id="prd-3-roster-import-approval-rule-compliance-v3">PRD-3: Roster
+Import, Approval, &amp; Rule Compliance (v3)</h1>
 <blockquote>
-<p>The roster state machine, the diff surfaced to the player before
-approval, and the automated rule-compliance engine. The central piece of
-v2.</p>
+<p>BullMQ-driven async parsing pipeline, integration with the user’s
+<code>bs-roster-parser</code> Python library, and a configurable rule
+engine that CMs and crusade settings can extend.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
-<p>Let a player import their NR-shaped JSON, see exactly what changed
-vs. the last approved roster, and submit it for CM approval. The system
-runs a rule-compliance check on every import and surfaces violations to
-both the player and the CM.</p>
-<p><strong>Success metric</strong>: 90% of NR-shaped JSON imports parse
-and produce a draft without manual fixup. 85% of submitted drafts pass
-CM approval on first review (the rest are caught by either the player or
-the CM as rule violations).</p>
+<p>Get a player from “uploaded JSON” to “RosterDraft ready for review”
+in under 30 seconds. Surface the diff vs. the last approved roster to
+the player first. Run a configurable rule-check engine on every draft
+and gate submission by an approved roster.</p>
+<p><strong>Success metrics:</strong> - 90% of NR-shaped JSON imports
+parse and produce a draft without manual fixup - 85% of submitted drafts
+pass CM approval on first review - Parse pipeline p95 latency: &lt;
+30s</p>
 <hr />
-<h2 id="the-roster-state-machine-key-concept">2. The Roster State
-Machine (KEY CONCEPT)</h2>
+<h2 id="the-roster-state-machine">2. The Roster State Machine</h2>
 <pre><code>                        ┌──────────────────────┐
                         │   (no Roster yet)    │
                         └──────────┬───────────┘
@@ -186,198 +248,340 @@ Machine (KEY CONCEPT)</h2>
                                    ▼
                         ┌──────────────────────┐
                         │  RosterDraft         │
-                        │  status:             │
-                        │   &#39;pending_review&#39;   │   player sees diff
+                        │  status: &#39;parsing&#39;   │   (BullMQ job running)
                         └──────────┬───────────┘
+                          parse OK │  parse fail
+                                   ▼                  ▼
+                        ┌──────────────────────┐  ┌─────────────────────┐
+                        │  RosterDraft         │  │  RosterDraft         │
+                        │  status:             │  │  status: &#39;failed&#39;    │
+                        │  &#39;pending_review&#39;    │  │  with parse error    │
+                        └──────────┬───────────┘  └─────────────────────┘
                           ack by   │
                           player   │   player submits for approval
                                    ▼
                         ┌──────────────────────┐
                         │  RosterDraft         │
                         │  status:             │
-                        │   &#39;pending_approval&#39; │   CM reviews
+                        │  &#39;pending_approval&#39;  │
                         └──────────┬───────────┘
-                          approved │
-                          by CM    │   rejected
+                          approved │  rejected
+                          by CM    │
                                    ▼                  ▼
                         ┌──────────────────────┐  ┌─────────────────────┐
                         │  RosterApproved      │  │  RosterDraft         │
-                        │  (immutable)         │  │  status:             │
-                        │  becomes &quot;active&quot;    │  │   &#39;rejected&#39;         │
-                        └──────────┬───────────┘  │  with CM feedback    │
-                                   │              └─────────────────────┘
-                                   │
-                                   │  player uploads NEW JSON
-                                   ▼
-                        ┌──────────────────────┐
-                        │  RosterDraft (v2)    │   diff is vs. RosterApproved v1
-                        │  status:             │
-                        │   &#39;pending_review&#39;   │
-                        └──────────┘</code></pre>
+                        │  (immutable)         │  │  status: &#39;rejected&#39;  │
+                        │  becomes &quot;active&quot;    │  │  with CM feedback    │
+                        └──────────────────────┘  └─────────────────────┘</code></pre>
 <p><strong>Hard rule</strong>: a player can only file a battle update,
 requisition, or any other event (PRD-4) if the most recent state of
-their Roster is <code>RosterApproved</code>. The “active” Roster at any
-timestamp is the most recent RosterApproved up to that timestamp.</p>
+their Roster is <code>RosterApproved</code> at the relevant
+timestamp.</p>
 <hr />
-<h2 id="import-pipeline">3. Import Pipeline</h2>
-<pre class="mermaid"><code>flowchart LR
-    A[Player uploads .json file] --&gt; B[Blob stored in MinIO]
-    B --&gt; C[Background job parses]
-    C --&gt; D{Valid NR schema?}
-    D --&gt;|No| E[Show parse error with line + reason]
-    D --&gt;|Yes| F[Walk selections tree]
-    F --&gt; G[Match units to Wahapedia Datasheets.csv]
-    G --&gt; H{Match found?}
-    H --&gt;|No| I[Flag unit for manual review]
-    H --&gt;|Yes| J[Hydrate Unit records with wahapedia_id]
-    J --&gt; K[Compute diff vs. last RosterApproved]
-    K --&gt; L{RosterApproved exists?}
-    L --&gt;|No| M[All units flagged &#39;additions&#39;]
-    L --&gt;|Yes| N[Categorize each unit: added, removed, wargear-changed, unchanged]
-    N --&gt; O[Run rule-compliance check, see §4]
-    O --&gt; P[Create RosterDraft with status &#39;pending_review&#39;]
-    P --&gt; Q[Notify player: &#39;review your diff&#39;]</code></pre>
-<h3 id="json-validation">3.1 JSON Validation</h3>
-<p>Standard New Recruit / BattleScribe JSON schema. Validation
-rules:</p>
-<ul>
-<li>Root must have <code>roster</code> key</li>
-<li><code>roster.forces[0].selections</code> present</li>
-<li>Each unit has a unique <code>id</code> (BattleScribe entry id)</li>
-<li>Costs present and non-negative</li>
-<li>Nested entries (<code>Order of Battle</code>, faction upgrades)
-parsed into <code>CrusadeForceState</code> (separate from unit
-list)</li>
-</ul>
-<p>Validation errors include line numbers and human-readable reasons.
-Parse errors are fatal (no draft created).</p>
-<h3 id="wahapedia-cross-reference">3.2 Wahapedia Cross-Reference</h3>
-<p>Match strategy: 1. <strong>By entry id</strong> (preferred): NR
-preserves BattleScribe entry ids. Direct lookup in
-<code>Datasheets.csv</code>. 2. <strong>By name + faction
-fallback</strong>: fuzzy match within the player’s selected faction.
-Confidence &gt; 90% auto-accepts; 70-90% requires player confirmation;
-&lt; 70% flags for manual review.</p>
-<p>Unmatched units become <code>Unit.wahapia_id = null</code> and
-display a warning in the draft. They’re still importable (player can
-manually enter stats) but require CM override to be approved.</p>
-<h3 id="crusade-metadata">3.3 Crusade Metadata</h3>
-<p>NR exports may include Crusade-specific entries under
-<code>Order of Battle</code> (Supply Limit, Battle Tally, Victories,
-etc.). These are parsed into <code>CrusadeForceState</code> and shown in
-the draft but <strong>not</strong> auto-applied — they only become
-canonical when the Roster is approved. This is important because:</p>
-<ul>
-<li>If the player is wrong about their RP balance, the CM catches it at
-approval</li>
-<li>A re-import can show the player “your Supply Limit dropped from 2800
-to 2400 — did you spend LP?”</li>
-</ul>
+<h2 id="the-parser-integration-contract">3. The Parser Integration
+Contract</h2>
+<p>The user’s existing <code>bs-roster-parser</code> Python library does
+BattleScribe / New Recruit JSON parsing. We invoke it as a subprocess
+from a Node/TS worker. The contract is the boundary.</p>
+<h3 id="whats-in-scope-of-the-python-parser">3.1 What’s in scope of the
+Python parser</h3>
+<p><code>bs-roster-parser</code> produces a <code>RosterSummary</code>
+(per its README) with: - <code>roster_name</code>,
+<code>game_system</code>, <code>points_limit</code>,
+<code>faction</code> - <code>units[]</code> — each with
+<code>name</code>, <code>type</code>, <code>pts</code>, <code>cp</code>,
+<code>model_count</code>, <code>breakdown[]</code> (per-variant with
+weapons) - Aggregate totals: <code>total_pts</code>,
+<code>total_cp</code>, <code>unit_count</code>,
+<code>total_models</code></p>
+<h3 id="what-the-app-must-parse-separately-python-parser-gaps">3.2 What
+the app must parse separately (Python parser gaps)</h3>
+<p>The parser does <strong>not</strong> currently extract: - Crusade
+state from <code>Order of Battle</code> (Supply Limit, Battle Tally,
+Victories, alignment, etc.) - Requisitions already purchased (in the
+Nachmund example: Logistics Points, Surplus/Deficiency entries) -
+Unit-level honours / scars / rank / XP - Custom unit names that come
+from BSApp <code>customName</code> (parser handles this, but other
+NR-specific fields may not be)</p>
+<p>These are parsed by a <strong>TypeScript pass</strong> over the raw
+JSON (in the worker, after the Python parser returns). This pass is a
+separate module (<code>app-side-parser.ts</code>) and is testable
+independently of the Python subprocess.</p>
+<h3 id="the-contract">3.3 The contract</h3>
+<p><strong>Input</strong> (worker → Python subprocess): - Stdin: the raw
+roster JSON string - Or argv: <code>--file &lt;path&gt;</code> for large
+rosters (worker writes to a temp file)</p>
+<p><strong>Output</strong> (Python → worker stdout): - Single JSON
+object, schema = <code>RosterSummary.to_dict()</code> (already
+supported) - On parse error: non-zero exit code + stderr containing the
+error message</p>
+<p><strong>Invocation pattern</strong> (in the worker, pseudo-TS):</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { spawn } <span class="im">from</span> <span class="st">&#39;node:child_process&#39;</span><span class="op">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">parseRoster</span>(rawJson<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RosterSummary<span class="op">&gt;</span> {</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> <span class="bu">Promise</span>((resolve<span class="op">,</span> reject) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> proc <span class="op">=</span> <span class="fu">spawn</span>(<span class="st">&#39;python&#39;</span><span class="op">,</span> [<span class="st">&#39;-m&#39;</span><span class="op">,</span> <span class="st">&#39;bs_roster_parser&#39;</span>]<span class="op">,</span> {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      stdio<span class="op">:</span> [<span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span>]<span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stdout <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stderr <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdout</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stdout <span class="op">+=</span> d)<span class="op">;</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stderr</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stderr <span class="op">+=</span> d)<span class="op">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;close&#39;</span><span class="op">,</span> (code) <span class="kw">=&gt;</span> {</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (code <span class="op">!==</span> <span class="dv">0</span>) <span class="cf">return</span> <span class="fu">reject</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`parser exit </span><span class="sc">${</span>code<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>stderr<span class="sc">}</span><span class="vs">`</span>))<span class="op">;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">resolve</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(stdout))<span class="op">;</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">write</span>(rawJson)<span class="op">;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">end</span>()<span class="op">;</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The worker then runs <code>app-side-parser.ts</code> on the same raw
+JSON to fill the gaps, and merges the two outputs.</p>
+<h3 id="deployment">3.4 Deployment</h3>
+<p>The worker container must have: - Node 22 + the worker code - Python
+3.10+ in the same image - The <code>bs-roster-parser</code> package
+installed
+(<code>pip install git+https://git.damascusfront.net/kaykayyali/bs-roster-parser.git</code>)</p>
+<p>Or, alternatively, a separate Python image with the parser installed,
+called via HTTP from the worker. Subprocess is simpler; promote to
+sidecar if parse latency becomes a bottleneck.</p>
 <hr />
-<h2 id="rule-compliance-engine-the-referee">4. Rule Compliance Engine
-(THE REFEREE)</h2>
-<p>Every import runs a set of checks. Each check produces a
-<code>RuleCheck</code> record with
-<code>status: &#39;pass&#39; | &#39;warn&#39; | &#39;fail&#39;</code>.</p>
+<h2 id="the-bullmq-pipeline-detailed">4. The BullMQ Pipeline
+(DETAILED)</h2>
+<h3 id="job-types">4.1 Job types</h3>
 <table>
 <colgroup>
-<col style="width: 20%" />
+<col style="width: 16%" />
 <col style="width: 29%" />
-<col style="width: 50%" />
+<col style="width: 25%" />
+<col style="width: 29%" />
 </colgroup>
 <thead>
 <tr class="header">
-<th>Check</th>
-<th>Severity</th>
-<th>What it catches</th>
+<th>Job</th>
+<th>Trigger</th>
+<th>Inputs</th>
+<th>Outputs</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Point cap</td>
-<td>fail</td>
-<td>Total roster points &gt; <code>campaign.point_cap</code></td>
+<td><code>parse-job</code></td>
+<td>Player uploads JSON, or new draft from manual edit</td>
+<td><code>rosterId</code>, <code>draftId</code>, <code>blobId</code>
+(MinIO)</td>
+<td>Writes <code>RosterDraft.parserOutputJson</code> +
+<code>appParseOutputJson</code>; updates status</td>
 </tr>
 <tr class="even">
-<td>Faction lock</td>
-<td>fail</td>
-<td>Unit has a faction keyword not in the player’s selected faction</td>
+<td><code>diff-job</code></td>
+<td>After <code>parse-job</code> succeeds</td>
+<td><code>draftId</code></td>
+<td>Writes <code>Delta[]</code> records into the draft’s diff
+summary</td>
 </tr>
 <tr class="odd">
-<td>Unit cap (Crusade rules)</td>
+<td><code>rule-check-job</code></td>
+<td>After <code>diff-job</code> succeeds</td>
+<td><code>draftId</code></td>
+<td>Writes <code>RuleCheck[]</code> records; updates
+<code>RosterDraft.status</code></td>
+</tr>
+<tr class="even">
+<td><code>notification-job</code></td>
+<td>Status change requiring user-visible event</td>
+<td><code>userId</code>, <code>kind</code>, <code>payload</code></td>
+<td>Sends in-app toast + email</td>
+</tr>
+<tr class="odd">
+<td><code>wahapedia-refresh-job</code></td>
+<td>Nightly cron</td>
+<td>n/a</td>
+<td>Updates cached CSVs, emits <code>system.errata_applied</code> events
+for affected units</td>
+</tr>
+</tbody>
+</table>
+<h3 id="failure-handling">4.2 Failure handling</h3>
+<ul>
+<li>Each job has a max attempt count (default 3) with exponential
+backoff</li>
+<li>On final failure: <code>RosterDraft.status = &#39;failed&#39;</code>,
+<code>parseError</code> field populated, user notified with retry
+option</li>
+<li>The blob in MinIO is the source of truth — any job can be re-queued
+by the player (“retry import”) without re-uploading</li>
+</ul>
+<h3 id="throughput">4.3 Throughput</h3>
+<ul>
+<li>One worker process handles one parse at a time (Python subprocess is
+synchronous)</li>
+<li>For higher throughput, run multiple worker containers</li>
+<li>Backpressure: BullMQ concurrency limit per worker (default 4)
+prevents OOM</li>
+</ul>
+<hr />
+<h2 id="the-app-side-parser-typescript">5. The App-Side Parser
+(TypeScript)</h2>
+<p>Fills the gaps the Python parser leaves:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> AppParseOutput {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    supplement<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>             <span class="co">// e.g. &#39;Nachmund Gauntlet&#39;, &#39;Armageddon&#39;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    supplyLimit<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    logisticsPoints<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    battleTally<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    victories<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    alignment<span class="op">?:</span> <span class="st">&#39;guardians&#39;</span> <span class="op">|</span> <span class="st">&#39;despoilers&#39;</span> <span class="op">|</span> <span class="st">&#39;marauders&#39;</span><span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    requisitionsPurchased<span class="op">:</span> RequisitionRef[]<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  unitMetadata<span class="op">:</span> {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    [bsEntryId<span class="op">:</span> <span class="dt">string</span>]<span class="op">:</span> {</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      customName<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>      rank<span class="op">?:</span> <span class="st">&#39;Blooded&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-ready&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-hardened&#39;</span> <span class="op">|</span> <span class="st">&#39;Heroic&#39;</span> <span class="op">|</span> <span class="st">&#39;Legendary&#39;</span><span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>      xp<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>      honours<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>      scars<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  warnings<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>                  <span class="co">// e.g. &quot;Order of Battle node &#39;X&#39; not recognized&quot;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Implementation: walk the same
+<code>roster.forces[0].selections</code> tree that the Python parser
+walks, but focus on the <code>Order of Battle</code> subtree and the
+<code>unit.upgrades</code> tree (which holds honours/scars). This is a
+relatively shallow walk; no fancy recursion needed.</p>
+<hr />
+<h2 id="the-rule-engine-configurable">6. The Rule Engine
+(CONFIGURABLE)</h2>
+<h3 id="architecture">6.1 Architecture</h3>
+<p>A rule is a TypeScript module implementing this interface:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleDefinition {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                          <span class="co">// stable identifier</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                      <span class="co">// e.g. &#39;point-cap&#39;, &#39;faction-lock&#39;, &#39;unit-provenance&#39;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                         <span class="co">// display name</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  description<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                  <span class="co">// shown to player/CM</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  defaultConfig<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  configSchema<span class="op">?:</span> JSONSchema<span class="op">;</span>            <span class="co">// for CM UI to render config form</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  appliesTo<span class="op">:</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  evaluate<span class="op">:</span> (input<span class="op">:</span> RuleInput<span class="op">,</span> config<span class="op">:</span> RuleConfig) <span class="kw">=&gt;</span> RuleResult<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleInput {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  draft<span class="op">:</span> RosterDraft<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  previousApproved<span class="op">:</span> RosterApproved <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  campaign<span class="op">:</span> Campaign<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> CrusadeForceState<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  delta<span class="op">:</span> Delta[]<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleResult {</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">;</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  details<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span>                    <span class="co">// human-readable</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  context<span class="op">?:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span>       <span class="co">// for UI</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="built-in-rules-v1-ship-list">6.2 Built-in rules (v1 ship
+list)</h3>
+<table>
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 43%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Rule key</th>
+<th>Default severity</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>point-cap</code></td>
+<td>fail</td>
+<td>Roster total &gt; <code>campaign.point_cap</code></td>
+</tr>
+<tr class="even">
+<td><code>faction-lock</code></td>
+<td>fail</td>
+<td>Unit has a faction keyword not in player’s faction</td>
+</tr>
+<tr class="odd">
+<td><code>unit-cap-universal</code></td>
 <td>warn</td>
 <td>More than 3 of the same datasheet (universal Crusade rule)</td>
 </tr>
 <tr class="even">
-<td>Requisition provenance</td>
+<td><code>unit-provenance</code></td>
 <td>warn</td>
-<td>Unit in roster but not in any prior RosterApproved AND no
-<code>requisition_purchase</code> event since the prior approval</td>
+<td>Unit in roster not in prior RosterApproved AND no requisition event
+since</td>
 </tr>
 <tr class="odd">
-<td>Wargear legality</td>
+<td><code>wargear-legality</code></td>
 <td>warn</td>
-<td>Wargear option not present in the matching datasheet’s Wahapedia
-options</td>
+<td>Wargear option not in matching datasheet’s Wahapedia options</td>
 </tr>
 <tr class="even">
-<td>Legends unit</td>
+<td><code>legends-unit</code></td>
 <td>warn</td>
-<td>Unit flagged as Legend in Wahapedia (CMs can override per campaign
-setting)</td>
+<td>Unit flagged as Legend in Wahapedia</td>
 </tr>
 <tr class="odd">
-<td>Removed unit</td>
+<td><code>removed-unit</code></td>
 <td>warn</td>
-<td>Unit in prior RosterApproved but not in new draft (could be
-intentional; could be forgotten requisition)</td>
+<td>Unit in prior approved but not in new draft (could be
+intentional)</td>
 </tr>
 <tr class="even">
-<td>Honour / scar consistency</td>
+<td><code>honour-provenance</code></td>
 <td>warn</td>
-<td>Unit has a Battle Honour in the new draft that wasn’t earned via a
-prior approved battle event</td>
+<td>New honour in draft not earned via prior approved event</td>
 </tr>
 <tr class="odd">
-<td>XP / rank consistency</td>
+<td><code>xp-consistency</code></td>
 <td>fail</td>
-<td>Unit’s XP / rank in new draft doesn’t match what the prior battles
-would produce</td>
-</tr>
-<tr class="even">
-<td>Supply limit (Nachmund)</td>
-<td>fail</td>
-<td>Roster units + reinforcements &gt; Supply Limit <em>(deferred; MVP
-is Armageddon)</em></td>
-</tr>
-<tr class="odd">
-<td>Logistics points (Nachmund)</td>
-<td>warn</td>
-<td>Implied LP spend exceeds available <em>(deferred; MVP is
-Armageddon)</em></td>
+<td>Unit XP/rank in draft doesn’t match what prior events would
+produce</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Configurable per campaign</strong>: -
-<code>rule_compliance_mode</code>: <code>soft</code> (warn, player
-acknowledges) | <code>hard</code> (fail blocks draft submission) |
-<code>off</code> - Default: <code>soft</code> with <code>hard</code> on
-the two <code>fail</code>-severity checks (point cap, faction lock,
-XP/rank consistency)</p>
-<p><strong>Output of the engine</strong>: a list of
-<code>RuleCheck</code> records attached to the <code>RosterDraft</code>.
-Surfaced to: 1. The player when they view the draft (must explicitly
-acknowledge before submitting for approval) 2. The CM when they review
-the draft for approval (PRD-5)</p>
-<h3 id="acknowledgment-ux">4.1 Acknowledgment UX</h3>
-<p>If any check is <code>warn</code> or <code>fail</code>, the player
-sees a modal: - List of issues, each with: severity, what’s wrong, how
-to fix - “I understand, submit anyway” button (only enabled if no
-<code>fail</code>-severity issues, or the campaign is in
-<code>soft</code> mode) - “Cancel and re-export from NR” button
-(recommended path)</p>
+<h3 id="configurable-rules-per-cm-per-crusade">6.3 Configurable rules
+(per-CM, per-crusade)</h3>
+<p>A rule can be <strong>instantiated</strong> with custom config at
+three scopes: - <code>builtin</code> — system default, applies to all
+campaigns - <code>cm</code> — a CM defines it for one of their campaigns
+(e.g., “max 2 units of any one type”) - <code>crusade</code> — the
+campaign’s supplement defines it (e.g., Nachmund’s Logistics Points
+constraints)</p>
+<p>The user said: “These rules need to also be configurable later by the
+cm and by crusade.” So the data model must support: - A CM creating a
+new rule instance with a config - The campaign settings referencing rule
+instances to apply - A future crusade supplement shipping new built-in
+rules that auto-attach when a campaign is created with that
+supplement</p>
+<p><strong>Storage</strong> (PRD-0 shared model):</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>RuleDefinition {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  authorUserId<span class="op">?,</span>           <span class="co">// null for builtin</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">?,</span>             <span class="co">// null for builtin or system-wide cm rules</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">,</span>                 <span class="co">// matches a built-in ruleKey</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  config<span class="op">,</span>                  <span class="co">// JSON; merged with builtin defaults</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  enabled<span class="op">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  severity<span class="op">,</span>                <span class="co">// override default severity per-instance</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Evaluation order</strong>: builtin rules → crusade rules (if
+supplement ships them) → CM rules (per-campaign). The campaign’s
+<code>enabledRuleIds</code> list is the final gate; nothing outside the
+enabled set is evaluated.</p>
+<h3 id="ui-for-cm-rule-editing-v1.x">6.4 UI for CM rule editing
+(v1.x)</h3>
+<p>Out of MVP. For v1, the rule engine ships with a fixed set of
+built-in rules. CM-custom rules and a rule-builder UI are v1.x. The data
+model and engine support them from day one; only the UI is deferred.</p>
 <hr />
-<h2 id="diff-view-player-first">5. Diff View (Player-First)</h2>
+<h2 id="the-diff-player-first">7. The Diff (Player-First)</h2>
 <p>The diff is <strong>for the player, not just the CM</strong>. The
 player must explicitly review and acknowledge it before submitting for
 approval.</p>
@@ -411,8 +615,8 @@ approval.</p>
 </tr>
 <tr class="odd">
 <td>Honours/scars added</td>
-<td>Inline with reason “earned via Battle #X (approved YYYY-MM-DD)” or
-“unearned — will require CM override”</td>
+<td>Inline with reason “earned via Battle #X” or “unearned — CM override
+needed”</td>
 </tr>
 <tr class="even">
 <td>Stats changed (after Wahapedia refresh)</td>
@@ -420,61 +624,62 @@ approval.</p>
 </tr>
 </tbody>
 </table>
-<p>The diff is two layers: 1. <strong>Structural diff</strong>: units
-and wargear 2. <strong>Crusade diff</strong>: XP, ranks, honours, scars,
-requisitions, supply limit</p>
+<p>The diff is two layers: 1. <strong>Structural diff</strong> — units
+and wargear 2. <strong>Crusade diff</strong> — XP, ranks, honours,
+scars, requisitions, supply limit</p>
+<h3 id="diff-implementation">7.1 Diff implementation</h3>
+<p>The diff runs in the worker (TS) against two
+<code>RosterSummary</code> objects + the
+<code>AppParseOutput</code>:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">diffRosters</span>(prev<span class="op">:</span> RosterSummary <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> next<span class="op">:</span> RosterSummary<span class="op">,</span> prevApp<span class="op">:</span> AppParseOutput <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> nextApp<span class="op">:</span> AppParseOutput)<span class="op">:</span> Delta[] {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> deltas<span class="op">:</span> Delta[] <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... unit-level match by canonical name or entry id</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... wargear-level match per model variant</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... crusade state diff (RP, supply, honours, scars)</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> deltas<span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Key detail: unit matching across two rosters must handle: - Same
+unit, different number of models (e.g., 5 → 10 Intercessors) - Custom
+name changes - Entry-id changes (e.g., player re-imported a fresh NR
+list)</p>
+<p>Strategy: 1. <strong>By entry id</strong> (most reliable) 2.
+<strong>By canonical name + faction</strong> (fallback) 3. <strong>Flag
+unmatched</strong> as separate “added” / “removed” deltas</p>
 <hr />
-<h2 id="cm-approval">6. CM Approval</h2>
+<h2 id="cm-approval">8. CM Approval</h2>
 <p>When the player submits the draft (status:
 <code>pending_review</code> → <code>pending_approval</code>), it enters
 the CM’s approval inbox (PRD-5).</p>
 <p>CM sees: - The same diff the player saw - The full rule-check report
-- Player’s optional notes - The currently-active RosterApproved (if any)
-for context - A diff between the new draft and the currently-active
-approved (re-using §5)</p>
-<p>CM’s options: - <strong>Approve</strong>: creates a new
-RosterApproved, becomes active. The previous RosterApproved is retained
-in history. - <strong>Reject with feedback</strong>: draft goes back to
-<code>rejected</code> status with CM’s notes. Player can edit and
-resubmit. - <strong>Request changes</strong>: same as reject, but with
-structured change requests. - <strong>Override a specific rule</strong>:
-per campaign, CM can mark a <code>fail</code> as
-<code>pass_with_override</code> with a reason.</p>
-<p>Approval creates a <code>roster_approved</code> event (PRD-4) with a
-<code>Delta</code> capturing the change from the previous approved
-snapshot.</p>
+- Player’s optional notes - The currently-active RosterApproved for
+context - “Override &amp; approve” option for specific rule-check
+fails</p>
+<p>CM’s options: - <strong>Approve</strong> → creates
+<code>RosterApproved</code>, becomes active, emits
+<code>roster.approved</code> event - <strong>Reject with
+feedback</strong> → draft goes to <code>rejected</code>, player can edit
+and resubmit - <strong>Request changes</strong> → same as reject, with
+structured change requests - <strong>Override a specific rule</strong> →
+marks a <code>fail</code> as <code>pass_with_override</code> with a
+reason</p>
 <hr />
-<h2 id="rollback">7. Rollback</h2>
+<h2 id="rollback">9. Rollback</h2>
 <p>A CM can roll back a RosterApproval within a configurable window
-(default 7 days). Rollback: - Marks the RosterApproved as
-<code>superseded</code> - Re-activates the previous one - Emits a
-<code>roster_rolled_back</code> event - Inverts any deltas that were
-applied as a consequence (e.g., if a requisition was purchased in the
-rolled-back window and the new roster included that unit, the unit is
-removed)</p>
+(default 7 days). Rollback inverts the deltas that the rolled-back
+Roster introduced. Since the Timeline (PRD-4) is the source of truth,
+the rollback is just a new event in the timeline that says
+“RosterApproved X is superseded by Y.”</p>
 <p>For destructive approvals (rare, since approval is mostly additive),
 rollback requires typed confirmation.</p>
 <hr />
-<h2 id="cron-wahapedia-refresh">8. Cron: Wahapedia Refresh</h2>
-<p>Nightly job: 1. Fetch
-<code>https://wahapedia.ru/wh40k10ed/*.csv</code> and the export spec
-XLSX 2. Compute diff vs. cached 3. For each changed datasheet, find
-affected RosterApproved snapshots and re-resolve unit data 4. If a unit
-was deleted from Wahapedia, mark
-<code>Unit.wahapia_id = deprecated</code> and surface a banner 5. If a
-unit’s points changed, emit a <code>points_updated</code> system event
-per affected RosterApproved 6. Cache key includes edition; when 11th-ed
-data appears on Wahapedia, the cache rotates and 10th-ed is preserved
-under <code>wh40k10ed.*</code></p>
-<hr />
-<h2 id="user-flow-first-time-import">9. User Flow: First-Time
+<h2 id="user-flow-first-time-import">10. User Flow: First-Time
 Import</h2>
 <pre class="mermaid"><code>flowchart TD
     A[Player on campaign dashboard] --&gt; B[Click &#39;Import Roster&#39;]
     B --&gt; C[Upload .json file]
-    C --&gt; D[System parses + cross-refs Wahapedia]
-    D --&gt; E[Run rule-compliance engine]
-    E --&gt; F[Create RosterDraft &#39;pending_review&#39;]
+    C --&gt; D[Hapi: validate, store blob in MinIO, enqueue parse-job]
+    D --&gt; E[Worker: download blob, spawn python parser]
+    E --&gt; F[Worker: app-side parse, write RosterDraft.status=pending_review]
     F --&gt; G[Player sees diff + rule check results]
     G --&gt; H{Issues to resolve?}
     H --&gt;|Yes, blocking| I[Player goes back to NR, fixes, re-exports]
@@ -485,32 +690,36 @@ Import</h2>
     L --&gt; M{Approved?}
     M --&gt;|Yes| N[RosterApproved created, becomes active]
     M --&gt;|No| O[Rejected, player can edit and resubmit]
-    N --&gt; P[Player can now file battles]</code></pre>
+    N --&gt; P[Player can now file battles per PRD-4]</code></pre>
 <hr />
-<h2 id="out-of-scope">10. Out of Scope</h2>
+<h2 id="out-of-scope">11. Out of Scope</h2>
 <ul>
 <li>NR URL fetch / scraping</li>
 <li>Manual unit editing in the UI (JSON import is the canonical path;
-CMs have an override tool for emergency fixes per PRD-1)</li>
-<li>Multiple approval-required documents (e.g., a “list of changes” that
-needs separate sign-off)</li>
-<li>Auto-rollback if CM is also the submitter (CM-as-player already
-requires a co-CM per PRD-1)</li>
+CMs have an override tool per PRD-1)</li>
+<li>Rule builder UI for CMs (data model + engine ready; UI deferred to
+v1.x)</li>
+<li>Diff in real-time while player edits (diff runs at parse-job time
+only)</li>
 </ul>
 <hr />
-<h2 id="dependencies">11. Dependencies</h2>
+<h2 id="dependencies">12. Dependencies</h2>
 <ul>
 <li><strong>PRD-0</strong>: <code>Roster</code>,
 <code>RosterDraft</code>, <code>RosterApproved</code>,
-<code>CrusadeForceState</code>, <code>RuleCheck</code></li>
-<li><strong>PRD-4</strong>: every approval creates an event; timeline is
-the source of truth for what was active when</li>
-<li><strong>PRD-5</strong>: approval workflow is unified</li>
+<code>CrusadeForceState</code>, <code>RuleDefinition</code>,
+<code>RuleCheck</code></li>
+<li><strong>PRD-4</strong>: every approval creates an event</li>
+<li><strong>PRD-5</strong>: approval workflow consumes rule-check
+results</li>
+<li><strong><code>bs-roster-parser</code></strong> Python package: must
+be installed in the worker container</li>
+<li><strong>BullMQ + Redis</strong>: async job infrastructure</li>
 <li><strong>Wahapedia CSV cache</strong> (infra): nightly refresh,
 shared across tenants</li>
 </ul>
 <hr />
-<h2 id="success-metrics">12. Success Metrics</h2>
+<h2 id="success-metrics">13. Success Metrics</h2>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -524,30 +733,34 @@ shared across tenants</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>NR-shaped JSON import success rate (no manual fixup)</td>
-<td>&gt; 90%</td>
+<td>Parse pipeline p95 latency</td>
+<td>&lt; 30s</td>
 </tr>
 <tr class="even">
 <td>First-try approval rate</td>
 <td>&gt; 85%</td>
 </tr>
 <tr class="odd">
-<td>Rule-check catch rate (catches violations CM would otherwise catch
-manually)</td>
+<td>Rule-check catch rate</td>
 <td>&gt; 95%</td>
 </tr>
 <tr class="even">
-<td>Time from JSON upload to first RosterApproved</td>
-<td>&lt; 30 min median</td>
+<td>Wahapedia cross-ref match rate</td>
+<td>&gt; 95% (by entry id), &gt; 90% (by name)</td>
 </tr>
 <tr class="odd">
-<td>Wahapedia cross-ref match rate</td>
-<td>&gt; 95% (by entry id), &gt; 90% (by name fallback)</td>
+<td>Parse pipeline throughput</td>
+<td>&gt; 30 imports/min/worker</td>
+</tr>
+<tr class="even">
+<td>Retry-after-failure recovery rate</td>
+<td>&gt; 99% (i.e., the parser either succeeds first time or succeeds on
+retry)</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="edge-cases">13. Edge Cases</h2>
+<h2 id="edge-cases">14. Edge Cases</h2>
 <ol type="1">
 <li><strong>Two players share the same NR list URL</strong> (copy-paste
 mistake): system detects duplicate import blob and prompts to use the
@@ -558,16 +771,22 @@ Veterans”): stored as <code>Unit.customName</code>;
 <li><strong>Import with a Legends / Forge World unit</strong>: stored
 with <code>wahapedia_id = null</code>; rule engine flags
 <code>warn</code>; player acknowledges; CM approves with override.</li>
-<li><strong>Corrupt JSON</strong>: show “Could not parse file” with a
-“Send to support” link that emails the raw file (with user
-consent).</li>
+<li><strong>Corrupt JSON</strong>: parse fails,
+<code>RosterDraft.status = &#39;failed&#39;</code> with <code>parseError</code>.
+Player sees clear error, can re-upload.</li>
 <li><strong>Player imports during a pending approval</strong>: the new
 draft is staged separately; pending approval refers to the older draft.
-The CM’s approval workflow handles drift (PRD-5).</li>
+Drift handled by PRD-5.</li>
 <li><strong>CM switches the campaign’s <code>point_cap</code> after a
 roster is approved</strong>: existing approved rosters are retroactively
 checked; if a roster now exceeds the cap, the player is notified and
 must re-import.</li>
+<li><strong>Parser subprocess crashes (OOM, segfault)</strong>: BullMQ
+job fails; <code>RosterDraft.status = &#39;failed&#39;</code> with stderr in
+<code>parseError</code>; player can retry; no zombie state.</li>
+<li><strong>Worker runs on a different host than Hapi</strong>: BullMQ +
+MinIO + Postgres are all networked services; the worker is a separate
+container with no special affinity.</li>
 </ol>
 </body>
 </html>

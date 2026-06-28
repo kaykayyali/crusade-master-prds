@@ -1,56 +1,60 @@
-# PRD-4: Events, Submissions, & Timeline (v2)
+# PRD-4: Events, Submissions, & Timeline (v3)
 
 > Every meaningful state transition is an Event. The Timeline is the source of truth for "what was the army's state when this battle happened?" Submission gating ensures every event links to an approved roster.
+
+> v3: async pipeline acknowledged; the same event model applies, with a few new event kinds tied to the parse pipeline.
 
 ---
 
 ## 1. Goals
 
-Capture every state transition in a campaign as a structured, queryable Event. Build a Timeline that lets a CM (or a spectator) reconstruct any moment: "what was Player A's roster when they fought Player B in Battle 12, and what was the crusade state at that time?"
+Capture every state transition in a campaign as a structured, queryable Event. Build a Timeline that lets a CM (or a spectator) reconstruct any moment.
 
-**Success metric**: 100% of state transitions produce an event. Any approved RosterApproved timestamp is queryable as "show me the campaign state at that moment" with < 200ms response.
+**Success metric**: 100% of state transitions produce an event. Any timestamp is queryable as "show me the campaign state at that moment" with < 200ms response.
 
 ---
 
-## 2. Submission Gating (KEY INVARIANT)
+## 2. Submission Gating
 
 **No event of any kind can be filed unless the submitter's Roster is in `RosterApproved` state at the relevant timestamp.**
 
-This is the hard rule. Concretely:
+- Battle update for a battle on 2026-08-15 → submitter must have a `RosterApproved` whose `approvedAt <= 2026-08-15`
+- Requisition purchase today → submitter must have a `RosterApproved` whose `approvedAt <= now`
+- CM-triggered narrative event affecting a player → that player must have a `RosterApproved`
 
-- A player wants to file a post-battle update for a battle on 2026-08-15 → they must have a `RosterApproved` whose `approvedAt <= 2026-08-15`
-- A player wants to purchase a Requisition today → they must have a `RosterApproved` whose `approvedAt <= now`
-- A CM wants to trigger a narrative event affecting a player → that player must have a `RosterApproved`
-
-The gating check is a single SQL query on every form submit. The UI surfaces the gating check pre-submit ("You need an approved roster to file this; [import now]").
-
-**Why this matters**: without this invariant, the Timeline is meaningless because you can't trust that "this battle was fought with this army." The whole point of the app is to be the referee that makes the timeline trustworthy.
+The gating check is a single SQL query on every form submit. The UI surfaces the gating check pre-submit.
 
 ---
 
-## 3. Event Taxonomy
+## 3. Event Taxonomy (v3 additions)
 
 ```ts
 type EventKind =
-  // === Roster lifecycle ===
-  | 'roster.imported'                  // new RosterDraft created from JSON
+  // === Roster lifecycle (v3 async pipeline additions) ===
+  | 'roster.import_enqueued'            // BullMQ parse-job created
+  | 'roster.parse_started'
+  | 'roster.parse_succeeded'
+  | 'roster.parse_failed'              // parseError populated
+  | 'roster.app_parse_succeeded'        // app-side Order of Battle extraction
+  | 'roster.diff_computed'
+  | 'roster.rule_check_run'
   | 'roster.draft_reviewed'            // player opened the diff
   | 'roster.draft_acknowledged'        // player acknowledged rule check issues
   | 'roster.draft_submitted'           // player submitted for CM approval
-  | 'roster.approved'                  // CM approved → RosterApproved created
-  | 'roster.rejected'                  // CM rejected
-  | 'roster.override_applied'          // CM override on a rule check
-  | 'roster.rolled_back'               // within rollback window
+  | 'roster.approved'
+  | 'roster.rejected'
+  | 'roster.override_applied'
+  | 'roster.rolled_back'
   | 'roster.points_updated'            // system: Wahapedia errata
 
   // === Battle lifecycle ===
   | 'battle.scheduled'
-  | 'battle.filed'                     // post-battle update submitted
+  | 'battle.filed'
   | 'battle.approved'
   | 'battle.rejected'
   | 'battle.disputed'
 
-  // === Unit state changes (within a battle) ===
+  // === Unit state changes ===
   | 'unit.xp_gained'
   | 'unit.xp_lost'
   | 'unit.rank_promoted'
@@ -58,33 +62,33 @@ type EventKind =
   | 'unit.honour_lost'
   | 'unit.scar_gained'
   | 'unit.scar_removed'
-  | 'unit.destroyed'                   // OoA test failed and player chose remove
-  | 'unit.replaced'                    // via Requisition
+  | 'unit.destroyed'
+  | 'unit.replaced'
 
   // === Crusade state changes ===
   | 'crusade.rp_gained'
   | 'crusade.rp_spent'
   | 'crusade.req_purchased'
-  | 'crusade.supply_changed'           // Nachmund
-  | 'crusade.logistics_changed'        // Nachmund
-  | 'crusade.alignment_changed'        // Nachmund
+  | 'crusade.supply_changed'
+  | 'crusade.logistics_changed'
+  | 'crusade.alignment_changed'
 
   // === Rule compliance ===
-  | 'rule_check.run'                   // engine ran on a draft
-  | 'rule_check.warn_acknowledged'     // player acknowledged
-  | 'rule_check.fail_overridden'       // CM overrode
+  | 'rule_check.run'
+  | 'rule_check.warn_acknowledged'
+  | 'rule_check.fail_overridden'
 
   // === Campaign-wide ===
   | 'campaign.created'
   | 'campaign.settings_updated'
   | 'campaign.member_joined'
   | 'campaign.member_left'
-  | 'campaign.narrative_event'         // CM-triggered
+  | 'campaign.narrative_event'
   | 'campaign.archived'
 
   // === System ===
   | 'system.errata_applied'
-  | 'system.crusade_update'
+  | 'system.parse_pipeline_alert'      // v3: BullMQ queue health degraded
   ;
 
 interface Event {
@@ -99,7 +103,6 @@ interface Event {
   payload: Record<string, unknown>;
   delta: Delta | null;
   visibility: 'public' | 'campaign' | 'cm_only' | 'private';
-  // Submission-gating context: which RosterApproved was active when this event was created
   activeRosterApprovedId: string | null;
 }
 
@@ -115,7 +118,7 @@ interface Delta {
 }
 ```
 
-**Critical**: every Event has `activeRosterApprovedId`. This is the linchpin of the Timeline.
+Every Event has `activeRosterApprovedId` — the linchpin of the Timeline.
 
 ---
 
@@ -132,28 +135,25 @@ flowchart TD
     G --> H{Submit?}
     H -->|No| I[Save as draft]
     H -->|Yes| J[Create BattleUpdate status=pending]
-    J --> K[Create Events with activeRosterApprovedId set]
-    K --> L[Loser notified to review]
-    L --> M{Disagree?}
-    M -->|No| N[Auto-approve if no anomalies, else CM]
-    M -->|Yes| O[Mark BattleUpdate disputed]
-    N --> P[CM approves per PRD-5]
-    O --> P
-    P --> Q[Apply events, status=approved]
-    Q --> R[Both players' active Roster unchanged; events live in timeline]
+    J --> K[Enqueue approval-job]
+    K --> L[CM reviews per PRD-5]
+    L --> M{Approved?}
+    M -->|Yes| N[Apply events with activeRosterApprovedId set]
+    M -->|No| O[Rejected, submitter can edit + resubmit]
+    N --> P[Both players' active Roster unchanged; events live in timeline]
 ```
 
 ### 4.1 Battle Update Form
 
 Fields:
-- Opponent (auto-fill from campaign member list, must be valid `CampaignMember`)
+- Opponent (must be valid `CampaignMember`)
 - Mission played (free text or pick from a campaign-specific list)
 - Result (win / loss / draw)
 - Agendas attempted (checklist from active supplement)
 - Agendas achieved (subset)
 - Per-unit: XP gained (default 3)
 - Per-unit: OoA test result (if any units were destroyed)
-- Per-unit: honours / scars (from supplement-defined list, or custom with CM override)
+- Per-unit: honours / scars
 - Requisitions purchased
 - Free-text battle report (markdown)
 
@@ -163,35 +163,32 @@ Two paths:
 1. **Quick entry**: "Did any units gain XP? Lose XP? Get destroyed? Take OoA test?" — system applies universal rules
 2. **Manual entry**: select specific unit, edit rank, add honour, etc.
 
-System warnings on:
+System warnings:
 - Spending RP the player doesn't have
 - Applying a honour that doesn't exist in the active supplement
 - Changing unit XP / rank in ways that don't match what prior events would produce
 
 ### 4.3 Battle Approval
 
-When approved, the events are written. The **active RosterApproved is NOT modified** — the events live in the timeline as the source of truth for what happened. This is important because:
-
+When approved, events are written. The **active RosterApproved is NOT modified** — events live in the timeline as the source of truth. This is important because:
 - Multiple battles between roster approvals accumulate in the timeline
-- A future re-import (PRD-3) shows the player "your Castellan should be Battle-ready by now based on Battle 12"
+- A future re-import shows the player "your Castellan should be Battle-ready by now based on Battle 12"
 - The Timeline reconstructs state at any timestamp
 
 ---
 
 ## 5. Requisition Purchase
 
-Separate flow, but uses the same event + approval model.
-
 ```mermaid
 flowchart TD
     A[Player opens Requisition shop] --> B{Approved Roster?}
     B -->|No| C[Block: 'Need approved roster first']
-    B -->|Yes| D[Show available Requisitions for supplement + faction]
+    B -->|Yes| D[Show available Requisitions]
     D --> E[Player picks one, sees cost in RP]
     E --> F{Player has RP?}
     F -->|No| G[Block: 'Not enough RP']
     F -->|Yes| H[Player submits purchase request]
-    H --> I[Create ApprovalRequest, kind=requisition_purchase]
+    H --> I[Create ApprovalRequest]
     I --> J[CM approves per PRD-5]
     J --> K[Emit crusade.req_purchased event + unit.replaced if applicable]
 ```
@@ -210,32 +207,25 @@ flowchart LR
     D --> E[Render: roster view, crusade view, narrative log]
 ```
 
-**Performance**: this is a single SQL query against the events table, indexed on `occurredAt` and `(targetType, targetId)`. The implementation can materialize a `CampaignStateSnapshot` per timestamp on demand.
-
-**Use cases**:
-- "What was everyone's army on Day 30 of the campaign?"
-- "Did Player A have a Battle Honour at the time of Battle 12?"
-- Spectator view: "Show me the campaign arc from start to now"
+**Performance**: single SQL query against events table, indexed on `occurredAt` and `(targetType, targetId)`. Materialize `CampaignStateSnapshot` per timestamp on demand.
 
 ---
 
-## 7. CM-Triggered Narrative Events (v2 — simplified from v1)
+## 7. CM-Triggered Narrative Events
 
-CMs can trigger campaign-wide narrative events. Per v2 user direction, the focus is **enforcement and timeline** — not pure narrative flavor. So v2's narrative events are minimal:
+Minimal v3 — focus is enforcement, not narrative flavor.
 
 ```ts
 type NarrativeEventEffect =
   | { type: 'rp_grant', amount: number, filter?: FilterExpr }
   | { type: 'rp_deduct', amount: number, filter?: FilterExpr }
-  | { type: 'campaign_announcement', message: string };  // pure flavor, no state change
+  | { type: 'campaign_announcement', message: string };
 ```
 
-Armageddon-specific templates (v1 had a long list; v2 ships just these three):
-- **"Yarrick's Broadcast"** — all Imperial factions +1 RP (morale boost)
-- **"Ork WAAAGH!"** — all non-Ork factions −1 RP (campaign-wide upheaval)
+Armageddon templates:
+- **"Yarrick's Broadcast"** — all Imperial factions +1 RP
+- **"Ork WAAAGH!"** — all non-Ork factions −1 RP
 - **"Armageddon Stands"** — campaign announcement, no state change
-
-Future expansions: when more supplements are supported, additional templates ship with them.
 
 ---
 
@@ -247,13 +237,11 @@ A scrubbed, readable narrative view of the campaign, derived from public-visibil
 - Action summary (1-2 lines generated from event payload)
 - Optional battle report excerpt
 
-This is what spectators see and what CMs share on social media.
-
 ---
 
 ## 9. Out of Scope (PRD-4)
 
-- AI-generated battle reports from data (future)
+- AI-generated battle reports from data
 - Real-time push notifications (email + in-app only for MVP)
 - Battle result photo / video upload
 - Cross-campaign event correlation
@@ -266,6 +254,7 @@ This is what spectators see and what CMs share on social media.
 - **PRD-3**: roster approval state machine feeds into `activeRosterApprovedId`
 - **PRD-5**: approval pipeline triggers event application
 - **PRD-1**: CM dashboard surfaces the timeline + event feed
+- **BullMQ**: the approval-job for battle updates is async; same queue infrastructure as the parse pipeline
 
 ---
 

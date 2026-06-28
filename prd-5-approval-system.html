@@ -222,130 +222,117 @@
 <header id="title-block-header">
 <h1 class="title">prd-5-approval-system</h1>
 </header>
-<h1 id="prd-5-approval-system-v2">PRD-5: Approval System (v2)</h1>
+<h1 id="prd-5-approval-system-v3">PRD-5: Approval System (v3)</h1>
 <blockquote>
-<p>Unified approval pipeline. v2 adds <code>roster_approval</code> as a
-first-class kind and ties every approval to the rule-compliance engine
-output.</p>
+<p>Unified approval pipeline. v3: feeds from rule-check results emitted
+by the worker; first-class <code>roster_approval</code> kind.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
 <p>One consistent pipeline for every approval-worthy action. The CM’s
-inbox is the single view of “what needs my attention.” Approvals are
-fast, auditable, and reversible.</p>
+inbox is the single view of “what needs my attention.”</p>
 <p><strong>Success metric</strong>: 95% of approval decisions made
 within 24 hours of submission.</p>
 <hr />
 <h2 id="approval-routed-actions">2. Approval-Routed Actions</h2>
 <table>
 <colgroup>
-<col style="width: 12%" />
-<col style="width: 31%" />
-<col style="width: 15%" />
-<col style="width: 39%" />
+<col style="width: 21%" />
+<col style="width: 52%" />
+<col style="width: 26%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>Action</th>
 <th>Approval required?</th>
 <th>Approver</th>
-<th>Auto-apply on approval?</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Player imports RosterDraft</td>
-<td>No (player self-serves draft creation)</td>
-<td>n/a</td>
-<td>n/a — draft becomes <code>pending_review</code></td>
+<td>Player imports RosterDraft (upload JSON)</td>
+<td>No (player self-serves upload)</td>
+<td>n/a — draft becomes <code>parsing</code></td>
 </tr>
 <tr class="even">
-<td>Player acknowledges rule-check issues</td>
-<td>No (player self-serves acknowledgment)</td>
-<td>n/a</td>
-<td>n/a — draft becomes <code>pending_approval</code></td>
+<td>BullMQ parse completes</td>
+<td>No (system)</td>
+<td>n/a — draft becomes <code>pending_review</code></td>
 </tr>
 <tr class="odd">
+<td>Player acknowledges rule-check issues</td>
+<td>No (player self-serves)</td>
+<td>n/a — draft becomes <code>pending_approval</code></td>
+</tr>
+<tr class="even">
 <td><strong>Player submits RosterDraft for approval</strong></td>
 <td><strong>Yes</strong></td>
 <td>CM (or co-CM)</td>
-<td>Yes — creates RosterApproved</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Player files post-battle update</td>
 <td>Yes</td>
 <td>CM</td>
-<td>Yes — applies events</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Player files manual roster edit</td>
 <td>Yes</td>
 <td>CM</td>
-<td>Yes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Player purchases Requisition</td>
 <td>Yes</td>
 <td>CM</td>
-<td>Yes</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Player requests roster revert</td>
 <td>Yes</td>
 <td>CM</td>
-<td>Yes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Player switches faction mid-campaign</td>
 <td>Yes</td>
 <td>CM</td>
-<td>Yes</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>CM edits campaign settings</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
-<td>Yes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>CM triggers narrative event</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
-<td>Yes</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>CM rolls back a RosterApproval</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
-<td>Yes (with audit)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>CM overrides a rule check</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
-<td>Yes (with audit)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>CM grants or strips a co-CM role</td>
 <td>No (primary CM only)</td>
 <td>n/a</td>
-<td>Yes</td>
 </tr>
 </tbody>
 </table>
 <p>A campaign setting
 <code>auto_approve_routine_battle_updates: bool</code> (default false)
-lets a CM skip approval for battle updates that have no anomalies.
-Triggers that always require approval: - An OoA test failed - A
-Requisition was purchased - Honours / scars were added beyond the
-supplement’s universal list - Manual edits outside NR import - The
-submitter is a new account (&lt; 7 days) - The submitter is the CM
+auto-approves battle updates with no anomalies. Anomalies that always
+require approval: - OoA test failed - Requisition purchased - Honours /
+scars added beyond supplement’s universal list - Manual edits outside NR
+import - Submitter is a new account (&lt; 7 days) - Submitter is the CM
 themselves (auto-routes to co-CM or self-approves with audit if no
 co-CM)</p>
 <hr />
 <h2 id="approvalrequest-schema">3. ApprovalRequest Schema</h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> ApprovalKind <span class="op">=</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_approval&#39;</span>                <span class="co">// v2 new — most common kind</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_approval&#39;</span>                <span class="co">// most common</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;post_battle_update&#39;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_manual_edit&#39;</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_purchase&#39;</span></span>
@@ -360,20 +347,20 @@ co-CM)</p>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> ApprovalKind<span class="op">;</span></span>
 <span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  submittedByUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
 <span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  submittedAt<span class="op">:</span> timestamp<span class="op">;</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span>     <span class="co">// kind-specific</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span></span>
 <span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;changes_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;withdrawn&#39;</span><span class="op">;</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  reviewerUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>        <span class="co">// claimed by a CM</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  reviewerUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  decidedAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  decisionReason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>        <span class="co">// required if rejected or changes_requested</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                  <span class="co">// hash of current state for drift detection</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>               <span class="co">// v2 new — rule checks attached at submission</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// v2 new — gating context</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  decisionReason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                <span class="co">// drift detection</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>            <span class="co">// v3: rule checks attached at submission</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// gating context</span></span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
-<p><strong><code>roster_approval</code></strong> (v2 — most common):</p>
+<p><strong><code>roster_approval</code></strong>:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  rosterId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  draftId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>           <span class="co">// RosterDraft being approved</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  draftId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  previousApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  diffSummary<span class="op">:</span> { added<span class="op">:</span> int<span class="op">,</span> removed<span class="op">:</span> int<span class="op">,</span> wargearChanged<span class="op">:</span> int<span class="op">,</span> crusadeChanged<span class="op">:</span> int }<span class="op">,</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
@@ -384,14 +371,11 @@ co-CM)</p>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  battleId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  battleUpdateId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="op">...,</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span>     <span class="co">// any rule violations</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<p>Other kinds omitted for brevity.</p>
 <hr />
-<h2 id="roster-approval-specifics-v2">4. Roster Approval Specifics
-(v2)</h2>
-<p>The roster approval flow is the most-used approval. Special
-handling:</p>
+<h2 id="roster-approval-specifics">4. Roster Approval Specifics</h2>
+<p>The most-used approval. Special handling:</p>
 <ul>
 <li><strong>CM sees</strong>: the diff, the rule-check report, the
 player’s optional note, the previously active RosterApproved for
@@ -400,12 +384,11 @@ context</li>
 <ul>
 <li><strong>Approve</strong> → creates RosterApproved, becomes active,
 emits <code>roster.approved</code> event</li>
-<li><strong>Reject with feedback</strong> → RosterDraft goes to
-<code>rejected</code> with CM notes; player can edit and resubmit (which
-creates a new RosterDraft)</li>
+<li><strong>Reject with feedback</strong> → RosterDraft →
+<code>rejected</code> with CM notes; player can edit and resubmit
+(creates a new RosterDraft)</li>
 <li><strong>Request changes</strong> → same as reject, with structured
-change requests (e.g., “remove the Hellhound — you don’t have a
-Requisition for it”)</li>
+change requests</li>
 <li><strong>Override a specific rule</strong> → marks a
 <code>fail</code> as <code>pass_with_override</code> with a reason. The
 override is itself an event
@@ -414,7 +397,7 @@ override is itself an event
 </ul>
 <h3 id="approval-as-the-source-of-truth">4.1 Approval as the Source of
 Truth</h3>
-<p>When a roster is approved, the <code>RosterApproved.snapshot</code>
+<p>When a roster is approved, <code>RosterApproved.snapshot</code>
 becomes the canonical state. Future imports diff against this snapshot.
 The Timeline (PRD-4) records what was approved when.</p>
 <hr />
@@ -438,24 +421,21 @@ The Timeline (PRD-4) records what was approved when.</p>
 <ul>
 <li><strong>Filter</strong>: by campaign, kind, submitter, age</li>
 <li><strong>Sort</strong>: oldest first (FIFO)</li>
-<li><strong>Claim</strong>: optional — first CM to claim locks the
-request; another CM can override</li>
+<li><strong>Claim</strong>: optional</li>
 <li><strong>Bulk actions</strong>: only for
-<code>post_battle_update</code> with no anomalies (per §2 auto-approve
-rules)</li>
+<code>post_battle_update</code> with no anomalies</li>
 </ul>
 <h3 id="detail-view">5.1 Detail View</h3>
-<p>Clicking an item opens a side panel: - Full proposed change with
-deltas highlighted - Current state of affected entity - Submitter’s
-notes - Recent related events - For <code>roster_approval</code>: full
-diff view, rule check report - Quick-approve / quick-reject buttons -
-“Open in full view” link</p>
+<p>Side panel with: - Full proposed change with deltas highlighted -
+Current state of affected entity - Submitter’s notes - Recent related
+events - For <code>roster_approval</code>: full diff view, rule check
+report - Quick-approve / quick-reject buttons - “Open in full view”
+link</p>
 <hr />
 <h2 id="drift-detection">6. Drift Detection</h2>
 <p>If the current state has changed since submission (e.g., the player
 imported a new RosterDraft while approval was pending), the CM sees a
-“Drift detected” warning. Side-by-side: original proposal vs. recomputed
-proposal.</p>
+“Drift detected” warning. Side-by-side: original vs. recomputed.</p>
 <p>Options: - <strong>Re-validate</strong> — ask the player to resubmit
 - <strong>Force-apply</strong> — apply the original intent anyway, with
 audit log - <strong>Reject</strong> — reject as stale</p>
@@ -488,6 +468,8 @@ confirmation.</p>
 </tr>
 </tbody>
 </table>
+<p>Notifications fire through a BullMQ <code>notification-job</code> to
+avoid blocking the approval flow.</p>
 <hr />
 <h2 id="campaign-level-approval-policies">9. Campaign-Level Approval
 Policies</h2>
@@ -505,12 +487,11 @@ Policies</h2>
 <tbody>
 <tr class="odd">
 <td><code>auto_approve_routine_battle_updates: bool</code></td>
-<td>Auto-approve battle updates with no anomalies (triggers in §2)</td>
+<td>Auto-approve battle updates with no anomalies</td>
 </tr>
 <tr class="even">
 <td><code>auto_approve_first_roster: bool</code></td>
-<td>First RosterApproved for a player is auto-approved (skip CM for
-initial onboarding friction); default off</td>
+<td>First RosterApproved for a player is auto-approved; default off</td>
 </tr>
 <tr class="odd">
 <td><code>require_battle_report: bool</code></td>
@@ -519,7 +500,7 @@ on</td>
 </tr>
 <tr class="even">
 <td><code>lock_ooa_modifications: bool</code></td>
-<td>Players cannot manually edit OoA results; must be CM-overridden</td>
+<td>Players cannot manually edit OoA results</td>
 </tr>
 <tr class="odd">
 <td><code>require_two_approvals: bool</code></td>
@@ -531,26 +512,27 @@ on</td>
 </tr>
 </tbody>
 </table>
-<p>Each policy enforced at form-submit time and at apply time.</p>
 <hr />
 <h2 id="user-flow-roster-approval">10. User Flow: Roster Approval</h2>
 <pre class="mermaid"><code>flowchart TD
     A[Player submits RosterDraft] --&gt; B[Create ApprovalRequest kind=roster_approval]
-    B --&gt; C[CM sees in inbox]
-    C --&gt; D{Decision}
-    D --&gt;|Approve| E[Create RosterApproved]
-    D --&gt;|Reject| F[Status=rejected with feedback]
-    D --&gt;|Override + approve| G[Mark rule check as pass_with_override, then create RosterApproved]
-    E --&gt; H[Emit roster.approved event]
-    F --&gt; I[Player can edit + resubmit]
-    G --&gt; H
-    H --&gt; J[Player can now file battles per PRD-4]</code></pre>
+    B --&gt; C[Enqueue notification-job for CM]
+    C --&gt; D[CM sees in inbox]
+    D --&gt; E{Decision}
+    E --&gt;|Approve| F[Create RosterApproved]
+    E --&gt;|Reject| G[Status=rejected with feedback]
+    E --&gt;|Override + approve| H[Mark rule check as pass_with_override, then create RosterApproved]
+    F --&gt; I[Emit roster.approved event]
+    G --&gt; J[Player can edit + resubmit]
+    H --&gt; I
+    I --&gt; K[Enqueue notification-job for player]
+    K --&gt; L[Player can now file battles per PRD-4]</code></pre>
 <hr />
 <h2 id="out-of-scope">11. Out of Scope</h2>
 <ul>
 <li>Cross-campaign approvals</li>
 <li>AI auto-adjudication of disputes (future)</li>
-<li>Multi-CM voting / consensus requirements</li>
+<li>Multi-CM voting / consensus</li>
 </ul>
 <hr />
 <h2 id="dependencies">12. Dependencies</h2>
@@ -558,11 +540,12 @@ on</td>
 <li><strong>PRD-0</strong>: <code>ApprovalRequest</code>,
 <code>ApprovalAuditEntry</code>, <code>User</code> (CM role)</li>
 <li><strong>PRD-1</strong>: CM dashboard inbox link</li>
-<li><strong>PRD-3</strong>: roster approval is the primary approval
-kind; rule-check engine output feeds the inbox</li>
+<li><strong>PRD-3</strong>: roster approval is the primary kind;
+rule-check engine output feeds the inbox</li>
 <li><strong>PRD-4</strong>: every approved action produces events</li>
 <li><strong>Auth infra</strong>: CM role gating</li>
-<li><strong>Notifications infra</strong>: in-app + email</li>
+<li><strong>BullMQ</strong>: notification jobs are async</li>
+<li><strong>Notifications infra</strong>: SMTP for email</li>
 </ul>
 <hr />
 <h2 id="success-metrics">13. Success Metrics</h2>
@@ -606,19 +589,19 @@ kind; rule-check engine output feeds the inbox</li>
 <li><strong>Two CMs approve the same request simultaneously</strong>:
 optimistic locking via <code>contextHash</code>; second approver sees
 “already decided.”</li>
-<li><strong>Submitter withdraws while a CM has it claimed</strong>: CM
-sees “withdrawn” banner; request is closed.</li>
-<li><strong>Approval is for a now-deleted entity</strong> (e.g., the
-unit was destroyed in a later update): apply step fails transactionally;
-CM is shown an error and asked to reject.</li>
+<li><strong>Submitter withdraws while a CM has it claimed</strong>:
+request closed.</li>
+<li><strong>Approval is for a now-deleted entity</strong>: apply step
+fails transactionally; CM is shown an error and asked to reject.</li>
 <li><strong>CM is the submitter and no co-CM exists</strong>:
-self-approves with audit-log entry <code>self_approved: true</code>. The
-CM-as-player edge case from PRD-1.</li>
+self-approves with audit-log entry
+<code>self_approved: true</code>.</li>
 <li><strong>Submitter suspended mid-approval</strong>: pending requests
 auto-rejected with reason “submitter suspended.”</li>
 <li><strong>Active RosterApproved changes during approval</strong>:
-drift detected; CM is shown the new state; choose re-validate,
-force-apply, or reject.</li>
+drift detected; CM chooses re-validate, force-apply, or reject.</li>
+<li><strong>Notification email bounces</strong>: status queued for
+retry; if persistent, in-app notification only.</li>
 </ol>
 </body>
 </html>

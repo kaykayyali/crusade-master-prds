@@ -159,16 +159,15 @@
 <header id="title-block-header">
 <h1 class="title">prd-2-player-signup</h1>
 </header>
-<h1 id="prd-2-player-sign-up-v2">PRD-2: Player Sign-Up (v2)</h1>
+<h1 id="prd-2-player-sign-up-v3">PRD-2: Player Sign-Up (v3)</h1>
 <blockquote>
-<p>Player onboarding within a tenant: account creation, invite-code
-join, faction choice. Tightly scoped to the MVP.</p>
+<p>Player onboarding within a tenant. v3: stack updated to Hapi/Node/TS;
+minor content changes.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
 <p>Get a player from “I have an invite code” to “I’m a member of the
-campaign with no roster yet” in under 5 minutes, with no required manual
-data entry beyond email and display name.</p>
+campaign with no roster yet” in under 5 minutes.</p>
 <p><strong>Success metric</strong>: Median time from invite acceptance
 to first draft roster import attempt &lt; 5 minutes.</p>
 <hr />
@@ -183,7 +182,7 @@ searchable list of all 26 Wahapedia factions.</li>
 <li><strong>As a returning player</strong>, I can join additional
 campaigns in the same tenant via new invite codes.</li>
 <li><strong>As a player</strong>, I get a guided first-tour explaining
-the import → approval → play flow.</li>
+the async parse → review → approval flow.</li>
 </ul>
 <hr />
 <h2 id="feature-modules">3. Feature Modules</h2>
@@ -197,7 +196,7 @@ suffixes)</li>
 <li>Locale (en for MVP)</li>
 </ul>
 <p><strong>Tenant assignment</strong>: every new account is tied to one
-tenant. If a player needs to be in multiple tenants (rare), they sign up
+tenant. If a player needs to be in multiple tenants, they sign up
 separately in each — the email can be the same; the <code>User</code>
 rows are per-tenant.</p>
 <h3 id="join-via-invite">3.2 Join via Invite</h3>
@@ -227,8 +226,10 @@ redirected to “Import your first roster” CTA</p>
 <p>Modal flow shown on first login to a campaign:</p>
 <ol type="1">
 <li><strong>“Welcome”</strong> — 1-line pitch + “Got it”</li>
-<li><strong>“The flow”</strong> — import → diff → CM approval → approved
-→ play; 3-step explainer</li>
+<li><strong>“The flow”</strong> — upload → BullMQ parse (a few seconds)
+→ review the diff → CM approval → play</li>
+<li><strong>“Async expectations”</strong> — “imports take ~30 seconds;
+you’ll get a notification when ready”</li>
 <li><strong>“Roster gating”</strong> — “you can’t file battle results
 until your roster is CM-approved; submit early”</li>
 <li><strong>“Import your roster”</strong> — direct link to PRD-3
@@ -267,32 +268,29 @@ a new account in this tenant” link.</p>
 Cases</h3>
 <ul>
 <li><strong>Expired</strong>: CM controls expiry (default 14 days).
-Expired codes show clear message with “Request new invite from your CM”
-button (sends in-app notification to CM).</li>
+Clear message with “Request new invite from your CM” button.</li>
 <li><strong>Used (max-uses reached)</strong>: “This invite has been
-fully used. Ask your CM for a new one.”</li>
+fully used.”</li>
 <li><strong>Wrong tenant</strong>: “This invite is for a different
-campaign group. If you don’t have an account in that group, you’ll need
-to be invited there separately.”</li>
+campaign group.”</li>
 </ul>
 <hr />
 <h2 id="faction-picker-notes">5. Faction Picker Notes</h2>
 <ul>
-<li>26 Wahapedia factions are the canonical list.</li>
-<li>The picker <strong>does not</strong> filter to Armageddon-suitable
-factions (player choice is respected; the CM’s house rules determine
-what’s actually legal).</li>
+<li>26 Wahapedia factions are the canonical list</li>
+<li>Picker does <strong>not</strong> filter to Armageddon-suitable
+factions</li>
 <li>Soft highlight: factions with documented Armageddon content get a
-small badge.</li>
-<li>Legends / Forge World units are not in the picker (faction choice
-only); they’re added during NR import.</li>
+small badge</li>
+<li>Legends / Forge World units are not in the picker; they’re added
+during NR import</li>
 </ul>
 <hr />
 <h2 id="out-of-scope">6. Out of Scope</h2>
 <ul>
 <li>Cross-tenant single sign-on</li>
 <li>Player-to-player direct messaging</li>
-<li>Spectator sign-up (spectators are public-link-based, no auth)</li>
+<li>Spectator sign-up (spectators are public-link-based)</li>
 <li>OAuth login (env-var OIDC config possible but out of MVP)</li>
 </ul>
 <hr />
@@ -331,7 +329,7 @@ descriptions</li>
 </tr>
 <tr class="even">
 <td>Magic-link delivery success</td>
-<td>&gt; 99% (incl. retry on bounce)</td>
+<td>&gt; 99%</td>
 </tr>
 </tbody>
 </table>
@@ -342,17 +340,16 @@ descriptions</li>
 campaign</strong>: append <code>#2</code>, <code>#3</code> etc.
 Non-blocking warning.</li>
 <li><strong>Player joins, then CM removes them</strong>: player loses
-access; roster data retained for 30 days for dispute, then
-hard-deleted.</li>
+access; roster data retained for 30 days, then hard-deleted.</li>
 <li><strong>Player wants to switch faction mid-campaign</strong>:
 requires CM approval (per PRD-5), creates a new Roster while keeping the
 old one as a snapshot.</li>
 <li><strong>Email bounces</strong>: account marked
 <code>email_unverified</code>; cannot file battle updates until
-resolved. Banner on dashboard.</li>
+resolved.</li>
 <li><strong>Player tries to join with code from a tenant they have no
 account in</strong>: error with a “create an account in this tenant”
-link, which restarts the flow at <code>D</code>.</li>
+link.</li>
 </ol>
 </body>
 </html>

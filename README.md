@@ -1,48 +1,61 @@
 # Crusade Master App — PRDs
 
-Product requirements for a self-hosted, multi-tenant app that lets a Crusade Master administer and track players across Warhammer 40,000 Crusade campaigns, fed by New Recruit JSON exports and a rule-compliance engine.
+Product requirements for a self-hosted, multi-tenant app that lets a Crusade Master administer and track players across Warhammer 40,000 Crusade campaigns, fed by New Recruit JSON imports parsed by the user's existing `bs-roster-parser` Python library.
 
-**Stack**: Vite (frontend) + FastAPI (backend) + Postgres + MinIO. Self-hosted via Docker.
-**MVP scope**: *Crusade: Armageddon* (10th Edition, June 2025). The app is single-edition and single-supplement.
-**Companion data reference**: `wahapedia-crusade-10th-data-reference.md` (in this repo's companion research folder).
+**Stack** (v3): Vite + Vue 3 + TypeScript (frontend) · @hapi/hapi + Node 22 + TypeScript (backend) · PostgreSQL · MinIO · BullMQ + Redis (async pipeline) · Python 3.10+ parser subprocess · Docker Compose.
+**MVP scope**: *Crusade: Armageddon* (10th Edition, June 2025) only.
+**Companion data reference**: `wahapedia-crusade-10th-data-reference.md` (in the companion research folder; the app's data model assumes this content).
+**Parser source**: `bs-roster-parser` Python library (referenced from PRD-3, lives in its own repo).
 
 ## Documents
 
-| File | Subsystem | v2 |
-|------|-----------|----|
-| [prd-0-overview.md](./prd-0-overview.md) | App overview, shared data model, architecture, MVP scope | ✓ |
-| [prd-1-crusade-master-admin.md](./prd-1-crusade-master-admin.md) | Instance admin + CM dashboard, campaign lifecycle, member management | ✓ |
-| [prd-2-player-signup.md](./prd-2-player-signup.md) | Tenant-scoped account creation, invite-code join, faction picker, onboarding | ✓ |
-| [prd-3-army-export-versioning.md](./prd-3-army-export-versioning.md) | Roster state machine (draft → approved), diff-to-player-first, **rule-compliance engine** | ✓ |
-| [prd-4-events-deltas.md](./prd-4-events-deltas.md) | Event taxonomy, **submission gating**, Timeline reconstruction | ✓ |
-| [prd-5-approval-system.md](./prd-5-approval-system.md) | Unified approval pipeline, **`roster_approval` as primary kind** | ✓ |
+| File | Subsystem |
+|------|-----------|
+| [prd-0-overview.md](./prd-0-overview.md) | App overview, shared data model, architecture, MVP scope |
+| [prd-1-crusade-master-admin.md](./prd-1-crusade-master-admin.md) | Instance admin + CM dashboard, campaign lifecycle |
+| [prd-2-player-signup.md](./prd-2-player-signup.md) | Tenant-scoped account creation, invite-code join, faction picker |
+| [prd-3-army-export-versioning.md](./prd-3-army-export-versioning.md) | BullMQ pipeline, parser integration contract, configurable rule engine |
+| [prd-4-events-deltas.md](./prd-4-events-deltas.md) | Event taxonomy, submission gating, Timeline |
+| [prd-5-approval-system.md](./prd-5-approval-system.md) | Unified approval pipeline, `roster_approval` as primary kind |
 
 ## CHANGELOG
 
-### v2 (current)
+### v3 (current) — Hapi + BullMQ + parser subprocess
 
-Major rewrite incorporating locked design decisions from the user. Key changes:
+Major rewrite driven by the user's real stack and existing code:
 
-| Area | Before (v1) | After (v2) |
-|------|-------------|------------|
-| Tech stack | Stack-neutral assumptions (React/Postgres) | **Vite + FastAPI + Postgres + MinIO**, self-hosted Docker |
-| Tenancy | Implicit single-tenant | **Multi-tenant** with Postgres row-level security; instance admin role |
-| MVP | "Armageddon first, others follow" | **Armageddon only** for v1; schema-ready for others, not UI-ready |
-| Roster model | "Active version" per import | **State machine**: `RosterDraft` (pending_review → pending_approval) → `RosterApproved` (immutable, becomes active) |
-| Diff audience | CM-first | **Player-first** — the player reviews and acknowledges before submission |
-| NR ingestion | URL fetch + file upload + manual entry | **JSON file upload only** |
-| Event model | "Post-battle deltas + narrative events" | **Every state transition is an event; submission gating by approved roster; Timeline reconstruction** |
-| Approval system | Generic action approvals | **`roster_approval` is the primary kind**; rule-check engine output feeds the inbox |
-| Edition framing | "10th with 11th-ed migration concerns" | **10th-edition only, period.** (A prior version of the companion data reference incorrectly claimed *Crusade: Armageddon* was 11th-ed; that has been corrected.) |
+| Area | v2 | v3 |
+|------|----|----|
+| Backend | FastAPI (Python) | **@hapi/hapi** (Node 22, TypeScript) — "I strongly prefer a node/typescript system" |
+| Queue | None | **BullMQ + Redis** — "I think we use a queue to parse them" |
+| Parser | Conceptual (TS would do everything) | **Python subprocess** running user's `bs-roster-parser` library |
+| Rule engine | Built-in only | **Configurable** — builtin + CM-defined + crusade-defined, with ruleKey/severity/configSchema per instance. UI deferred to v1.x; data model + engine ship in v1. |
+| Roster pipeline | Synchronous | **Async**: Hapi → MinIO blob → BullMQ `parse-job` → worker spawns Python → `diff-job` → `rule-check-job` → notify |
+| PRD-3 surface | Generic | Now includes the exact parser contract (stdio JSON, exit codes, what the Python lib does and doesn't extract), and the app-side TS pass for the gaps |
 
-### v1 (initial draft)
+**Architectural change**: the load-bearing flow is now a 5-stage async pipeline. The Python parser handles the BattleScribe quirks; the TS app handles the diff + rules + persistence. They communicate via stdio JSON.
 
-First pass — generated from initial requirements. Superseded by v2.
+### v2 — Locked design
+
+| Area | v1 | v2 |
+|------|----|----|
+| Tech stack | Stack-neutral | Vite + FastAPI + Postgres + MinIO, Docker |
+| Tenancy | Single | Multi-tenant with RLS + instance admin |
+| MVP | "Armageddon first" | Armageddon only |
+| Roster model | Active version per import | State machine: `RosterDraft` → `RosterApproved` |
+| Diff audience | CM-first | Player-first |
+| Ingestion | URL + file + manual | JSON file only |
+| Events | Post-battle deltas | Every state transition is an event; submission gated by approved roster |
+| Approvals | Generic | `roster_approval` is the primary kind |
+
+### v1 — Initial draft
+
+First pass. Superseded.
+
+## How to read
+
+Start with **PRD-0** (overview) → **PRD-3** (the load-bearing piece — BullMQ pipeline, parser contract, rule engine) → **PRD-4** (events + submission gating). Then PRD-1, 2, 5 as supporting infrastructure.
 
 ## Status
 
 Drafts — pending review before implementation kickoff.
-
-## How to read
-
-If you're picking one PRD to start with: **PRD-0** (overview) → **PRD-3** (roster state machine) → **PRD-4** (events + submission gating). Those three are the load-bearing pieces; PRDs 1, 2, 5 are the supporting infrastructure.

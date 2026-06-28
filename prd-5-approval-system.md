@@ -1,12 +1,12 @@
-# PRD-5: Approval System (v2)
+# PRD-5: Approval System (v3)
 
-> Unified approval pipeline. v2 adds `roster_approval` as a first-class kind and ties every approval to the rule-compliance engine output.
+> Unified approval pipeline. v3: feeds from rule-check results emitted by the worker; first-class `roster_approval` kind.
 
 ---
 
 ## 1. Goals
 
-One consistent pipeline for every approval-worthy action. The CM's inbox is the single view of "what needs my attention." Approvals are fast, auditable, and reversible.
+One consistent pipeline for every approval-worthy action. The CM's inbox is the single view of "what needs my attention."
 
 **Success metric**: 95% of approval decisions made within 24 hours of submission.
 
@@ -14,29 +14,30 @@ One consistent pipeline for every approval-worthy action. The CM's inbox is the 
 
 ## 2. Approval-Routed Actions
 
-| Action | Approval required? | Approver | Auto-apply on approval? |
-|--------|--------------------|----------|-------------------------|
-| Player imports RosterDraft | No (player self-serves draft creation) | n/a | n/a — draft becomes `pending_review` |
-| Player acknowledges rule-check issues | No (player self-serves acknowledgment) | n/a | n/a — draft becomes `pending_approval` |
-| **Player submits RosterDraft for approval** | **Yes** | CM (or co-CM) | Yes — creates RosterApproved |
-| Player files post-battle update | Yes | CM | Yes — applies events |
-| Player files manual roster edit | Yes | CM | Yes |
-| Player purchases Requisition | Yes | CM | Yes |
-| Player requests roster revert | Yes | CM | Yes |
-| Player switches faction mid-campaign | Yes | CM | Yes |
-| CM edits campaign settings | No (CM is authority) | n/a | Yes |
-| CM triggers narrative event | No (CM is authority) | n/a | Yes |
-| CM rolls back a RosterApproval | No (CM is authority) | n/a | Yes (with audit) |
-| CM overrides a rule check | No (CM is authority) | n/a | Yes (with audit) |
-| CM grants or strips a co-CM role | No (primary CM only) | n/a | Yes |
+| Action | Approval required? | Approver |
+|--------|--------------------|----------|
+| Player imports RosterDraft (upload JSON) | No (player self-serves upload) | n/a — draft becomes `parsing` |
+| BullMQ parse completes | No (system) | n/a — draft becomes `pending_review` |
+| Player acknowledges rule-check issues | No (player self-serves) | n/a — draft becomes `pending_approval` |
+| **Player submits RosterDraft for approval** | **Yes** | CM (or co-CM) |
+| Player files post-battle update | Yes | CM |
+| Player files manual roster edit | Yes | CM |
+| Player purchases Requisition | Yes | CM |
+| Player requests roster revert | Yes | CM |
+| Player switches faction mid-campaign | Yes | CM |
+| CM edits campaign settings | No (CM is authority) | n/a |
+| CM triggers narrative event | No (CM is authority) | n/a |
+| CM rolls back a RosterApproval | No (CM is authority) | n/a |
+| CM overrides a rule check | No (CM is authority) | n/a |
+| CM grants or strips a co-CM role | No (primary CM only) | n/a |
 
-A campaign setting `auto_approve_routine_battle_updates: bool` (default false) lets a CM skip approval for battle updates that have no anomalies. Triggers that always require approval:
-- An OoA test failed
-- A Requisition was purchased
-- Honours / scars were added beyond the supplement's universal list
+A campaign setting `auto_approve_routine_battle_updates: bool` (default false) auto-approves battle updates with no anomalies. Anomalies that always require approval:
+- OoA test failed
+- Requisition purchased
+- Honours / scars added beyond supplement's universal list
 - Manual edits outside NR import
-- The submitter is a new account (< 7 days)
-- The submitter is the CM themselves (auto-routes to co-CM or self-approves with audit if no co-CM)
+- Submitter is a new account (< 7 days)
+- Submitter is the CM themselves (auto-routes to co-CM or self-approves with audit if no co-CM)
 
 ---
 
@@ -44,7 +45,7 @@ A campaign setting `auto_approve_routine_battle_updates: bool` (default false) l
 
 ```ts
 type ApprovalKind =
-  | 'roster_approval'                // v2 new — most common kind
+  | 'roster_approval'                // most common
   | 'post_battle_update'
   | 'roster_manual_edit'
   | 'requisition_purchase'
@@ -59,24 +60,24 @@ interface ApprovalRequest {
   kind: ApprovalKind;
   submittedByUserId: string;
   submittedAt: timestamp;
-  payload: Record<string, unknown>;     // kind-specific
+  payload: Record<string, unknown>;
   status: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'withdrawn';
-  reviewerUserId: string | null;        // claimed by a CM
+  reviewerUserId: string | null;
   decidedAt: timestamp | null;
-  decisionReason: string | null;        // required if rejected or changes_requested
-  contextHash: string;                  // hash of current state for drift detection
-  ruleCheckIds: string[];               // v2 new — rule checks attached at submission
-  activeRosterApprovedId: string | null; // v2 new — gating context
+  decisionReason: string | null;
+  contextHash: string;                // drift detection
+  ruleCheckIds: string[];            // v3: rule checks attached at submission
+  activeRosterApprovedId: string | null; // gating context
 }
 ```
 
 ### 3.1 Per-Kind Payloads
 
-**`roster_approval`** (v2 — most common):
+**`roster_approval`**:
 ```ts
 {
   rosterId: string,
-  draftId: string,           // RosterDraft being approved
+  draftId: string,
   previousApprovedId: string | null,
   diffSummary: { added: int, removed: int, wargearChanged: int, crusadeChanged: int },
   ruleCheckIds: string[],
@@ -90,28 +91,26 @@ interface ApprovalRequest {
   battleId: string,
   battleUpdateId: string,
   perUnitChanges: ...,
-  ruleCheckIds: string[],     // any rule violations
+  ruleCheckIds: string[],
 }
 ```
 
-Other kinds omitted for brevity.
-
 ---
 
-## 4. Roster Approval Specifics (v2)
+## 4. Roster Approval Specifics
 
-The roster approval flow is the most-used approval. Special handling:
+The most-used approval. Special handling:
 
 - **CM sees**: the diff, the rule-check report, the player's optional note, the previously active RosterApproved for context
 - **CM's options**:
   - **Approve** → creates RosterApproved, becomes active, emits `roster.approved` event
-  - **Reject with feedback** → RosterDraft goes to `rejected` with CM notes; player can edit and resubmit (which creates a new RosterDraft)
-  - **Request changes** → same as reject, with structured change requests (e.g., "remove the Hellhound — you don't have a Requisition for it")
+  - **Reject with feedback** → RosterDraft → `rejected` with CM notes; player can edit and resubmit (creates a new RosterDraft)
+  - **Request changes** → same as reject, with structured change requests
   - **Override a specific rule** → marks a `fail` as `pass_with_override` with a reason. The override is itself an event (`rule_check.fail_overridden`)
 
 ### 4.1 Approval as the Source of Truth
 
-When a roster is approved, the `RosterApproved.snapshot` becomes the canonical state. Future imports diff against this snapshot. The Timeline (PRD-4) records what was approved when.
+When a roster is approved, `RosterApproved.snapshot` becomes the canonical state. Future imports diff against this snapshot. The Timeline (PRD-4) records what was approved when.
 
 ---
 
@@ -138,12 +137,12 @@ When a roster is approved, the `RosterApproved.snapshot` becomes the canonical s
 
 - **Filter**: by campaign, kind, submitter, age
 - **Sort**: oldest first (FIFO)
-- **Claim**: optional — first CM to claim locks the request; another CM can override
-- **Bulk actions**: only for `post_battle_update` with no anomalies (per §2 auto-approve rules)
+- **Claim**: optional
+- **Bulk actions**: only for `post_battle_update` with no anomalies
 
 ### 5.1 Detail View
 
-Clicking an item opens a side panel:
+Side panel with:
 - Full proposed change with deltas highlighted
 - Current state of affected entity
 - Submitter's notes
@@ -156,7 +155,7 @@ Clicking an item opens a side panel:
 
 ## 6. Drift Detection
 
-If the current state has changed since submission (e.g., the player imported a new RosterDraft while approval was pending), the CM sees a "Drift detected" warning. Side-by-side: original proposal vs. recomputed proposal.
+If the current state has changed since submission (e.g., the player imported a new RosterDraft while approval was pending), the CM sees a "Drift detected" warning. Side-by-side: original vs. recomputed.
 
 Options:
 - **Re-validate** — ask the player to resubmit
@@ -182,20 +181,20 @@ When a submission's status changes, the submitter is notified:
 | In-app (toast + notifications list) | Yes |
 | Email | Yes |
 
+Notifications fire through a BullMQ `notification-job` to avoid blocking the approval flow.
+
 ---
 
 ## 9. Campaign-Level Approval Policies
 
 | Policy | Effect |
 |--------|--------|
-| `auto_approve_routine_battle_updates: bool` | Auto-approve battle updates with no anomalies (triggers in §2) |
-| `auto_approve_first_roster: bool` | First RosterApproved for a player is auto-approved (skip CM for initial onboarding friction); default off |
+| `auto_approve_routine_battle_updates: bool` | Auto-approve battle updates with no anomalies |
+| `auto_approve_first_roster: bool` | First RosterApproved for a player is auto-approved; default off |
 | `require_battle_report: bool` | Battle updates must include a markdown report ≥ 200 chars; default on |
-| `lock_ooa_modifications: bool` | Players cannot manually edit OoA results; must be CM-overridden |
+| `lock_ooa_modifications: bool` | Players cannot manually edit OoA results |
 | `require_two_approvals: bool` | Battle updates that destroy units need two CM approvals |
 | `override_window_days: int` | Days within which an approval can be rolled back; default 7 |
-
-Each policy enforced at form-submit time and at apply time.
 
 ---
 
@@ -204,15 +203,17 @@ Each policy enforced at form-submit time and at apply time.
 ```mermaid
 flowchart TD
     A[Player submits RosterDraft] --> B[Create ApprovalRequest kind=roster_approval]
-    B --> C[CM sees in inbox]
-    C --> D{Decision}
-    D -->|Approve| E[Create RosterApproved]
-    D -->|Reject| F[Status=rejected with feedback]
-    D -->|Override + approve| G[Mark rule check as pass_with_override, then create RosterApproved]
-    E --> H[Emit roster.approved event]
-    F --> I[Player can edit + resubmit]
-    G --> H
-    H --> J[Player can now file battles per PRD-4]
+    B --> C[Enqueue notification-job for CM]
+    C --> D[CM sees in inbox]
+    D --> E{Decision}
+    E -->|Approve| F[Create RosterApproved]
+    E -->|Reject| G[Status=rejected with feedback]
+    E -->|Override + approve| H[Mark rule check as pass_with_override, then create RosterApproved]
+    F --> I[Emit roster.approved event]
+    G --> J[Player can edit + resubmit]
+    H --> I
+    I --> K[Enqueue notification-job for player]
+    K --> L[Player can now file battles per PRD-4]
 ```
 
 ---
@@ -221,7 +222,7 @@ flowchart TD
 
 - Cross-campaign approvals
 - AI auto-adjudication of disputes (future)
-- Multi-CM voting / consensus requirements
+- Multi-CM voting / consensus
 
 ---
 
@@ -229,10 +230,11 @@ flowchart TD
 
 - **PRD-0**: `ApprovalRequest`, `ApprovalAuditEntry`, `User` (CM role)
 - **PRD-1**: CM dashboard inbox link
-- **PRD-3**: roster approval is the primary approval kind; rule-check engine output feeds the inbox
+- **PRD-3**: roster approval is the primary kind; rule-check engine output feeds the inbox
 - **PRD-4**: every approved action produces events
 - **Auth infra**: CM role gating
-- **Notifications infra**: in-app + email
+- **BullMQ**: notification jobs are async
+- **Notifications infra**: SMTP for email
 
 ---
 
@@ -252,8 +254,9 @@ flowchart TD
 ## 14. Edge Cases
 
 1. **Two CMs approve the same request simultaneously**: optimistic locking via `contextHash`; second approver sees "already decided."
-2. **Submitter withdraws while a CM has it claimed**: CM sees "withdrawn" banner; request is closed.
-3. **Approval is for a now-deleted entity** (e.g., the unit was destroyed in a later update): apply step fails transactionally; CM is shown an error and asked to reject.
-4. **CM is the submitter and no co-CM exists**: self-approves with audit-log entry `self_approved: true`. The CM-as-player edge case from PRD-1.
+2. **Submitter withdraws while a CM has it claimed**: request closed.
+3. **Approval is for a now-deleted entity**: apply step fails transactionally; CM is shown an error and asked to reject.
+4. **CM is the submitter and no co-CM exists**: self-approves with audit-log entry `self_approved: true`.
 5. **Submitter suspended mid-approval**: pending requests auto-rejected with reason "submitter suspended."
-6. **Active RosterApproved changes during approval**: drift detected; CM is shown the new state; choose re-validate, force-apply, or reject.
+6. **Active RosterApproved changes during approval**: drift detected; CM chooses re-validate, force-apply, or reject.
+7. **Notification email bounces**: status queued for retry; if persistent, in-app notification only.
