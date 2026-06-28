@@ -96,7 +96,57 @@ Validation runs at the very start of `parse-job`, before the blob is stored in M
 
 > "This doesn't look like a Crusade Force export. In New Recruit, use the 'Export Crusade Force' option from your Order of Battle screen."
 
-**Detection approach (v3.28 — awaiting reference files from the user):** the system looks for markers specific to a Crusade Force export. The user has offered to supply 2 known-good Crusade exports and 1 known non-Crusade export to develop a robust detection signature. Until then, this PRD documents the *contract* (validation is mandatory, error message is fixed) but not the *detection logic* (which markers to check). The detection logic will be added in a follow-up v3.28.x commit.
+**Detection logic (v3.28 — implemented and validated):** the worker checks three signals, in order of strength:
+
+1. **PRIMARY** — top-level force name is `"Crusade Force"`. New Recruit labels its Crusade Force exports this way; non-Crusade exports have `force.name === "Army Roster"` (e.g., the comp list).
+
+2. **SECONDARY** — presence of a sub-force named `"Crusade Army"` inside the main force. Crusade exports wrap the musterable subset in a sub-force with this exact name.
+
+3. **TERTIARY** — Crusade rank markers in selection names. Known markers: `Battle-ready`, `Battle-hardened`, `Heroic`, `Legendary` (and `Blooded` for Cadian Shock Troops). Suggestive but weak alone (could appear in custom narrative lists).
+
+**Decision matrix:**
+- Signal 1 OR 2 fires → **CRUSADE**
+- Signal 3 only fires → **UNCERTAIN** (the worker surfaces this to a human reviewer rather than auto-rejecting)
+- None fire → **NON_CRUSADE**
+
+**Validation against 4 reference files** (`validators/nr-exports/`):
+- `haan-crusade-10th.json` (T'au Empire, 10th ed) → crusade ✓
+- `cadian-67-crusade-10th.json` (Astra Militarum, 10th ed) → crusade ✓
+- `comp-list-non-crusade.json` (Astra Militarum comp list, 10th ed) → non_crusade ✓
+- `cadian-67th-legion-11th-ed.json` (Astra Militarum, 11th ed) → crusade ✓ (11th ed has the same structure as 10th)
+
+**Reference implementations:**
+- Python: `validators/is_crusade_force_export.py` (reference, used for local validation)
+- TypeScript: `validators/isCrusadeForceExport.ts` (the actual worker port)
+- Test fixtures: `validators/nr-exports/*.json`
+
+**11th edition compatibility:** the Cadian 67th Legion 11th ed reference file (provided by the user) shows the same structural shape as 10th edition — top-level force named `Crusade Force`, sub-force named `Crusade Army`, same rank markers. The detection logic works for both editions without modification. If a future edition changes the structure, the validator will return UNCERTAIN and a human reviewer can update the detection logic.
+
+**Worker integration (parse-job step 0):**
+```ts
+import { assertCrusadeForceExport, NON_CRUSADE_ERROR_MESSAGE } from './validators/isCrusadeForceExport';
+
+async function parseJob(blobId: string) {
+  const raw = await minIO.getObject(blobId);
+  let json: unknown;
+  try {
+    json = JSON.parse(raw.toString());
+  } catch (e) {
+    throw Object.assign(new Error('Invalid JSON'), { parseError: 'INVALID_JSON' });
+  }
+  try {
+    assertCrusadeForceExport(json);
+  } catch (e) {
+    if (e.parseError === 'NOT_CRUSADE_FORCE_EXPORT') {
+      throw e;  // surfaced to user with NON_CRUSADE_ERROR_MESSAGE
+    }
+    throw e;
+  }
+  // ... continue with parser subprocess invocation
+}
+```
+
+The validation runs **before the blob is stored in MinIO** so a bad upload never persists.
 
 **One NR Crusade Force export = one `CrusadeForceVersion` update.** The parser does not need to handle multiple lists in a single file.
 

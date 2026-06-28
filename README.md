@@ -19,10 +19,38 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 | [prd-5-approval-system.md](./prd-5-approval-system.md) | Unified approval pipeline, `roster_approval` as primary kind |
 | [prd-6-technical-architecture.md](./prd-6-technical-architecture.md) | Hapi API contract, OpenAPI/Swagger generation, drift detection |
 | [prd-7-testing-strategy.md](./prd-7-testing-strategy.md) | Test pyramid, dev/staging/prod environments, e2e API + UI, RLS verification |
+| [validators/](./validators/) | NR export validation: `is_crusade_force_export.py` (reference) + `isCrusadeForceExport.ts` (worker) + 4 reference JSON files |
 
 ## CHANGELOG
 
-### v3.28 (current) — Big changeset from review pass: data model overhaul, polling, retrospective view
+### v3.28.1 (current) — NR export detection logic implemented + reference files stored
+
+Per user-provided reference files (4 known NR exports), the PRD-3 §3.0 detection logic is now implemented and validated:
+
+**Files added:**
+- `validators/nr-exports/haan-crusade-10th.json` — known crusade shape, T'au Empire 10th ed
+- `validators/nr-exports/cadian-67-crusade-10th.json` — known crusade shape, Astra Militarum 10th ed
+- `validators/nr-exports/comp-list-non-crusade.json` — known non-crusade (matched-play comp list), Astra Militarum 10th ed
+- `validators/nr-exports/cadian-67th-legion-11th-ed.json` — known crusade shape, Astra Militarum **11th** ed (validates forward-compatibility)
+- `validators/is_crusade_force_export.py` — reference Python implementation
+- `validators/isCrusadeForceExport.ts` — TypeScript port for the worker
+
+**Detection signals (in order of strength):**
+1. PRIMARY: top-level force name is `"Crusade Force"`
+2. SECONDARY: sub-force named `"Crusade Army"` exists
+3. TERTIARY: Crusade rank markers (`Battle-ready`, `Battle-hardened`, `Heroic`, `Legendary`, `Blooded`)
+
+**Decision:** signals 1 OR 2 fire → CRUSADE; signal 3 only → UNCERTAIN (human review); none → NON_CRUSADE.
+
+**Validation results:**
+- haan-crusade-10th → crusade ✓
+- cadian-67-crusade-10th → crusade ✓
+- comp-list-non-crusade → non_crusade ✓
+- cadian-67th-legion-11th-ed → crusade ✓
+
+**11th edition note:** the 11th ed reference file has the same structural shape (force named `Crusade Force`, sub-force `Crusade Army`, same rank markers). Detection works for both editions. If a future edition changes the structure, the validator returns UNCERTAIN and a human reviewer updates the logic.
+
+### v3.28 — Big changeset from review pass: data model overhaul, polling, retrospective view
 
 Per a review changeset passed in by the user, this version applies 10 of 11 proposed changes (Change 1 was based on a misread of v3.26 — skipped).
 

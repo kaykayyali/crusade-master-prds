@@ -349,14 +349,73 @@ a user-facing message:</p>
 <p>“This doesn’t look like a Crusade Force export. In New Recruit, use
 the ‘Export Crusade Force’ option from your Order of Battle screen.”</p>
 </blockquote>
-<p><strong>Detection approach (v3.28 — awaiting reference files from the
-user):</strong> the system looks for markers specific to a Crusade Force
-export. The user has offered to supply 2 known-good Crusade exports and
-1 known non-Crusade export to develop a robust detection signature.
-Until then, this PRD documents the <em>contract</em> (validation is
-mandatory, error message is fixed) but not the <em>detection logic</em>
-(which markers to check). The detection logic will be added in a
-follow-up v3.28.x commit.</p>
+<p><strong>Detection logic (v3.28 — implemented and validated):</strong>
+the worker checks three signals, in order of strength:</p>
+<ol type="1">
+<li><p><strong>PRIMARY</strong> — top-level force name is
+<code>&quot;Crusade Force&quot;</code>. New Recruit labels its Crusade Force
+exports this way; non-Crusade exports have
+<code>force.name === &quot;Army Roster&quot;</code> (e.g., the comp
+list).</p></li>
+<li><p><strong>SECONDARY</strong> — presence of a sub-force named
+<code>&quot;Crusade Army&quot;</code> inside the main force. Crusade exports wrap
+the musterable subset in a sub-force with this exact name.</p></li>
+<li><p><strong>TERTIARY</strong> — Crusade rank markers in selection
+names. Known markers: <code>Battle-ready</code>,
+<code>Battle-hardened</code>, <code>Heroic</code>,
+<code>Legendary</code> (and <code>Blooded</code> for Cadian Shock
+Troops). Suggestive but weak alone (could appear in custom narrative
+lists).</p></li>
+</ol>
+<p><strong>Decision matrix:</strong> - Signal 1 OR 2 fires →
+<strong>CRUSADE</strong> - Signal 3 only fires →
+<strong>UNCERTAIN</strong> (the worker surfaces this to a human reviewer
+rather than auto-rejecting) - None fire →
+<strong>NON_CRUSADE</strong></p>
+<p><strong>Validation against 4 reference files</strong>
+(<code>validators/nr-exports/</code>): -
+<code>haan-crusade-10th.json</code> (T’au Empire, 10th ed) → crusade ✓ -
+<code>cadian-67-crusade-10th.json</code> (Astra Militarum, 10th ed) →
+crusade ✓ - <code>comp-list-non-crusade.json</code> (Astra Militarum
+comp list, 10th ed) → non_crusade ✓ -
+<code>cadian-67th-legion-11th-ed.json</code> (Astra Militarum, 11th ed)
+→ crusade ✓ (11th ed has the same structure as 10th)</p>
+<p><strong>Reference implementations:</strong> - Python:
+<code>validators/is_crusade_force_export.py</code> (reference, used for
+local validation) - TypeScript:
+<code>validators/isCrusadeForceExport.ts</code> (the actual worker port)
+- Test fixtures: <code>validators/nr-exports/*.json</code></p>
+<p><strong>11th edition compatibility:</strong> the Cadian 67th Legion
+11th ed reference file (provided by the user) shows the same structural
+shape as 10th edition — top-level force named
+<code>Crusade Force</code>, sub-force named <code>Crusade Army</code>,
+same rank markers. The detection logic works for both editions without
+modification. If a future edition changes the structure, the validator
+will return UNCERTAIN and a human reviewer can update the detection
+logic.</p>
+<p><strong>Worker integration (parse-job step 0):</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { assertCrusadeForceExport<span class="op">,</span> NON_CRUSADE_ERROR_MESSAGE } <span class="im">from</span> <span class="st">&#39;./validators/isCrusadeForceExport&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">parseJob</span>(blobId<span class="op">:</span> <span class="dt">string</span>) {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> raw <span class="op">=</span> <span class="cf">await</span> minIO<span class="op">.</span><span class="fu">getObject</span>(blobId)<span class="op">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">let</span> json<span class="op">:</span> <span class="dt">unknown</span><span class="op">;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    json <span class="op">=</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(raw<span class="op">.</span><span class="fu">toString</span>())<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (e) {</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">throw</span> <span class="bu">Object</span><span class="op">.</span><span class="fu">assign</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&#39;Invalid JSON&#39;</span>)<span class="op">,</span> { parseError<span class="op">:</span> <span class="st">&#39;INVALID_JSON&#39;</span> })<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">try</span> {</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">assertCrusadeForceExport</span>(json)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">catch</span> (e) {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (e<span class="op">.</span><span class="at">parseError</span> <span class="op">===</span> <span class="st">&#39;NOT_CRUSADE_FORCE_EXPORT&#39;</span>) {</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>      <span class="cf">throw</span> e<span class="op">;</span>  <span class="co">// surfaced to user with NON_CRUSADE_ERROR_MESSAGE</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">throw</span> e<span class="op">;</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... continue with parser subprocess invocation</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The validation runs <strong>before the blob is stored in
+MinIO</strong> so a bad upload never persists.</p>
 <p><strong>One NR Crusade Force export = one
 <code>CrusadeForceVersion</code> update.</strong> The parser does not
 need to handle multiple lists in a single file.</p>
@@ -408,25 +467,25 @@ object, schema = <code>RosterSummary.to_dict()</code> (already
 supported) - On parse error: non-zero exit code + stderr containing the
 error message</p>
 <p><strong>Invocation pattern</strong> (in the worker, pseudo-TS):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { spawn } <span class="im">from</span> <span class="st">&#39;node:child_process&#39;</span><span class="op">;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">parseRoster</span>(rawJson<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RosterSummary<span class="op">&gt;</span> {</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> <span class="bu">Promise</span>((resolve<span class="op">,</span> reject) <span class="kw">=&gt;</span> {</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> proc <span class="op">=</span> <span class="fu">spawn</span>(<span class="st">&#39;python&#39;</span><span class="op">,</span> [<span class="st">&#39;-m&#39;</span><span class="op">,</span> <span class="st">&#39;bs_roster_parser&#39;</span>]<span class="op">,</span> {</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      stdio<span class="op">:</span> [<span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span>]<span class="op">,</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stdout <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stderr <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdout</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stdout <span class="op">+=</span> d)<span class="op">;</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stderr</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stderr <span class="op">+=</span> d)<span class="op">;</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;close&#39;</span><span class="op">,</span> (code) <span class="kw">=&gt;</span> {</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (code <span class="op">!==</span> <span class="dv">0</span>) <span class="cf">return</span> <span class="fu">reject</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`parser exit </span><span class="sc">${</span>code<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>stderr<span class="sc">}</span><span class="vs">`</span>))<span class="op">;</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">resolve</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(stdout))<span class="op">;</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">write</span>(rawJson)<span class="op">;</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">end</span>()<span class="op">;</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { spawn } <span class="im">from</span> <span class="st">&#39;node:child_process&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">parseRoster</span>(rawJson<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> <span class="bu">Promise</span><span class="op">&lt;</span>RosterSummary<span class="op">&gt;</span> {</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">new</span> <span class="bu">Promise</span>((resolve<span class="op">,</span> reject) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> proc <span class="op">=</span> <span class="fu">spawn</span>(<span class="st">&#39;python&#39;</span><span class="op">,</span> [<span class="st">&#39;-m&#39;</span><span class="op">,</span> <span class="st">&#39;bs_roster_parser&#39;</span>]<span class="op">,</span> {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>      stdio<span class="op">:</span> [<span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span><span class="op">,</span> <span class="st">&#39;pipe&#39;</span>]<span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stdout <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">let</span> stderr <span class="op">=</span> <span class="st">&#39;&#39;</span><span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdout</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stdout <span class="op">+=</span> d)<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stderr</span><span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> (d) <span class="kw">=&gt;</span> stderr <span class="op">+=</span> d)<span class="op">;</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="fu">on</span>(<span class="st">&#39;close&#39;</span><span class="op">,</span> (code) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>      <span class="cf">if</span> (code <span class="op">!==</span> <span class="dv">0</span>) <span class="cf">return</span> <span class="fu">reject</span>(<span class="kw">new</span> <span class="bu">Error</span>(<span class="vs">`parser exit </span><span class="sc">${</span>code<span class="sc">}</span><span class="vs">: </span><span class="sc">${</span>stderr<span class="sc">}</span><span class="vs">`</span>))<span class="op">;</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">resolve</span>(<span class="bu">JSON</span><span class="op">.</span><span class="fu">parse</span>(stdout))<span class="op">;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">write</span>(rawJson)<span class="op">;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    proc<span class="op">.</span><span class="at">stdin</span><span class="op">.</span><span class="fu">end</span>()<span class="op">;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>The worker then runs <code>app-side-parser.ts</code> on the same raw
 JSON to fill the gaps, and merges the two outputs.</p>
 <h3 id="deployment">3.4 Deployment</h3>
@@ -516,27 +575,27 @@ prevents OOM</li>
 <h2 id="the-app-side-parser-typescript">5. The App-Side Parser
 (TypeScript)</h2>
 <p>Fills the gaps the Python parser leaves:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> AppParseOutput {</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> {</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    supplement<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>             <span class="co">// e.g. &#39;Nachmund Gauntlet&#39;, &#39;Armageddon&#39;</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    supplyLimit<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    logisticsPoints<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    battleTally<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    victories<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    alignment<span class="op">?:</span> <span class="st">&#39;guardians&#39;</span> <span class="op">|</span> <span class="st">&#39;despoilers&#39;</span> <span class="op">|</span> <span class="st">&#39;marauders&#39;</span><span class="op">;</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    requisitionsPurchased<span class="op">:</span> RequisitionRef[]<span class="op">;</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  unitMetadata<span class="op">:</span> {</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    [bsEntryId<span class="op">:</span> <span class="dt">string</span>]<span class="op">:</span> {</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>      customName<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      rank<span class="op">?:</span> <span class="st">&#39;Blooded&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-ready&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-hardened&#39;</span> <span class="op">|</span> <span class="st">&#39;Heroic&#39;</span> <span class="op">|</span> <span class="st">&#39;Legendary&#39;</span><span class="op">;</span></span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>      xp<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>      honours<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>      scars<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  warnings<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>                  <span class="co">// e.g. &quot;Order of Battle node &#39;X&#39; not recognized&quot;</span></span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> AppParseOutput {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    supplement<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>             <span class="co">// e.g. &#39;Nachmund Gauntlet&#39;, &#39;Armageddon&#39;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    supplyLimit<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    logisticsPoints<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    battleTally<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    victories<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    alignment<span class="op">?:</span> <span class="st">&#39;guardians&#39;</span> <span class="op">|</span> <span class="st">&#39;despoilers&#39;</span> <span class="op">|</span> <span class="st">&#39;marauders&#39;</span><span class="op">;</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    requisitionsPurchased<span class="op">:</span> RequisitionRef[]<span class="op">;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  unitMetadata<span class="op">:</span> {</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    [bsEntryId<span class="op">:</span> <span class="dt">string</span>]<span class="op">:</span> {</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      customName<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>      rank<span class="op">?:</span> <span class="st">&#39;Blooded&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-ready&#39;</span> <span class="op">|</span> <span class="st">&#39;Battle-hardened&#39;</span> <span class="op">|</span> <span class="st">&#39;Heroic&#39;</span> <span class="op">|</span> <span class="st">&#39;Legendary&#39;</span><span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>      xp<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>      honours<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>      scars<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  warnings<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>                  <span class="co">// e.g. &quot;Order of Battle node &#39;X&#39; not recognized&quot;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>Implementation: walk the same
 <code>roster.forces[0].selections</code> tree that the Python parser
 walks, but focus on the <code>Order of Battle</code> subtree and the
@@ -557,30 +616,30 @@ Recruit. This app never tries to be a rules adjudicator for unit
 data.</p>
 <h3 id="architecture">6.1 Architecture</h3>
 <p>A rule is a TypeScript module implementing this interface:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleDefinition {</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                          <span class="co">// stable identifier</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                      <span class="co">// e.g. &#39;point-cap&#39;, &#39;faction-lock&#39;, &#39;unit-provenance&#39;</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                         <span class="co">// display name</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  description<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                  <span class="co">// shown to player/CM</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  defaultConfig<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  configSchema<span class="op">?:</span> JSONSchema<span class="op">;</span>            <span class="co">// for CM UI to render config form</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  appliesTo<span class="op">:</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">;</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  evaluate<span class="op">:</span> (input<span class="op">:</span> RuleInput<span class="op">,</span> config<span class="op">:</span> RuleConfig) <span class="kw">=&gt;</span> RuleResult<span class="op">;</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleInput {</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  draft<span class="op">:</span> RosterDraft<span class="op">;</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  previousApproved<span class="op">:</span> RosterApproved <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  campaign<span class="op">:</span> Campaign<span class="op">;</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> CrusadeForceState<span class="op">;</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  delta<span class="op">:</span> Delta[]<span class="op">;</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleResult {</span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">;</span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  details<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span>                    <span class="co">// human-readable</span></span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  context<span class="op">?:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span>       <span class="co">// for UI</span></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleDefinition {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                          <span class="co">// stable identifier</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                      <span class="co">// e.g. &#39;point-cap&#39;, &#39;faction-lock&#39;, &#39;unit-provenance&#39;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                         <span class="co">// display name</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  description<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                  <span class="co">// shown to player/CM</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  defaultConfig<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  configSchema<span class="op">?:</span> JSONSchema<span class="op">;</span>            <span class="co">// for CM UI to render config form</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  appliesTo<span class="op">:</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  evaluate<span class="op">:</span> (input<span class="op">:</span> RuleInput<span class="op">,</span> config<span class="op">:</span> RuleConfig) <span class="kw">=&gt;</span> RuleResult<span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleInput {</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  draft<span class="op">:</span> RosterDraft<span class="op">;</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  previousApproved<span class="op">:</span> RosterApproved <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  campaign<span class="op">:</span> Campaign<span class="op">;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  crusadeState<span class="op">:</span> CrusadeForceState<span class="op">;</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>  delta<span class="op">:</span> Delta[]<span class="op">;</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleResult {</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">;</span></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  details<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span>                    <span class="co">// human-readable</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  context<span class="op">?:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">any</span><span class="op">&gt;;</span>       <span class="co">// for UI</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="built-in-rules-v1-ship-list">6.2 Built-in rules (v1 ship
 list)</h3>
 <p>All built-in rules are <strong>campaign-level only</strong> (per
@@ -674,17 +733,17 @@ instances to apply - A future crusade supplement shipping new built-in
 rules that auto-attach when a campaign is created with that
 supplement</p>
 <p><strong>Storage</strong> (PRD-0 shared model):</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>RuleDefinition {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  authorUserId<span class="op">?,</span>           <span class="co">// null for builtin</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">?,</span>             <span class="co">// null for builtin or system-wide cm rules</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">,</span>                 <span class="co">// matches a built-in ruleKey</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  config<span class="op">,</span>                  <span class="co">// JSON; merged with builtin defaults</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  enabled<span class="op">,</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  severity<span class="op">,</span>                <span class="co">// override default severity per-instance</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>RuleDefinition {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  authorUserId<span class="op">?,</span>           <span class="co">// null for builtin</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">?,</span>             <span class="co">// null for builtin or system-wide cm rules</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  ruleKey<span class="op">,</span>                 <span class="co">// matches a built-in ruleKey</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  config<span class="op">,</span>                  <span class="co">// JSON; merged with builtin defaults</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  enabled<span class="op">,</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  severity<span class="op">,</span>                <span class="co">// override default severity per-instance</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p><strong>Evaluation order</strong>: builtin rules → crusade rules (if
 supplement ships them) → CM rules (per-campaign). The campaign’s
 <code>enabledRuleIds</code> list is the final gate; nothing outside the
@@ -890,13 +949,13 @@ scars, requisitions, supply limit</p>
 <p>The diff runs in the worker (TS) against two
 <code>RosterSummary</code> objects + the
 <code>AppParseOutput</code>:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">diffRosters</span>(prev<span class="op">:</span> RosterSummary <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> next<span class="op">:</span> RosterSummary<span class="op">,</span> prevApp<span class="op">:</span> AppParseOutput <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> nextApp<span class="op">:</span> AppParseOutput)<span class="op">:</span> Delta[] {</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> deltas<span class="op">:</span> Delta[] <span class="op">=</span> []<span class="op">;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... unit-level match by canonical name or entry id</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... wargear-level match per model variant</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... crusade state diff (RP, supply, honours, scars)</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> deltas<span class="op">;</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">diffRosters</span>(prev<span class="op">:</span> RosterSummary <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> next<span class="op">:</span> RosterSummary<span class="op">,</span> prevApp<span class="op">:</span> AppParseOutput <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> nextApp<span class="op">:</span> AppParseOutput)<span class="op">:</span> Delta[] {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> deltas<span class="op">:</span> Delta[] <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... unit-level match by canonical name or entry id</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... wargear-level match per model variant</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... crusade state diff (RP, supply, honours, scars)</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> deltas<span class="op">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>Key detail: unit matching across two rosters must handle: - Same
 unit, different number of models (e.g., 5 → 10 Intercessors) - Custom
 name changes - Entry-id changes (e.g., player re-imported a fresh NR
