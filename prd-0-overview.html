@@ -561,13 +561,31 @@ XLSX</li>
 <span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
-<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId<span class="op">,</span> approvalSource }</span>
 <span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
-<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
-<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="co">// === History (computed once ApprovalRequest is approved) ===</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a><span class="co">// Every approved changeset generates HistoryEntry rows. Tombstoned (not</span></span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a><span class="co">// hard-deleted) when a rollback is approved. The grouping dimension is</span></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="co">// derived (multiple grouping strategies on the same data), but each</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a><span class="co">// entry has a single primary group for storage + indexing.</span></span>
+<span id="cb3-101"><a href="#cb3-101" aria-hidden="true" tabindex="-1"></a>HistoryEntry {</span>
+<span id="cb3-102"><a href="#cb3-102" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span></span>
+<span id="cb3-103"><a href="#cb3-103" aria-hidden="true" tabindex="-1"></a>  approvalRequestId<span class="op">,</span>                    <span class="co">// ties entry back to its approval (G5)</span></span>
+<span id="cb3-104"><a href="#cb3-104" aria-hidden="true" tabindex="-1"></a>  grouping<span class="op">,</span>                             <span class="co">// &#39;unit&#39; | &#39;roster_version&#39; | &#39;battle&#39; | &#39;requisition&#39; | &#39;state_field&#39;</span></span>
+<span id="cb3-105"><a href="#cb3-105" aria-hidden="true" tabindex="-1"></a>  groupKey<span class="op">,</span>                             <span class="co">// stable id within grouping (unitId, rosterApprovedId, battleId, etc.)</span></span>
+<span id="cb3-106"><a href="#cb3-106" aria-hidden="true" tabindex="-1"></a>  summary<span class="op">,</span>                              <span class="co">// human-readable 1-line (&quot;Cadian Castellan XP 5→8, +1 kill&quot;)</span></span>
+<span id="cb3-107"><a href="#cb3-107" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">,</span>                              <span class="co">// structured diff (per-grouping shape)</span></span>
+<span id="cb3-108"><a href="#cb3-108" aria-hidden="true" tabindex="-1"></a>  occurredAt<span class="op">,</span></span>
+<span id="cb3-109"><a href="#cb3-109" aria-hidden="true" tabindex="-1"></a>  tombstoned<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span>                  <span class="co">// true after rollback; hidden from timelines, kept in audit log</span></span>
+<span id="cb3-110"><a href="#cb3-110" aria-hidden="true" tabindex="-1"></a>  tombstonedByApprovalRequestId<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb3-111"><a href="#cb3-111" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-112"><a href="#cb3-112" aria-hidden="true" tabindex="-1"></a>HistoryEntryIndex { historyEntryId<span class="op">,</span> groupKey<span class="op">,</span> dimension }  <span class="co">// secondary indexes (e.g., unitId, battleId) for cross-grouping queries</span></span>
+<span id="cb3-113"><a href="#cb3-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-114"><a href="#cb3-114" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
+<span id="cb3-115"><a href="#cb3-115" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
+<span id="cb3-116"><a href="#cb3-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-117"><a href="#cb3-117" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb3-118"><a href="#cb3-118" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
 <p><strong>Identifiers</strong>: UUIDv7.</p>
 <hr />
 <h2 id="b.-design-principle-approval-gating-for-narrative-integrity">4b.

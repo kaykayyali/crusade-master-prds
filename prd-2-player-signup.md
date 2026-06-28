@@ -223,26 +223,37 @@ Sarah's success criteria for this app:
 
 **Edge case:** Sarah files a battle update referencing a roster that's been superseded. The system warns: "Your referenced roster is no longer your active roster (you uploaded a newer version 2 days ago). Update the reference, or proceed with the original?" Sarah can either pick the newer roster or confirm the older one — explicit user choice.
 
-### Flow 3: Buying a requisition
+### Flow 3: Requisitions — done in NR, shown as history
 
 **Trigger:** Sarah's Leman Russ was destroyed in a game. The OoA test failed; she chose to remove the unit. She wants to bring it back next week.
 
-**Why this matters:** Requisitions are the player's "spend RP to fix a thing" mechanic. The moment of purchase is the moment Sarah is asking the system "show me the impact, then let me commit." If the UI hides the impact, she gets surprised by the result and loses trust.
+**Why this matters:** Per PRD-0 §4b.2 and PRD-4 §7b.2, **requisitions are done in New Recruit**, not in this app's UI. Sarah marks the requisition in NR (spends RP, adds the unit, marks "Requisition: Replaced Destroyed Unit" on the unit's crusade card), exports JSON, and uploads to this app. The requisition shows up as a history entry — visible in Sarah's requisition history, on the unit's per-unit timeline, and on the campaign's narrative log.
 
-**UI requirements:**
+**What this app DOES surface (read-only display, sourced from NR):**
 
-- **Requisition shop is a tab on Sarah's roster view.** Lists the available requisitions for Armageddon + Astra Militarum, each with a 1-line description and the RP cost.
-- **The shop is empty if Sarah has no active RosterApproved.** The UI shows "You need an approved roster to buy requisitions" with a link to the roster page. (This is the submission-gating surface; Sarah sees the rule made visible.)
-- **Each requisition card has a "What this does" preview** that opens a tooltip or side panel with the delta: "Replace 1 destroyed unit of any type. Your available destroyed-unit slots: 1. Current RP: 3."
-- **The confirm button shows the cost in big type: "Confirm: Spend 3 RP to add 1 Leman Russ."** Sarah taps confirm.
-- **The requisition goes to the CM's inbox as a pending approval.** Sarah sees "Pending Mike's review" and an ETA based on Mike's recent approval times (median of last 10 approvals).
-- **When Mike approves, Sarah gets a notification** and the new unit appears in her roster. If Mike rejects, Sarah sees the reason and the RP is unspent.
+- **Requisition history view** — a tab on Sarah's roster page. Lists past requisitions with date, type, RP cost, the unit affected. Each row links to the per-unit timeline (G1 grouping).
+- **"What this does" preview at roster import time** — when Sarah uploads a new NR list, the diff view highlights the requisition: "Requisition: Replaced Destroyed Unit — Leman Russ added, -3 RP." The preview is informational; Sarah doesn't "buy" anything in our app.
+- **Per-requisition grouping in the campaign timeline (G4)** — the CM and Sarah can filter the campaign timeline to show only requisitions, which is useful for the "what did my army look like at any point in time" use case.
 
-**Critical moment:** The "what this does" preview. Requisitions have cascade effects — adding a unit might require a new requisition event AND a new unit node AND affect the point cap. The preview must show all of this. Sarah needs to know "if I buy this, here's the full list of changes."
+**What this app does NOT do for routine requisitions:**
 
-**Edge case:** Sarah doesn't have enough RP. The button is disabled; the cost is shown in red; hovering shows "You have 1 RP. This costs 3."
+- No "buy requisition" button. No RP deduction UI. No CM approval workflow for routine purchases.
+- The `requisition_purchase` `ApprovalRequest` kind (PRD-5 §3.2) is reserved for **CM-gifted or narrative-driven** requisitions — e.g., Mike grants Sarah a free Leman Russ replacement as a narrative reward at end-of-session. That kind of requisition goes through normal approval; routine player-bought ones don't.
 
-**Edge case:** Sarah buys a requisition, Mike approves, but the imported NR list she used doesn't have the corresponding unit slot. The system emits a `unit.replaced` event but the unit doesn't appear in her roster until she re-imports. Sarah sees: "Approved. Re-import your NR list to see the new unit in your roster." (Cascading re-import is the cost of the "JSON is the source of truth" model.)
+**Workflow:**
+
+1. Sarah plays a battle; her Leman Russ is destroyed.
+2. Sarah opens NR, marks the unit as destroyed, applies "Requisition: Replaced Destroyed Unit" (NR-side flow), adds the new Leman Russ to her list, marks the RP cost. NR's requisition mechanic handles the rest.
+3. Sarah exports NR JSON, uploads to this app.
+4. App parses the new roster, sees the new unit + the requisition marker, generates a `HistoryEntry` row (G4 grouping: per-requisition).
+5. The requisition history view shows it. The unit's per-unit timeline shows it. The campaign narrative log shows it.
+6. CM doesn't need to approve — this happened in NR, the app just displays it.
+
+**Critical moment:** When Sarah uploads the new NR list, the roster diff view should clearly call out the requisition so Sarah can verify "yes, that's the Leman Russ I bought in NR." Without that confirmation, Sarah might wonder if the upload caught the requisition correctly. The diff UI gets a "Requisitions in this upload" section that lists each requisition with its NR-derived details.
+
+**Edge case:** Sarah uploads a new NR list but the requisition marker isn't visible (e.g., NR's requisition field is in a position the parser doesn't extract yet). The diff UI shows: "This upload has a new Leman Russ but no requisition marker detected. If you applied a requisition in NR, double-check the export." Helps Sarah catch export mistakes before they pollute the history.
+
+**Edge case:** Sarah has a CM-gifted requisition (`requisition_purchase` approval) AND a routine NR-bought requisition in the same campaign. The history view shows both with different icons/badges so Sarah can distinguish "free gift from Mike" vs "bought in NR." The CM-gifted one has a CM note attached ("narrative reward for winning the Helsreach arc").
 
 ### Flow 4: Checking her timeline
 

@@ -20,7 +20,48 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.9 (current) — NR-as-source-of-truth + form schema pinning
+### v3.10 (current) — History, changeset groupings, rollback
+
+Three new architectural pieces:
+
+**1. History generation from approved changesets.**
+Per user: "Every approved changeset should generate history objects. Every tracked metric or detail needs to be able to be visualized as a timeline over the campaign."
+
+- **PRD-0 §4**: new `HistoryEntry` data model. Entries are generated only when an `ApprovalRequest` is approved (drafts and pending approvals do not generate history).
+- **PRD-4 §7b.1**: history generation rules. Cross-grouping indexes on `HistoryEntryIndex` so a single entry is queryable from multiple grouping dimensions.
+- **PRD-4 §7b.5**: worked example showing Sarah's Cadian Castellan across the campaign via three different grouping views.
+
+**2. Requisitions in NR (read-only history).**
+Per user: "Requisitions are done in new recruit. We parse it and show it as a history. The history is only computed once change set is approved."
+
+- **PRD-4 §7b.2**: requisitions are done in NR; this app parses and shows them as history. The `requisition_purchase` `ApprovalRequest` kind is reserved for CM-gifted / narrative-driven requisitions only.
+- **PRD-2 §6 Flow 3**: rewritten. No "buy requisition" button. Sarah's workflow is NR-side; the app displays the result. New "Requisitions in this upload" section in the diff view.
+- **PRD-5 §3.2**: `requisition_purchase` kind narrowed to "CM-gifted or narrative-driven."
+
+**3. Changeset groupings (proposed for user approval).**
+Per user: "Propose other groupings for me to approve." v1 ships G1–G6:
+
+| # | Grouping | Default for |
+|---|---|---|
+| G1 Per-Unit | All field changes to one unit within a single approval | Roster changes (per-unit timeline) |
+| G2 Per-Roster-Version | All changes from one NR import | Roster approvals |
+| G3 Per-Battle | All changes from one battle | Battle updates |
+| G4 Per-Requisition | RP cost + unit change from one requisition | Requisitions |
+| G5 Per-ApprovalRequest | All changes from one approval (broadest) | Always stored; ties history to its authorization |
+| G6 Per-State-Field | One field change = one entry (granular) | Base layer that G1–G5 group over |
+| G7 Per-Narrative-Arc | Manually-tagged arc | **Deferred to v2+** |
+
+Time-bucketed rollups (per-day, per-week, per-session) are computed on read from G3 + G4 — not stored separately.
+
+**4. Rollback (CM-approved).**
+Per user: "In the event that the roster update was bad, or the user changes their mind, they need to 'rollback' the roster version. This would be an action requiring CM approval."
+
+- **PRD-4 §7b.4**: rollback mechanics. New `roster_rollback` and `history_rollback` `ApprovalRequest` kinds. On approval, all linked `HistoryEntry` rows get `tombstoned = true` (hidden from timelines, retained in audit log). A compensating entry is created.
+- **PRD-5 §3.1**: payload schemas for `roster_rollback` (specific `RosterApproved`) and `history_rollback` (specific `HistoryEntry` ids).
+- **PRD-5 §3.2 routing**: rollback kinds require CM approval; CM-as-player rollback auto-approves per PRD-1 §5.
+- **PRD-4 §7b.4 cascading invalidation**: battle reports referencing a rolled-back roster surface a "rolled back" badge in the UI; the report itself remains approved (it was a real event).
+
+### v3.9 — NR-as-source-of-truth + form schema pinning
 
 Three architectural clarifications:
 

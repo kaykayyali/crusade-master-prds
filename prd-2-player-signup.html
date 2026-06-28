@@ -486,52 +486,80 @@ is no longer your active roster (you uploaded a newer version 2 days
 ago). Update the reference, or proceed with the original?” Sarah can
 either pick the newer roster or confirm the older one — explicit user
 choice.</p>
-<h3 id="flow-3-buying-a-requisition">Flow 3: Buying a requisition</h3>
+<h3 id="flow-3-requisitions-done-in-nr-shown-as-history">Flow 3:
+Requisitions — done in NR, shown as history</h3>
 <p><strong>Trigger:</strong> Sarah’s Leman Russ was destroyed in a game.
 The OoA test failed; she chose to remove the unit. She wants to bring it
 back next week.</p>
-<p><strong>Why this matters:</strong> Requisitions are the player’s
-“spend RP to fix a thing” mechanic. The moment of purchase is the moment
-Sarah is asking the system “show me the impact, then let me commit.” If
-the UI hides the impact, she gets surprised by the result and loses
-trust.</p>
-<p><strong>UI requirements:</strong></p>
+<p><strong>Why this matters:</strong> Per PRD-0 §4b.2 and PRD-4 §7b.2,
+<strong>requisitions are done in New Recruit</strong>, not in this app’s
+UI. Sarah marks the requisition in NR (spends RP, adds the unit, marks
+“Requisition: Replaced Destroyed Unit” on the unit’s crusade card),
+exports JSON, and uploads to this app. The requisition shows up as a
+history entry — visible in Sarah’s requisition history, on the unit’s
+per-unit timeline, and on the campaign’s narrative log.</p>
+<p><strong>What this app DOES surface (read-only display, sourced from
+NR):</strong></p>
 <ul>
-<li><strong>Requisition shop is a tab on Sarah’s roster view.</strong>
-Lists the available requisitions for Armageddon + Astra Militarum, each
-with a 1-line description and the RP cost.</li>
-<li><strong>The shop is empty if Sarah has no active
-RosterApproved.</strong> The UI shows “You need an approved roster to
-buy requisitions” with a link to the roster page. (This is the
-submission-gating surface; Sarah sees the rule made visible.)</li>
-<li><strong>Each requisition card has a “What this does”
-preview</strong> that opens a tooltip or side panel with the delta:
-“Replace 1 destroyed unit of any type. Your available destroyed-unit
-slots: 1. Current RP: 3.”</li>
-<li><strong>The confirm button shows the cost in big type: “Confirm:
-Spend 3 RP to add 1 Leman Russ.”</strong> Sarah taps confirm.</li>
-<li><strong>The requisition goes to the CM’s inbox as a pending
-approval.</strong> Sarah sees “Pending Mike’s review” and an ETA based
-on Mike’s recent approval times (median of last 10 approvals).</li>
-<li><strong>When Mike approves, Sarah gets a notification</strong> and
-the new unit appears in her roster. If Mike rejects, Sarah sees the
-reason and the RP is unspent.</li>
+<li><strong>Requisition history view</strong> — a tab on Sarah’s roster
+page. Lists past requisitions with date, type, RP cost, the unit
+affected. Each row links to the per-unit timeline (G1 grouping).</li>
+<li><strong>“What this does” preview at roster import time</strong> —
+when Sarah uploads a new NR list, the diff view highlights the
+requisition: “Requisition: Replaced Destroyed Unit — Leman Russ added,
+-3 RP.” The preview is informational; Sarah doesn’t “buy” anything in
+our app.</li>
+<li><strong>Per-requisition grouping in the campaign timeline
+(G4)</strong> — the CM and Sarah can filter the campaign timeline to
+show only requisitions, which is useful for the “what did my army look
+like at any point in time” use case.</li>
 </ul>
-<p><strong>Critical moment:</strong> The “what this does” preview.
-Requisitions have cascade effects — adding a unit might require a new
-requisition event AND a new unit node AND affect the point cap. The
-preview must show all of this. Sarah needs to know “if I buy this,
-here’s the full list of changes.”</p>
-<p><strong>Edge case:</strong> Sarah doesn’t have enough RP. The button
-is disabled; the cost is shown in red; hovering shows “You have 1 RP.
-This costs 3.”</p>
-<p><strong>Edge case:</strong> Sarah buys a requisition, Mike approves,
-but the imported NR list she used doesn’t have the corresponding unit
-slot. The system emits a <code>unit.replaced</code> event but the unit
-doesn’t appear in her roster until she re-imports. Sarah sees:
-“Approved. Re-import your NR list to see the new unit in your roster.”
-(Cascading re-import is the cost of the “JSON is the source of truth”
-model.)</p>
+<p><strong>What this app does NOT do for routine
+requisitions:</strong></p>
+<ul>
+<li>No “buy requisition” button. No RP deduction UI. No CM approval
+workflow for routine purchases.</li>
+<li>The <code>requisition_purchase</code> <code>ApprovalRequest</code>
+kind (PRD-5 §3.2) is reserved for <strong>CM-gifted or
+narrative-driven</strong> requisitions — e.g., Mike grants Sarah a free
+Leman Russ replacement as a narrative reward at end-of-session. That
+kind of requisition goes through normal approval; routine player-bought
+ones don’t.</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol type="1">
+<li>Sarah plays a battle; her Leman Russ is destroyed.</li>
+<li>Sarah opens NR, marks the unit as destroyed, applies “Requisition:
+Replaced Destroyed Unit” (NR-side flow), adds the new Leman Russ to her
+list, marks the RP cost. NR’s requisition mechanic handles the
+rest.</li>
+<li>Sarah exports NR JSON, uploads to this app.</li>
+<li>App parses the new roster, sees the new unit + the requisition
+marker, generates a <code>HistoryEntry</code> row (G4 grouping:
+per-requisition).</li>
+<li>The requisition history view shows it. The unit’s per-unit timeline
+shows it. The campaign narrative log shows it.</li>
+<li>CM doesn’t need to approve — this happened in NR, the app just
+displays it.</li>
+</ol>
+<p><strong>Critical moment:</strong> When Sarah uploads the new NR list,
+the roster diff view should clearly call out the requisition so Sarah
+can verify “yes, that’s the Leman Russ I bought in NR.” Without that
+confirmation, Sarah might wonder if the upload caught the requisition
+correctly. The diff UI gets a “Requisitions in this upload” section that
+lists each requisition with its NR-derived details.</p>
+<p><strong>Edge case:</strong> Sarah uploads a new NR list but the
+requisition marker isn’t visible (e.g., NR’s requisition field is in a
+position the parser doesn’t extract yet). The diff UI shows: “This
+upload has a new Leman Russ but no requisition marker detected. If you
+applied a requisition in NR, double-check the export.” Helps Sarah catch
+export mistakes before they pollute the history.</p>
+<p><strong>Edge case:</strong> Sarah has a CM-gifted requisition
+(<code>requisition_purchase</code> approval) AND a routine NR-bought
+requisition in the same campaign. The history view shows both with
+different icons/badges so Sarah can distinguish “free gift from Mike” vs
+“bought in NR.” The CM-gifted one has a CM note attached (“narrative
+reward for winning the Helsreach arc”).</p>
 <h3 id="flow-4-checking-her-timeline">Flow 4: Checking her timeline</h3>
 <p><strong>Trigger:</strong> Sarah wants to see what happened to her
 Cadian Shock Troops. They were Battle-ready, then Battle-hardened, and

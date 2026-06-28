@@ -87,8 +87,10 @@ type ApprovalKind =
   // === Army roster changes ===
   | 'roster_approval'              // player submits a RosterDraft for CM approval (most common)
   | 'roster_manual_edit'            // CM-initiated ad-hoc change to a player's roster (e.g., dispute resolution)
-  | 'requisition_purchase'         // player buys a requisition (replace destroyed unit, gain wargear, etc.)
+  | 'requisition_purchase'         // CM-gifted or narrative-driven requisition (per PRD-4 §7b.2, routine player requisitions happen in NR + show up in history)
   | 'roster_revert'                // player requests revert of a RosterApproved to a prior version
+  | 'roster_rollback'              // player or CM requests rollback of a specific RosterApproved (per PRD-4 §7b.4); all linked HistoryEntry rows tombstoned on approval
+  | 'history_rollback'             // finer-grained rollback targeting specific HistoryEntry rows (per PRD-4 §7b.4)
 
   // === Team / faction changes ===
   | 'team_switch'                  // player requests to switch campaign teams
@@ -180,6 +182,23 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
   rosterId: string,
   targetRosterApprovedId: string,    // the prior version to revert to
   reason: string,                    // why revert
+}
+```
+
+#### `roster_rollback` (Rollback — see PRD-4 §7b.4)
+```ts
+{
+  rosterApprovedId: string,          // the version to roll back
+  reason: string,                    // mandatory; visible in audit log
+  cascadingInvalidationsAck: boolean,// player acknowledges battle reports referencing this roster will show a "rolled back" badge
+}
+```
+
+#### `history_rollback` (Finer-grained rollback — see PRD-4 §7b.4)
+```ts
+{
+  historyEntryIds: string[],         // specific entries to roll back
+  reason: string,
 }
 ```
 
@@ -301,8 +320,10 @@ Each kind has a default approver and (for high-impact kinds) a co-approval rule:
 |---|---|---|
 | `roster_approval` | CM | Optional (campaign setting) |
 | `roster_manual_edit` | Co-CM (since the CM is the actor) | Mandatory — prevents CM self-edit abuse |
-| `requisition_purchase` | CM | Optional |
+| `requisition_purchase` | CM | Optional (CM-gifted or narrative; routine player requisitions bypass this per PRD-4 §7b.2) |
 | `roster_revert` | CM | Optional |
+| `roster_rollback` | CM | Optional (auto-approve if CM-as-player per PRD-1 §5) |
+| `history_rollback` | CM | Optional (auto-approve if CM-as-player per PRD-1 §5) |
 | `team_switch` | CM | Optional |
 | `faction_switch` | CM | Optional |
 | `post_battle_update` | CM | Optional |

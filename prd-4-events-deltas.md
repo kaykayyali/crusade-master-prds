@@ -286,6 +286,89 @@ This is the data path the v1.x **team view page** will use: a per-team dashboard
 
 ---
 
+## 7b. History & Changeset Groupings (v3.10)
+
+Per the user's clarification: every approved changeset generates **history objects** that surface as a **timeline over the campaign**. Multiple grouping dimensions are supported on the same data so different views (per-unit, per-battle, per-requisition) all read from one underlying event store.
+
+### 7b.1 History generation
+
+When an `ApprovalRequest` is approved (by CM, by self-approval per PRD-1 §5, or by auto-approve per PRD-5 §9), the system materializes `HistoryEntry` rows:
+
+- One entry per **primary grouping** (configurable; v1 default: `unit` for roster changes, `battle` for battle updates, `requisition` for requisition purchases).
+- Cross-grouping indexes on `HistoryEntryIndex` so a single entry is queryable from multiple grouping dimensions.
+- The `approvalRequestId` ties every entry back to its authorization (G5 grouping; PRD-5 §3.2).
+- Tombstoned entries (after rollback) are hidden from timeline views but retained in the audit log.
+
+**History is only computed once the changeset is approved.** Drafts and pending approvals do not generate history. This keeps the audit trail aligned with what actually happened in the campaign.
+
+### 7b.2 Requisitions in NR (read-only history)
+
+Per the user's clarification: requisitions are **done in New Recruit**. The player adds the unit, marks the requisition in NR, exports JSON, and uploads to this app. The app parses the new roster, sees the new unit + the requisition marker, and shows the requisition as a **history entry** — not as an in-app action. The player's requisition shop history view (PRD-2) lists past requisitions from these history entries.
+
+Implication: the `requisition_purchase` `ApprovalRequest` kind (PRD-5 §3.2) is reserved for **CM-gifted or narrative-driven** requisitions (e.g., a CM grants a free Leman Russ replacement as a narrative reward). Routine player-bought requisitions don't go through approval — they show up in the history when the player re-imports their NR list with the new unit.
+
+### 7b.3 Changeset grouping proposals (review and approve)
+
+The user requested proposed groupings. v1 ships G1–G6 (derived from the data; G6 is the base layer that G1–G5 group over). G7 (per-narrative-arc) deferred to v2.
+
+| # | Grouping | One history entry covers | Primary use | Ship in v1? |
+|---|---|---|---|---|
+| **G1** | **Per-Unit** | All field changes to one unit within a single approval | PRD-2 §6 Flow 4 — Sarah's per-unit timeline | **Yes — default for roster changes** |
+| **G2** | **Per-Roster-Version** | All changes from one NR import (lumps all units + roster meta) | "What changed in this import" — CM inbox row, audit log | **Yes — default for roster approvals** |
+| **G3** | **Per-Battle** | All changes attributable to one battle (roster diff + agenda outcomes + RP delta) | "What happened in Battle 22" — narrative log | **Yes — default for battle updates** |
+| **G4** | **Per-Requisition** | RP cost + unit addition/removal + any wargear swap from one requisition | Requisition history view | **Yes — default for requisitions** |
+| **G5** | **Per-ApprovalRequest** | All changes that were authorized by one approval (broadest grouping; ties history to its authorization) | Audit log, rollback targets, "show me everything from approval X" | **Yes — always stored as a metadata field** |
+| **G6** | **Per-State-Field** | One field change = one entry (e.g., "Unit X XP: 5→8" + "Unit X kills: 1→2") | Granular audit log, debugging, technical drill-down | **Yes — base layer that G1–G5 group over** |
+| **G7** | **Per-Narrative-Arc** | Manually-tagged changesets that form an arc | End-of-campaign summary, long-form narrative log | **No — v2+ (manual tagging is open-ended)** |
+
+**Time-bucketed rollups** (Per-Day, Per-Week, Per-Session) are computed on read from G3 + G4 — not stored separately. The campaign progress dashboard groups by week by default.
+
+### 7b.4 Rollback mechanics
+
+When a roster update was bad, or a player changes their mind, the player (or CM) can request to **rollback** a changeset. Per the user, rollback is a **CM-approved action**.
+
+**New `ApprovalRequest` kinds:**
+
+- **`roster_rollback`** — player or CM requests rollback of a specific `RosterApproved`. On approval, all `HistoryEntry` rows tied to that approval's `approvalRequestId` (G5) get `tombstoned = true`, hidden from timeline views, retained in the audit log. A compensating history entry is created: "Roster v17 rolled back on YYYY-MM-DD." The active roster reverts to the prior `RosterApproved`.
+- **`history_rollback`** — finer-grained rollback. Targets one or more `HistoryEntry` rows by their id (e.g., "rollback just Unit X's XP gain from Battle 22, keep everything else"). Same tombstoning + compensating entry pattern.
+
+**Why tombstone instead of delete:** the audit log must record what happened (CM approved, then later CM approved a rollback). Hard-deleting history entries would lose that trail. Tombstoning preserves both: timelines show only the rolled-back state, audit logs show the full chronology including the rollback event.
+
+**Co-approval rule:** `roster_rollback` requires CM approval (the actor might be the player, in which case CM reviews). If the actor is the CM themselves (CM-as-player rollback), auto-approve per PRD-1 §5. `history_rollback` follows the same rule.
+
+**Cascading invalidation (UI behavior, not data):** when a roster rollback is approved, any battle reports that referenced the rolled-back roster are surfaced with a "referenced roster was rolled back" badge. The battle report itself remains approved (it was a real event), but the unit-level diff shown to the player is now empty (the post-battle state was rolled back). This is a UI affordance, not a data mutation.
+
+### 7b.5 Example: Sarah's Cadian Castellan across the campaign
+
+Timeline view (per-unit, G1) — what Sarah sees:
+
+```
+2026-08-01 — Unit added (Battle-ready)
+  (Roster v1 approved)
+2026-08-15 — Battle 1: +3 XP (Battle-ready → Blooded)
+  (Roster v3 approved; Battle 1 report approved)
+2026-08-22 — Battle 2: +3 XP, +1 kill, Battle Scar "Lost in the Fog"
+  (Roster v5 approved; Battle 2 report approved)
+2026-08-29 — Requisition: Replaced destroyed Leman Russ (-3 RP, +1 unit)
+  (Roster v6 approved; requisition reflected via NR re-import)
+2026-09-05 — Roster v7 rolled back (history entries 2026-08-29 tombstoned)
+  (Rollback approved by Mike)
+```
+
+Same history, viewed per-battle (G3):
+```
+Battle 1 (2026-08-15) — Helsreach vs. Gorgutz, win, +1 RP, +3 XP on 4 units
+Battle 2 (2026-08-22) — Helsreach vs. Skari, loss, +1 kill, Battle Scar on Castellan
+```
+
+Same history, viewed per-requisition (G4):
+```
+2026-08-29 — Replaced Leman Russ, -3 RP
+  (rolled back 2026-09-05)
+```
+
+---
+
 ## 8. Public Narrative Log
 
 A scrubbed, readable narrative view of the campaign, derived from public-visibility events. Each entry shows:

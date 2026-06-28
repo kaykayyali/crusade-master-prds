@@ -230,7 +230,25 @@ CrusadeSupplement {
 }
 
 // === Approval ===
-ApprovalRequest { id, tenantId, campaignId, kind, submittedByUserId, payload, status, reviewerUserId, decidedAt, decisionReason, contextHash, ruleCheckIds, activeRosterApprovedId }
+ApprovalRequest { id, tenantId, campaignId, kind, submittedByUserId, payload, status, reviewerUserId, decidedAt, decisionReason, contextHash, ruleCheckIds, activeRosterApprovedId, approvalSource }
+
+// === History (computed once ApprovalRequest is approved) ===
+// Every approved changeset generates HistoryEntry rows. Tombstoned (not
+// hard-deleted) when a rollback is approved. The grouping dimension is
+// derived (multiple grouping strategies on the same data), but each
+// entry has a single primary group for storage + indexing.
+HistoryEntry {
+  id, tenantId, campaignId,
+  approvalRequestId,                    // ties entry back to its approval (G5)
+  grouping,                             // 'unit' | 'roster_version' | 'battle' | 'requisition' | 'state_field'
+  groupKey,                             // stable id within grouping (unitId, rosterApprovedId, battleId, etc.)
+  summary,                              // human-readable 1-line ("Cadian Castellan XP 5→8, +1 kill")
+  payload,                              // structured diff (per-grouping shape)
+  occurredAt,
+  tombstoned: boolean,                  // true after rollback; hidden from timelines, kept in audit log
+  tombstonedByApprovalRequestId?: string,
+}
+HistoryEntryIndex { historyEntryId, groupKey, dimension }  // secondary indexes (e.g., unitId, battleId) for cross-grouping queries
 
 // === Queue / async ===
 JobRecord { id, kind, payload, status, attempts, lastError, resultRef, enqueuedAt, completedAt }
