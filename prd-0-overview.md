@@ -161,6 +161,13 @@ Campaign {
   // CM-customizable in principle (homebrew forms); v1 has no UI to author
   // them, but the field exists so a v1.x schema editor can write here.
   battleReportSchema: object | null,
+  // Per-kind team-leader authority (default per PRD-1 §4.4; CM-configurable).
+  teamLeaderAuthority: { [kind: string]: boolean },
+  // Approval mode for multi-team-leader teams. 'any' = any one team leader
+  // can approve; 'all' = every team leader must approve. Default 'any'.
+  teamLeaderApprovalMode: 'any' | 'all',
+  // Per-kind rule-pack enforcement settings (PRD-1 §4.4; CM-configurable).
+  rulePackEnforcement: { [kind: string]: { ruleKeys: string[] } },
 }
 CampaignTeam {
   id, campaignId, name, description, color, narrativeLogFilter,
@@ -169,7 +176,21 @@ CampaignTeam {
   // approval on every roster. Books (e.g., Armageddon) ship with these pre-filled.
   expectedFactionIds: string[] | null
 }
+// TeamLeader join table — a user can be a team leader for multiple teams
+// (rare; usually just one), and a team can have multiple team leaders (v3.12).
+TeamLeader {
+  id, teamId, userId,
+  grantedAt, grantedByUserId,        // who promoted them
+  revokedAt?: timestamp, revokedByUserId?: string,  // soft-delete; team leader is removed
+}
+// Once a campaign is started, every team must have ≥1 active TeamLeader row.
+// CM is the only role that can grant or revoke TeamLeader rows (policy).
 CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: CampaignTeam['id'] }
+CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: CampaignTeam['id'] }
+// ^ Note: CampaignMember.teamId is the player's team membership.
+//   TeamLeader is a separate join for team-scoped approval authority.
+//   A user can be a player on a team (CampaignMember) AND a team leader
+//   for that team (TeamLeader) — the roles stack.
 
 // === Roster (state machine) ===
 Roster {
@@ -276,11 +297,15 @@ Per v3.11 — these terms have specific meanings in this app. Drift between "wha
 |---|---|---|
 | **Instance Admin** | A user with the `instance_admin` role. Cross-tenant. | Provisions tenants, sees all campaigns, doesn't play. |
 | **Primary CM** | A user with the `cm` role for a specific campaign. One per campaign (more can be promoted to co-CM-via-secondary-CM, but that's a separate concept). | Full campaign authority: create campaign, configure rules, approve any action, see all teams' data, edit any roster. |
-| **Crusade Team Leader** | A user with the `crusade_team_leader` role for one specific team. **They are also a player on that team** (they have a roster, they play in battles). The primary CM promotes them by granting the role for a specific team. | Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; **cannot see or approve anything for other teams**. The primary CM controls which actions a team leader can approve, per `ApprovalKind`. |
+| **Crusade Team Leader** | A user with the `crusade_team_leader` role for one specific team. **They are also a player on that team** (they have a roster, they play in battles). The primary CM promotes them by granting the role for a specific team. **A team can have multiple team leaders.** The CM is the only role that can add or update the team leader list for any team (policy). | Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; **cannot see or approve anything for other teams**. The primary CM controls which actions a team leader can approve, per `ApprovalKind`. When multiple team leaders exist on a team, **any one** of them can approve a request in their team's scope (default OR-semantics; the primary CM can switch to AND-semantics per campaign setting if desired). |
 | **Player** | A user with the `player` role for a campaign. On exactly one team. | Sees their own roster + their team's narrative log + their own data. Files approvals, plays games, edits nothing about other teams. |
 | **Spectator** | Read-only public-link user. | Sees what the campaign's `publicVisibility` setting exposes. No team membership. |
 
-**Co-approval (PRD-5):** the term "co-approval" refers to an `ApprovalRequest` requiring two distinct approvers. In v3.11 the candidates are: Primary CM + a second Primary CM (if the campaign has multiple CMs); or Primary CM + a Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's scope). The approval pair depends on the request's scope and the campaign's configuration. **There is no automatic co-approval kind; every dual-approval is a configuration choice.**
+**Co-approval (PRD-5):** the term "co-approval" refers to an `ApprovalRequest` requiring two distinct approvers. In v3.12 the candidates are: Primary CM + a second Primary CM (if the campaign has multiple CMs); or Primary CM + a Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's scope). The approval pair depends on the request's scope and the campaign's configuration. **There is no automatic co-approval kind; every dual-approval is a configuration choice.**
+
+**Multi-leader on a team:** a team can have multiple team leaders. Any one of them can approve a request in their team's scope (default OR-semantics). The primary CM controls whether approval requires any one or all of the team leaders via `Campaign.teamLeaderApprovalMode: 'any' | 'all'` (default `'any'`). With `'all'`, every team leader on the team must approve before the request is decided — a stronger check, used rarely. The audit log records which team leaders approved, in order.
+
+**Naming for the UI:** team leaders are referred to as **"team leader"** in user-facing language in the context of a specific campaign. Do NOT use "co-CM," "co-Crusade Master," or any terminology that implies they share the CM's role. They are players with delegated team-scoped approval authority. The role grants them limited, scoped authority — not a promotion to CM.
 
 **Roster-level CM (player who is also a CM, possibly also a team leader):** a user can hold multiple roles for the same campaign. E.g., the Primary CM is typically also a player (PRD-1 §5); a Crusade Team Leader is by definition also a player on their team. Role combinations resolve at query time: a user's effective permissions are the union of their roles, scoped by team membership where applicable.
 

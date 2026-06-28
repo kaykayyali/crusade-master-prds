@@ -827,6 +827,22 @@ must match the team leader’s team. A team leader of Helsreach Defenders
 cannot approve a <code>roster_approval</code> for a Gorgutz WAAAGH!
 player — the RLS policy and the API both enforce this, returning
 403.</p>
+<p><strong>Multi-team-leader approval semantics (v3.12):</strong></p>
+<p>When a team has multiple team leaders, the campaign’s
+<code>teamLeaderApprovalMode</code> setting controls the OR/AND
+semantics: - <code>&#39;any&#39;</code> (default): any one team leader on the
+affected team can approve the request. Approval is recorded in the audit
+log with <code>reviewerUserId: teamLeader</code>. Other team leaders see
+“already approved by [name]” in their inbox. - <code>&#39;all&#39;</code>: every
+active team leader on the affected team must approve before the request
+is decided. The request stays <code>pending</code> until all have
+approved or any one has rejected. If a team leader is removed
+mid-flight, their pending approval on an <code>&#39;all&#39;</code>-mode request
+is auto-recorded as <code>abstained</code> (the request continues; the
+remaining leaders suffice).</p>
+<p>The CM can switch modes at any time. Mid-flight requests follow the
+mode that was set when the request was filed, not when it was
+approved.</p>
 <p><strong>Per-kind rule-pack enforcement (v3.11):</strong></p>
 <p>The CM’s configuration of which rules fire on which kinds (PRD-1
 §4.4) is enforced at approval time: when an <code>ApprovalRequest</code>

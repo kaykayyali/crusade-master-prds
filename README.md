@@ -20,7 +20,41 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.11 (current) — Crusade Team Leader + team-isolated data model
+### v3.12 (current) — Multi-team-leader + removal workflow + Crusade Administration panel
+
+Four refinements from the user:
+
+**1. Team leaders set before campaign starts.** Per user: "By default, team leaders should be set before the campaign starts." During campaign creation in the Crusade Administration panel, the CM assigns team leaders per team. Once the campaign is started, every team must always have at least one active team leader.
+
+**2. Naming — NOT a co-CM.** Per user: "we shouldn't refer to it as a Co-Crusade Master. Instead, refer to them as team leader in the context of that campaign." Team leaders are players with delegated team-scoped approval authority. Not a promotion to CM. The Glossary sections in PRD-0/1/2/5 explicitly forbid the "co-CM" / "co-Crusade Master" terminology in user-facing language.
+
+**3. Team-leader removal workflow.** Per user: "When a team leader is removed, only the CM should be allowed to do it. As part of that workflow, the CM must pick a team leader to replace them. Once the campaign is started, a team leader must always exist."
+- Only the CM can grant or revoke team leader roles (policy, not a setting).
+- CM removes a team leader → system checks if it's the last on the team → if yes, requires picking a replacement from the team's players → atomic operation (both succeed or both fail).
+- If no (other leaders exist), removal proceeds; in-flight approvals where the removed leader was the sole reviewer fall back to the primary CM.
+- Audit log records the change.
+
+**4. Multiple team leaders per team.** Per user: "each team should be allowed to have multiple team leaders. But, only the CM can add or update that list for a team. This is policy."
+- A team can have multiple team leaders.
+- New `TeamLeader` join table (PRD-0 §4): `id, teamId, userId, grantedAt, grantedByUserId, revokedAt?, revokedByUserId?`. Soft-delete via `revokedAt`.
+- Only the CM can INSERT or UPDATE rows in this table.
+- New `Campaign.teamLeaderApprovalMode: 'any' | 'all'` setting (default `'any'`):
+  - `'any'` (default): any one team leader can approve
+  - `'all'`: every team leader must approve (rare; stronger check)
+- Mid-flight `'all'`-mode requests handle team leader removal by auto-recording `abstained` for the removed leader.
+
+**Crusade Administration panel (PRD-1 §4.4):** renamed from "Campaign Settings." New sections:
+- General (point cap, OoA, etc.)
+- Teams (per-team CRUD + team leader management)
+- Rules (rule pack enable/disable)
+- Approvals (per-kind team-leader authority, `teamLeaderApprovalMode`, bulk-approve cap, rule-pack enforcement per kind)
+- Archive (soft / hard)
+
+**Schema changes:**
+- PRD-0 §4: new `TeamLeader` join table
+- PRD-0 §4: `Campaign` adds `teamLeaderAuthority`, `teamLeaderApprovalMode`, `rulePackEnforcement`
+
+### v3.11 — Crusade Team Leader + team-isolated data model
 
 Big rename + privacy model. The user clarified: the "co-CM" concept is now a **Crusade Team Leader** — a player on a team who has been approved by the primary CM to approve changes for their own team only.
 

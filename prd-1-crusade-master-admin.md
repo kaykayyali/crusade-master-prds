@@ -11,9 +11,17 @@ Per PRD-0 §3b. The roles in this app:
 | Role | What they are | Scope |
 |---|---|---|
 | **Primary CM** | A user with the `cm` role for a specific campaign. The top authority on that campaign. | Full campaign authority, sees all teams' data. |
-| **Crusade Team Leader** | A user with the `crusade_team_leader` role for **one specific team**. They are also a player on that team. | **Their team only.** Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; cannot see other teams. |
+| **Crusade Team Leader** | A user with the `crusade_team_leader` role for **one specific team** (a team can have multiple team leaders per v3.12). They are also a player on that team. **They are not a co-CM; do not refer to them as such in the UI.** | **Their team only.** Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; cannot see other teams. |
 | **Player** | A user with the `player` role. On exactly one team. | Their own roster + their team's narrative log + their own data. Cannot see other teams. |
 | **Spectator** | Read-only public-link user. | Sees what the campaign's `publicVisibility` setting exposes. |
+
+**Team leaders are not co-CMs.** Calling them "co-CM," "co-Crusade Master," or any phrase that implies they share the CM's role is wrong. They are players with delegated team-scoped approval authority. The role grants limited, scoped authority — it is not a promotion.
+
+**Setting team leaders before campaign start:** by default, team leaders are assigned **before the campaign starts** (during campaign creation in the Crusade Administration panel). Once the campaign is started, a team must always have at least one active team leader — the CM cannot remove the only team leader on a team without first promoting a replacement.
+
+**Multi-team-leader on a team:** a team can have multiple team leaders (v3.12). Default approval semantics: any one of them can approve (`teamLeaderApprovalMode: 'any'`). The CM can switch to `'all'` (every team leader must approve) per campaign, but `'any'` is the default and matches typical team-leadership workflows. With multi-leader + `'all'`, the request stays pending until every team leader has approved (or one has rejected).
+
+**Only the CM can grant or revoke the team leader role** for any team (policy). Players cannot self-promote, and team leaders cannot promote other players to team leader. The CM does this from the Crusade Administration panel → Approvals section.
 
 **Co-approval (in PRD-5) means:** an `ApprovalRequest` requires two distinct approvers. The pair is either Primary CM + second Primary CM (if the campaign has multiple CMs) or Primary CM + Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's team scope). Per-kind team-leader authority is configured by the primary CM.
 
@@ -126,9 +134,21 @@ The instance admin sees:
 ### 4.2 Member Management
 
 - CM sees: `displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (parsing|pending_review|pending_approval|approved|failed)`
-- CM can: invite (via email or link), remove, suspend, **promote a player on a team to `crusade_team_leader` for that team** (the player must consent; promotion is per-team, not global)
-- Players can self-serve removal
-- **Crusade Team Leaders** are scoped to their team: they see their team's data, can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled, but **cannot see or approve anything for other teams**. A team leader can be removed by the primary CM at any time.
+- CM can: invite (via email or link), remove, suspend
+- **Crusade Team Leader management (CM-only, per v3.12):**
+  - **Only the CM can add or update the team leader list for any team.** Players cannot self-promote, and existing team leaders cannot promote other players. This is policy, not a setting.
+  - A team can have **multiple team leaders** (v3.12). The CM promotes a player to team leader by adding them to `TeamLeader` join table (PRD-0 §4) with `grantedAt` and `grantedByUserId`. The player must be a member of that team (via `CampaignMember`).
+  - Default promotion timing: during campaign creation/setup, before the campaign starts. The Crusade Administration panel prompts the CM to assign at least one team leader per team.
+  - Once the campaign is started, **every team must have at least one active team leader at all times.** The CM cannot remove the only team leader on a team without first promoting a replacement.
+- **Team leader removal workflow (v3.12):**
+  - The CM opens the team's team leader list in the Crusade Administration panel.
+  - Clicks "Remove" next to a team leader.
+  - The system checks: "Is this team leader the last active one on this team?" If yes, the CM is required to pick a replacement from the team's players before the removal can proceed. The replacement is added to `TeamLeader` atomically with the removal — both succeed or both fail.
+  - If no, the removal proceeds and the team continues with the remaining team leaders.
+  - The audit log records: "CM removed User X from team leadership; replaced by User Y" (or "no replacement needed").
+  - The removed team leader loses the `crusade_team_leader` role for that team immediately. Their in-flight approvals (if any) are reassigned: pending approvals where they were the sole reviewer fall back to the primary CM (auto-reroute per PRD-5 §3.3 logic).
+- Players can self-serve removal (leave the campaign entirely).
+- **Crusade Team Leaders** are scoped to their team: they see their team's data, can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled, but **cannot see or approve anything for other teams**.
 - **Multiple CMs (rare):** if a campaign has more than one user with the `cm` role, they have full campaign authority each. Co-approval between them is configurable per kind (PRD-5 §3.2). This is **distinct** from Crusade Team Leaders, who are scoped to a team.
 
 ### 4.3 Dashboard
@@ -182,15 +202,25 @@ The inbox is the operational surface. The campaign timeline is the storytelling 
 - A team leader cannot see a request that was filed by a player who switched to their team after the request was filed (the request is bound to the team at filing time, not at approval time).
 - When the crusade is archived (`Campaign.status = 'archived'`), all inboxes become read-only and every player across teams sees the full history (per PRD-0 §3b post-crusade relaxation).
 
-### 4.4 Campaign Settings
+### 4.4 The Crusade Administration Panel (v3.12)
+
+The CM's campaign-administration surface. Sections:
+
+- **General** — point cap, max games/week, OoA variant, house rules
+- **Teams** — add/rename/delete/reorder/color teams; manage team leaders per team (per PRD-1 §4.2)
+- **Rules** — enable/disable `RulePack`s per campaign
+- **Approvals** — per-kind team-leader authority; rule-pack enforcement per kind; team-leader approval mode (`any` vs `all`); bulk-approve cap
+- **Archive** — soft-archive or hard-delete the campaign
 
 Editable: point cap, max games/week, OoA variant, house rules.
 
 **Supplement changes are locked** for MVP. Switching supplements would invalidate active approved rosters; not supported.
 
-**Per-kind Team Leader authority (v3.11):**
+**Approvals sub-section (v3.12):**
 
-The CM configures, per `ApprovalKind`, whether Crusade Team Leaders can approve requests in their team's scope. Stored as `Campaign.teamLeaderAuthority: { [kind: ApprovalKind]: boolean }`. Default values:
+The CM opens the Approvals section to configure:
+
+1. **Per-kind Team Leader authority** (`Campaign.teamLeaderAuthority`): per `ApprovalKind`, whether Crusade Team Leaders can approve requests in their team's scope. Defaults:
 
 | Kind | Default team-leader authority |
 |---|---|
@@ -212,7 +242,13 @@ The CM configures, per `ApprovalKind`, whether Crusade Team Leaders can approve 
 
 The CM can flip any of these on/off per campaign. The reasoning for defaults: actions affecting only the player's own team and not cross-team-broad are team-leader-eligible; actions that affect the campaign as a whole or other teams are CM-only.
 
-**Active rule packs:** which `RulePack`s (PRD-3 §6) are enabled for this campaign. The CM toggles these on/off. **Per-kind rule-pack settings (v3.11):** the CM can also control which rules are in enforcement per kind (e.g., "the team-narrative-alignment rule is enforced at warn severity for `roster_approval` and disabled for `post_battle_update`").
+2. **Team-leader approval mode** (`Campaign.teamLeaderApprovalMode: 'any' | 'all'`): when a team has multiple team leaders, do all of them need to approve (`'all'`), or does any one suffice (`'any'`)? Default `'any'`. The `'all'` mode is a stronger check, used rarely. The audit log records which team leaders approved, in order.
+
+3. **Bulk-approve cap** (`Campaign.bulk_approve_max_batch_size`): cap on how many approvals the CM or a team leader can act on in one bulk action. Default 50.
+
+4. **Per-kind rule-pack enforcement** (`Campaign.rulePackEnforcement: { [kind]: { ruleKeys: string[] } }`): per kind, which rules are in enforcement. E.g., "the team-narrative-alignment rule is enforced at warn severity for `roster_approval` and disabled for `post_battle_update`." Defaults: rules apply to all kinds they were registered for; CM can selectively disable per kind.
+
+**Active rule packs:** which `RulePack`s (PRD-3 §6) are enabled for this campaign. The CM toggles these on/off in the Rules section.
 
 Deletable: archive (soft) or hard-delete (typed confirmation required). Archive is the post-crusade state where all data becomes read-only-visible to all players across teams (per PRD-0 §3b data-isolation relaxation).
 
