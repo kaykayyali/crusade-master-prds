@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-2-player-signup</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-2-player-signup</h1>
+</header>
+<h1 id="prd-2-player-sign-up">PRD-2: Player Sign-Up</h1>
+<blockquote>
+<p>Player onboarding flow: account creation, joining a campaign via
+invite, choosing a faction, and first-time onboarding.</p>
+</blockquote>
+<hr />
+<h2 id="goals">1. Goals</h2>
+<p>Get a player from “I have an invite code” to “I see my empty Crusade
+roster” in under 5 minutes, with no required manual data entry beyond
+faction choice.</p>
+<p><strong>Success metric</strong>: Median time from invite acceptance
+to first roster import attempt &lt; 5 minutes.</p>
+<hr />
+<h2 id="user-stories">2. User Stories</h2>
+<ul>
+<li><strong>As a new player</strong>, I can sign up with just an email
+address (magic-link auth) — no password to remember.</li>
+<li><strong>As a player with an invite code</strong>, I can enter it and
+immediately land inside the campaign.</li>
+<li><strong>As a player</strong>, I can pick my faction (with searchable
+picker across all 26 Wahapedia factions).</li>
+<li><strong>As a player</strong>, I get a guided first-tour explaining
+Crusade card mechanics, post-battle update flow, and requisitions.</li>
+</ul>
+<hr />
+<h2 id="feature-modules">3. Feature Modules</h2>
+<h3 id="account-creation">3.1 Account Creation</h3>
+<ul>
+<li>Email + magic link (no password; CM invitation email is the
+bootstrap)</li>
+<li>Display name (unique within a campaign, globally unique for CM)</li>
+<li>Optional avatar upload</li>
+<li>Timezone (auto-detected, editable; used for battle scheduling)</li>
+<li>Locale (en for MVP)</li>
+</ul>
+<h3 id="join-via-invite">3.2 Join via Invite</h3>
+<ul>
+<li>Single text field: “Paste invite code or link”</li>
+<li>Validation against <code>Campaign.joinCode</code></li>
+<li>If valid: account auto-binds to campaign with
+<code>CampaignMember</code> role <code>player</code></li>
+<li>If invalid: clear error (“Code not found or expired” vs “Already
+used”)</li>
+</ul>
+<h3 id="faction-picker">3.3 Faction Picker</h3>
+<p>Searchable dropdown of all 26 Wahapedia factions. Each option shows:
+- Faction logo (from Wahapedia or local) - One-line description - Linked
+supplement (auto-selected if campaign supplement has faction-specific
+content)</p>
+<p>After selection, the system creates a placeholder <code>Roster</code>
+with no units. Player then imports their first army (PRD-3).</p>
+<h3 id="first-time-onboarding">3.4 First-Time Onboarding</h3>
+<p>Modal flow shown only on first login:</p>
+<ol type="1">
+<li><strong>“Welcome”</strong>: 1-line pitch + “Got it” button</li>
+<li><strong>“Crusade basics”</strong>: 3-step explainer with visuals
+(rank ladder, OoA test, requisitions)</li>
+<li><strong>“Import your army”</strong>: direct link to PRD-3
+importer</li>
+<li><strong>“You’re set”</strong>: dashboard with empty roster</li>
+</ol>
+<p>The tour can be re-invoked from settings at any time.</p>
+<hr />
+<h2 id="user-flow">4. User Flow</h2>
+<pre class="mermaid"><code>flowchart TD
+    A[Player receives invite link] --&gt; B{Click link}
+    B --&gt; C[Lands on /join?code=XYZ]
+    C --&gt; D{Has account?}
+    D --&gt;|No| E[Sign up: email + display name]
+    D --&gt;|Yes| F[Sign in via magic link]
+    E --&gt; G[Email magic link sent]
+    F --&gt; G
+    G --&gt; H[Click link in email]
+    H --&gt; I[Authenticated, on /join page]
+    I --&gt; J[Pick faction]
+    J --&gt; K[Confirm join]
+    K --&gt; L[Redirected to /campaigns/{id} dashboard]
+    L --&gt; M{First time?}
+    M --&gt;|Yes| N[Onboarding tour]
+    M --&gt;|No| O[Standard dashboard]
+    N --&gt; P[Import army CTA]
+    P --&gt; Q[Hand off to PRD-3]</code></pre>
+<h3 id="branch-returning-player-new-campaign">4.1 Branch: Returning
+Player, New Campaign</h3>
+<p>Player signs in, opens dashboard, sees existing campaign(s) + a “Join
+another campaign” button. Same flow as above from <code>J</code> (pick
+faction).</p>
+<h3 id="branch-invite-code-expired">4.2 Branch: Invite Code Expired</h3>
+<p>CM controls expiry (default 14 days). Expired codes show a clear
+message with a “Request new invite from your CM” button (sends in-app
+notification to CM).</p>
+<hr />
+<h2 id="faction-picker-notes">5. Faction Picker Notes</h2>
+<p>The 26 Wahapedia factions are not equally Crusade-friendly in the
+Armageddon supplement. The picker should:</p>
+<ul>
+<li><strong>Highlight</strong> factions with strong Armageddon content
+(per Wahapedia faction page)</li>
+<li><strong>Allow</strong> picking any faction; if a faction has no
+Armageddon-specific content, show a soft warning (“Limited Armageddon
+content — you’ll use mostly universal Crusade rules”)</li>
+<li><strong>Not restrict</strong> player choice; some CMs run “anything
+goes” campaigns</li>
+</ul>
+<hr />
+<h2 id="out-of-scope">6. Out of Scope</h2>
+<ul>
+<li>Multi-campaign cross-roster management (future)</li>
+<li>Player-to-player messaging (not part of MVP)</li>
+<li>Spectator sign-up (spectators can view via public campaign URL, no
+auth)</li>
+</ul>
+<hr />
+<h2 id="dependencies">7. Dependencies</h2>
+<ul>
+<li><strong>PRD-0</strong>: <code>User</code>, <code>Campaign</code>,
+<code>CampaignMember</code> types</li>
+<li><strong>PRD-1</strong>: CM-side invite generation</li>
+<li><strong>Auth infra</strong> (PRD-0): magic-link email delivery</li>
+<li><strong>PRD-3</strong>: army import handoff</li>
+</ul>
+<hr />
+<h2 id="success-metrics">8. Success Metrics</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Invite-to-onboarded time</td>
+<td>&lt; 5 min median</td>
+</tr>
+<tr class="even">
+<td>Drop-off at faction picker</td>
+<td>&lt; 10%</td>
+</tr>
+<tr class="odd">
+<td>Players completing onboarding tour</td>
+<td>&gt; 80%</td>
+</tr>
+<tr class="even">
+<td>Magic-link delivery success rate</td>
+<td>&gt; 99% (incl. retry on bounce)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="edge-cases">9. Edge Cases</h2>
+<ol type="1">
+<li><strong>Two players pick the same display name in same
+campaign</strong>: append <code>#2</code>, <code>#3</code>, etc. (e.g.,
+<code>Jake#2</code>). Show a non-blocking warning.</li>
+<li><strong>Player joins, then CM removes them</strong>: player loses
+access but their roster data is retained for 30 days in case of dispute,
+then hard-deleted.</li>
+<li><strong>Player wants to switch faction mid-campaign</strong>:
+requires CM approval (per PRD-5), creates a new roster version while
+keeping the old one as a snapshot.</li>
+<li><strong>Player’s email bounces</strong>: account marked
+<code>email_unverified</code>; cannot file battle updates until
+resolved. Banner on dashboard explains.</li>
+</ol>
+</body>
+</html>

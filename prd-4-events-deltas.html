@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-4-events-deltas</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-4-events-deltas</h1>
+</header>
+<h1 id="prd-4-events-deltas">PRD-4: Events &amp; Deltas</h1>
+<blockquote>
+<p>Battle event generation, the post-battle update pipeline, and the
+change-tracking layer that records every state change to a roster over
+the life of a campaign.</p>
+</blockquote>
+<hr />
+<h2 id="goals">1. Goals</h2>
+<p>Capture every meaningful state change in a campaign as a structured,
+queryable <strong>Event</strong>, and produce a human-readable
+<strong>Delta</strong> for each change so players and CMs can see what
+happened and when.</p>
+<p><strong>Success metric</strong>: 100% of state changes produce an
+event; 100% of those events produce a delta visible in the relevant UI
+within 1 second.</p>
+<hr />
+<h2 id="user-stories">2. User Stories</h2>
+<ul>
+<li><strong>As a player</strong>, after a battle I can submit a
+post-battle update with: opponent, result, agendas attempted, and
+per-unit changes (XP, ranks, honours, scars, requisitions).</li>
+<li><strong>As a player</strong>, I see a delta of what my submission
+will change before confirming.</li>
+<li><strong>As a CM</strong>, I see a timeline of all events in my
+campaign.</li>
+<li><strong>As a CM</strong>, I can trigger narrative events that affect
+all players (e.g., a planet-wide plague, a supply convoy, a
+campaign-wide rank promotion).</li>
+<li><strong>As a spectator</strong>, I see a public, scrubbed narrative
+log of major events.</li>
+<li><strong>As a player</strong>, I can request a requisition (e.g.,
+“Replace Destroyed Unit”) which produces a delta after CM approval
+(PRD-5).</li>
+</ul>
+<hr />
+<h2 id="event-taxonomy">3. Event Taxonomy</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> EventKind <span class="op">=</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Roster lifecycle</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster.imported&#39;</span>              <span class="co">// new RosterVersion created</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster.version_activated&#39;</span>     <span class="co">// player switched active version</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster.version_reverted&#39;</span>      <span class="co">// player rolled back</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster.manually_edited&#39;</span>       <span class="co">// manual edit by player or CM</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Battle lifecycle</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;battle.scheduled&#39;</span>             <span class="co">// two players agreed to play</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;battle.filed&#39;</span>                 <span class="co">// post-battle update submitted</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;battle.approved&#39;</span>              <span class="co">// CM approved a post-battle update</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;battle.rejected&#39;</span>              <span class="co">// CM rejected a post-battle update</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;battle.disputed&#39;</span>              <span class="co">// one or both players disagree with result</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Unit state changes</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.xp_gained&#39;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.xp_lost&#39;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.rank_promoted&#39;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.rank_demoted&#39;</span>            <span class="co">// rare, only via OoA fail</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.honour_gained&#39;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.honour_lost&#39;</span>             <span class="co">// when OoA fail swaps a honour for a scar</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.scar_gained&#39;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.scar_removed&#39;</span>            <span class="co">// via Requisition</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.destroyed&#39;</span>               <span class="co">// removed from active roster</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;unit.replaced&#39;</span>                <span class="co">// via Requisition</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Crusade state changes</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.rp_gained&#39;</span>            <span class="co">// requisition points earned</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.rp_spent&#39;</span>             <span class="co">// requisition points spent</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.req_purchased&#39;</span>        <span class="co">// a Requisition was bought</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.supply_changed&#39;</span>       <span class="co">// Nachmund: supply limit delta</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.logistics_changed&#39;</span>    <span class="co">// Nachmund: LP delta</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;crusade.alignment_changed&#39;</span>     <span class="co">// Nachmund: 3-alignment switch</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Campaign-wide</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.member_joined&#39;</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.member_left&#39;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.member_removed&#39;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.narrative_event&#39;</span>     <span class="co">// CM-triggered</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.supplement_changed&#39;</span>  <span class="co">// CM switched supplement</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign.settings_updated&#39;</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  <span class="co">// System</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;system.errata_applied&#39;</span>        <span class="co">// Wahapedia refresh affected a unit</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;system.crusade_update&#39;</span>        <span class="co">// schema migration</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>  <span class="op">;</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> <span class="bu">Event</span> {</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> EventKind<span class="op">;</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>  occurredAt<span class="op">:</span> timestamp<span class="op">;</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>  actorUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>   <span class="co">// null for system events</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>  targetType<span class="op">:</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;battle&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">;</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>  targetId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span>  <span class="co">// kind-specific</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>  delta<span class="op">:</span> Delta <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>          <span class="co">// for state-changing events</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>  visibility<span class="op">:</span> <span class="st">&#39;public&#39;</span> <span class="op">|</span> <span class="st">&#39;cm_only&#39;</span> <span class="op">|</span> <span class="st">&#39;private&#39;</span><span class="op">;</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> Delta {</span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>  eventId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>  entityType<span class="op">:</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span> <span class="op">|</span> <span class="st">&#39;roster&#39;</span><span class="op">;</span></span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>  entityId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>  field<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>  beforeValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a>  afterValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>     <span class="co">// human-readable e.g. &quot;Battle vs. Space Wolves (W)&quot;</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="post-battle-update-flow">4. Post-Battle Update Flow</h2>
+<pre class="mermaid"><code>flowchart TD
+    A[Battle happens in real life] --&gt; B[Winner files update]
+    B --&gt; C[Form: opponent, result, mission, agendas, per-unit changes]
+    C --&gt; D[System computes deltas]
+    D --&gt; E[Show preview to submitter]
+    E --&gt; F{Submit?}
+    F --&gt;|No| G[Save as draft]
+    F --&gt;|Yes| H[Create BattleUpdate with status=pending]
+    H --&gt; I[Create Events for each change]
+    I --&gt; J[Loser notified: review changes]
+    J --&gt; K{Disagree?}
+    K --&gt;|No| L[Auto-approve OR wait for CM]
+    K --&gt;|Yes| M[Mark BattleUpdate disputed]
+    M --&gt; N[CM adjudicates per PRD-5]
+    L --&gt; O[CM reviews per PRD-5]
+    O --&gt; P[Approved → apply events, status=approved]
+    N --&gt; P
+    P --&gt; Q[Player sees updated roster]</code></pre>
+<h3 id="battle-update-form">4.1 Battle Update Form</h3>
+<p>Fields: - Opponent (auto-fill from campaign member list) - Mission
+played (free text or pick from PRD-0 mission list) - Result (win / loss
+/ draw) - Agendas attempted (checklist from active supplement) - Agendas
+achieved (subset of attempted) - Per-unit: XP gained (default 3, per
+Crusade rules) - Per-unit: OoA test result (if any units were destroyed)
+- Per-unit: honours / scars gained (from supplement-defined list) -
+Requisitions purchased - Free-text battle report (markdown)</p>
+<h3 id="per-unit-change-entry">4.2 Per-Unit Change Entry</h3>
+<p>Two paths: 1. <strong>Quick entry</strong>: “Did any units gain XP?
+Lose XP? Get destroyed? Take OoA test?” — system applies universal rules
+2. <strong>Manual entry</strong>: select specific unit, edit rank, add
+honour, etc.</p>
+<p>The system warns when a proposed change violates a Crusade rule
+(e.g., spending RP the player doesn’t have, applying a honour that
+doesn’t exist in the active supplement).</p>
+<hr />
+<h2 id="delta-computation">5. Delta Computation</h2>
+<p>When a <code>BattleUpdate</code> is approved, the system:</p>
+<ol type="1">
+<li>Iterates over the proposed changes in payload</li>
+<li>For each, writes a <code>Delta</code> with <code>beforeValue</code>
+(current state) and <code>afterValue</code> (proposed state)</li>
+<li>On approval, applies them transactionally — if any step fails, the
+entire update rolls back</li>
+<li>Emits <code>Event</code> records with <code>delta</code>
+linkage</li>
+</ol>
+<p>This makes the timeline:</p>
+<pre><code>2026-07-12 14:00  jake42 imported roster v1 (2,000 pts, Cadian 67th)
+2026-07-15 19:00  jake42 won vs. Space Wolves (W) → BattleUpdate #12
+                 ├─ Cadian Shock Troops: XP 0→3
+                 ├─ Cadian Castellan: rank Blooded→Battle-ready
+                 ├─ Hellhound: destroyed → OoA: failed → −6 XP, +1 Scar (Cowardly)
+                 └─ Crusader: +5 RP
+2026-07-16 10:00  cm_jane approved BattleUpdate #12
+2026-07-18 14:00  jake42 purchased Requisition: Reinforcements (+5 Cadian Shock Troops, −3 RP)</code></pre>
+<hr />
+<h2 id="narrative-event-generation-cm-only">6. Narrative Event
+Generation (CM-only)</h2>
+<p>The CM can trigger campaign-wide narrative events that affect all or
+specific rosters. Each event produces a structured payload that
+translates to deltas.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> NarrativeEventTemplate {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  code<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                  <span class="co">// &#39;plague_outbreak&#39;, &#39;supply_convoy&#39;, &#39;rank_promotion&#39;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  description<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>           <span class="co">// narrative</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  effect<span class="op">:</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;supply_change&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rank_grant&#39;</span><span class="op">,</span> rank<span class="op">:</span> Rank<span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;unit_destroyed&#39;</span><span class="op">,</span> filter<span class="op">:</span> FilterExpr }</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;custom&#39;</span><span class="op">,</span> payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;</span> }<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  filter<span class="op">?:</span> FilterExpr<span class="op">;</span>           <span class="co">// which rosters/units it applies to</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Examples (Armageddon-themed): - <strong>“Ork Waagh!”</strong> — all
+players with 5+ victories gain 1 RP; all players with 0 victories lose 1
+RP (campaign-wide upheaval) - <strong>“Yarrick’s Broadcast”</strong> —
+all Imperial players gain 1 RP (morale boost) - <strong>“Supply Convoy
+Arrives”</strong> — Armageddon: Supply Limit +200 for all players -
+<strong>“Planet-wide Plague”</strong> — all units with Nurgle keyword
+take 1 Battle Scar; all other players with 10+ units lose 1 random unit
+to a new Battle Scar “Plague-Ridden”</p>
+<p>CM selects a template, customizes the parameters (or uses defaults),
+previews the impact (“will affect 8 of 12 players”), and applies. The
+application produces one <code>Event</code> per affected entity, batched
+under a single <code>campaign.narrative_event</code> parent.</p>
+<hr />
+<h2 id="public-narrative-log">7. Public Narrative Log</h2>
+<p>A scrubbed, readable narrative view of the campaign, derived from
+public-visibility events. Each entry shows: - Date - Player handle (or
+“anonymous” if user opted out) - Action summary (1-2 lines, generated
+from event payload) - Optional battle report excerpt</p>
+<p>This is what spectators see and what CMs share on social media.</p>
+<hr />
+<h2 id="out-of-scope">8. Out of Scope</h2>
+<ul>
+<li>Real-time push notifications (PRD-0 future)</li>
+<li>Battle result photo / video upload</li>
+<li>Detailed per-die roll audit (too noisy for MVP)</li>
+<li>AI-generated battle reports from data (future, PRD-7+)</li>
+</ul>
+<hr />
+<h2 id="dependencies">9. Dependencies</h2>
+<ul>
+<li><strong>PRD-0</strong>: <code>Battle</code>,
+<code>BattleUpdate</code>, <code>Event</code>, <code>Delta</code>,
+<code>RosterVersion</code></li>
+<li><strong>PRD-3</strong>: roster versioning makes deltas
+well-defined</li>
+<li><strong>PRD-5</strong>: approval is the trigger for delta
+application</li>
+<li><strong>PRD-1</strong>: CM event generation UI lives in the CM
+dashboard</li>
+</ul>
+<hr />
+<h2 id="success-metrics">10. Success Metrics</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Time to file a post-battle update</td>
+<td>&lt; 5 min (median)</td>
+</tr>
+<tr class="even">
+<td>Update approval time (CM)</td>
+<td>&lt; 2 min (median)</td>
+</tr>
+<tr class="odd">
+<td>Per-update events generated</td>
+<td>complete (no missing changes)</td>
+</tr>
+<tr class="even">
+<td>Public narrative log freshness</td>
+<td>&lt; 5 min after approval</td>
+</tr>
+<tr class="odd">
+<td>Narrative event templates available at launch</td>
+<td>&gt;= 4 Armageddon-specific</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="edge-cases">11. Edge Cases</h2>
+<ol type="1">
+<li><strong>Both players file conflicting updates</strong> (one says
+they won, the other says they won): system detects the conflict, flags
+as <code>disputed</code>, requires CM adjudication.</li>
+<li><strong>Player files update for a battle against someone who is not
+in the campaign</strong>: rejected at form level; player must pick from
+member list.</li>
+<li><strong>Update applied to a now-stale RosterVersion</strong> (player
+imported a new version while update was pending): approval flow forces
+re-confirmation against the new version.</li>
+<li><strong>CM-triggered event would bankrupt a player</strong> (e.g.,
+−10 RP when they have 3): event is applied, RP clamps to 0; the system
+emits a warning event for the CM audit log.</li>
+<li><strong>Player attempts to add an honour not in the active
+supplement</strong>: form-level validation blocks; if a CM-override
+allows it, the honour is tagged
+<code>supplement_out_of_scope = true</code>.</li>
+</ol>
+</body>
+</html>

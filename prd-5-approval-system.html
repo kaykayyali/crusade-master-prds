@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-5-approval-system</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-5-approval-system</h1>
+</header>
+<h1 id="prd-5-approval-system">PRD-5: Approval System</h1>
+<blockquote>
+<p>All actions that change campaign state go through a unified approval
+pipeline. The CM is the default approver; co-CMs share the role.</p>
+</blockquote>
+<hr />
+<h2 id="goals">1. Goals</h2>
+<p>One consistent pipeline for every approval-worthy action in the app,
+so the CM never has to learn a new flow for each subsystem. Approval is
+fast (target: &lt; 30s for a routine update), auditable, and
+reversible.</p>
+<p><strong>Success metric</strong>: 95% of approval decisions made
+within 24 hours of submission.</p>
+<hr />
+<h2 id="user-stories">2. User Stories</h2>
+<ul>
+<li><strong>As a CM</strong>, I have a single inbox that shows all
+pending approvals across all my campaigns.</li>
+<li><strong>As a CM</strong>, I can approve, reject, or request changes
+on a submission. Rejections require a reason.</li>
+<li><strong>As a CM</strong>, I can see context (the proposed change
+vs. current state) without leaving the inbox.</li>
+<li><strong>As a player</strong>, I see the status of my submissions in
+real time.</li>
+<li><strong>As a co-CM</strong>, I share the same approval rights as the
+primary CM.</li>
+</ul>
+<hr />
+<h2 id="approval-routed-actions">3. Approval-Routed Actions</h2>
+<p>Not every action needs approval. The system distinguishes:</p>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 31%" />
+<col style="width: 15%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Action</th>
+<th>Approval required?</th>
+<th>Approver</th>
+<th>Auto-apply on approval?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Player imports new RosterVersion</td>
+<td>No (player self-serves)</td>
+<td>n/a</td>
+<td>Yes (on confirm)</td>
+</tr>
+<tr class="even">
+<td>Player files post-battle update</td>
+<td>Yes</td>
+<td>CM (or co-CM)</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Player files manual edit to active roster</td>
+<td>Yes</td>
+<td>CM</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Player purchases Requisition</td>
+<td>Yes</td>
+<td>CM</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Player requests roster revert</td>
+<td>Yes</td>
+<td>CM</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Player switches faction mid-campaign</td>
+<td>Yes</td>
+<td>CM</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>CM edits campaign settings</td>
+<td>No (CM is the authority)</td>
+<td>n/a</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>CM triggers narrative event</td>
+<td>No (CM is the authority)</td>
+<td>n/a</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>CM overrides a record</td>
+<td>No (CM is the authority)</td>
+<td>n/a</td>
+<td>Yes (with audit)</td>
+</tr>
+<tr class="even">
+<td>CM grants or strips a co-CM role</td>
+<td>No (primary CM only)</td>
+<td>n/a</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Member joins campaign</td>
+<td>No (per PRD-2 self-serve)</td>
+<td>n/a</td>
+<td>Yes (with optional CM vetting mode)</td>
+</tr>
+<tr class="even">
+<td>Member removed by CM</td>
+<td>No</td>
+<td>n/a</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>A campaign setting <code>auto_approve_known_actions</code> (default
+off) lets a CM skip approval for routine post-battle updates with no
+anomalies. When on, the system only routes updates to the inbox if any
+of the following triggers: - An OoA test failed - A Requisition was
+purchased - Honours/scars were added beyond universal list - Player was
+the loser of a battle and is requesting reversal - Manual edits outside
+NR import - Player is a new account (&lt; 7 days)</p>
+<hr />
+<h2 id="approvalrequest-schema">4. ApprovalRequest Schema</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> ApprovalKind <span class="op">=</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;post_battle_update&#39;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_manual_edit&#39;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_purchase&#39;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_revert&#39;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;faction_switch&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;custom&#39;</span><span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> ApprovalRequest {</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> ApprovalKind<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  submittedByUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  submittedAt<span class="op">:</span> timestamp<span class="op">;</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span>  <span class="co">// kind-specific</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;changes_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;withdrawn&#39;</span><span class="op">;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  reviewerUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>     <span class="co">// claimed by a CM</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  decidedAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  decisionReason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>      <span class="co">// required if rejected or changes_requested</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                <span class="co">// hash of current state to detect drift</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> ApprovalAuditEntry {</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  approvalId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  actorUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  action<span class="op">:</span> <span class="st">&#39;submitted&#39;</span> <span class="op">|</span> <span class="st">&#39;claimed&#39;</span> <span class="op">|</span> <span class="st">&#39;unclaimed&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;changes_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;auto_approved&#39;</span> <span class="op">|</span> <span class="st">&#39;auto_rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;withdrawn&#39;</span><span class="op">;</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  occurredAt<span class="op">:</span> timestamp<span class="op">;</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="inbox-ux">5. Inbox UX</h2>
+<p>CM lands on a dedicated <code>/inbox</code> route. Layout:</p>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│ Inbox                              [Filter ▾] [⚙]  │
+├─────────────────────────────────────────────────────┤
+│ 5 pending · 0 claimed by you                        │
+├─────────────────────────────────────────────────────┤
+│ ☐ Post-battle update — jake42 vs. sarah_k           │
+│   Submitted 2h ago · Battle 12: Cadian 67th vs. SW  │
+│   Result: W · 1 unit promoted, 1 unit took OoA     │
+│   [View] [Approve] [Reject] [Request Changes]      │
+├─────────────────────────────────────────────────────┤
+│ ☐ Requisition — mike_t                             │
+│   Submitted 1d ago · Requesting: Reinforcements     │
+│   Cost: 3 RP · Player current RP: 5                │
+│   [View] [Approve] [Reject]                         │
+└─────────────────────────────────────────────────────┘</code></pre>
+<ul>
+<li><strong>Filter</strong>: by campaign, kind, submitter, age</li>
+<li><strong>Sort</strong>: oldest first by default (FIFO)</li>
+<li><strong>Claim</strong>: optional — first CM to “claim” locks the
+request to them; another CM can override</li>
+<li><strong>Bulk actions</strong>: select multiple → approve (only for
+routine post-battle updates with no anomalies)</li>
+</ul>
+<h3 id="detail-view">5.1 Detail View</h3>
+<p>Clicking an item opens a side panel with: - Full proposed change
+(with deltas highlighted) - Current state of the affected entity -
+Submitter’s notes (if any) - Recent related events - Quick-approve /
+quick-reject buttons - “Open in full view” link to the relevant
+subsystem</p>
+<hr />
+<h2 id="drift-detection">6. Drift Detection</h2>
+<p>When a CM opens a pending approval, the system recomputes the
+proposed change against the <strong>current</strong> state. If the
+current state has changed since submission (e.g., the player imported a
+new RosterVersion while approval was pending), the CM sees a “Drift
+detected” warning with a side-by-side of the original proposal vs. the
+recomputed proposal.</p>
+<p>The CM can then: - <strong>Re-validate</strong> — the player is asked
+to resubmit - <strong>Force-apply</strong> — apply the original intent
+anyway (with audit log entry explaining the override) -
+<strong>Reject</strong> — the submission is rejected as stale</p>
+<hr />
+<h2 id="reversibility">7. Reversibility</h2>
+<p>Every approved change is reversible. The CM (or, in some cases, the
+player themselves) can roll back any approval within a configurable
+window (default 7 days). Rollback creates a new set of
+<code>Event</code> records that exactly invert the originals.</p>
+<p>For destructive actions (e.g., <code>unit_destroyed</code> from an
+OoA fail), rollback is allowed but produces a “resurrection” event
+visible in the narrative log.</p>
+<hr />
+<h2 id="notifications">8. Notifications</h2>
+<p>When a submission’s status changes, the submitter gets a
+notification:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Channel</th>
+<th>MVP?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>In-app (toast + notifications list)</td>
+<td>Yes</td>
+</tr>
+<tr class="even">
+<td>Email</td>
+<td>Yes</td>
+</tr>
+<tr class="odd">
+<td>Push</td>
+<td>No (post-MVP)</td>
+</tr>
+</tbody>
+</table>
+<p>Notification text is templated and versioned: &gt; “Your post-battle
+update for Cadian 67th vs. Space Wolves was approved by cm_jane 2h ago.
+1 unit promoted, 1 OoA test applied.”</p>
+<hr />
+<h2 id="approval-policies-campaign-level-setting">9. Approval Policies
+(campaign-level setting)</h2>
+<p>CMs can configure campaign-level policies:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Policy</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>auto_approve_post_battle: true</code></td>
+<td>Auto-approve routine post-battle updates that have no anomalies (per
+trigger list above)</td>
+</tr>
+<tr class="even">
+<td><code>require_two_approvals: true</code></td>
+<td>Battle updates that destroy units need two CM approvals</td>
+</tr>
+<tr class="odd">
+<td><code>lock_ooa_modifications: true</code></td>
+<td>Players cannot manually edit OoA results; must be CM-overridden</td>
+</tr>
+<tr class="even">
+<td><code>require_battle_report: true</code></td>
+<td>Post-battle updates must include a markdown battle report of &gt;=
+200 chars</td>
+</tr>
+</tbody>
+</table>
+<p>Each policy is enforced at form-submit time and at apply time.</p>
+<hr />
+<h2 id="user-flow">10. User Flow</h2>
+<pre class="mermaid"><code>flowchart TD
+    A[Player submits] --&gt; B{Action kind}
+    B --&gt;|auto-approveable| C{All policies pass?}
+    C --&gt;|Yes| D[Auto-approve]
+    C --&gt;|No| E[Create ApprovalRequest pending]
+    B --&gt;|always requires approval| E
+    D --&gt; F[Apply events]
+    E --&gt; G[CM sees in inbox]
+    G --&gt; H{Decision}
+    H --&gt;|Approve| I[Apply events, notify player]
+    H --&gt;|Reject| J[Mark rejected, notify with reason]
+    H --&gt;|Request changes| K[Mark changes_requested, notify]
+    I --&gt; L[Player sees updated roster]
+    J --&gt; L
+    K --&gt; M[Player edits and resubmits]
+    M --&gt; A</code></pre>
+<hr />
+<h2 id="out-of-scope">11. Out of Scope</h2>
+<ul>
+<li>Cross-campaign approval (e.g., a CM approves for another CM)</li>
+<li>Auto-adjudication of disputes (AI judge) — flagged as future</li>
+<li>Multi-CM voting (consensus requirements)</li>
+</ul>
+<hr />
+<h2 id="dependencies">12. Dependencies</h2>
+<ul>
+<li><strong>PRD-0</strong>: <code>ApprovalRequest</code>,
+<code>ApprovalAuditEntry</code>, <code>User</code> (CM role)</li>
+<li><strong>PRD-1</strong>: CM dashboard inbox link</li>
+<li><strong>PRD-3</strong>: roster version drift detection</li>
+<li><strong>PRD-4</strong>: every state change goes through this
+pipeline</li>
+<li><strong>Auth infra</strong>: CM role gating</li>
+<li><strong>Notifications infra</strong> (PRD-0, future): in-app + email
+delivery</li>
+</ul>
+<hr />
+<h2 id="success-metrics">13. Success Metrics</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Median time from submission to decision</td>
+<td>&lt; 2 hours</td>
+</tr>
+<tr class="even">
+<td>Inbox clearance rate (within 24h)</td>
+<td>&gt; 95%</td>
+</tr>
+<tr class="odd">
+<td>Drift events detected and handled correctly</td>
+<td>100%</td>
+</tr>
+<tr class="even">
+<td>Approval rollback rate</td>
+<td>&lt; 1% of approvals</td>
+</tr>
+<tr class="odd">
+<td>CM time per approval</td>
+<td>&lt; 30s for routine updates</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="edge-cases">14. Edge Cases</h2>
+<ol type="1">
+<li><strong>Two CMs approve the same request simultaneously</strong>
+(race condition): optimistic locking via <code>contextHash</code>;
+second approver sees a “already decided” message and is asked to
+refresh.</li>
+<li><strong>Submitter withdraws request</strong> while a CM has it
+claimed: CM sees a “withdrawn” banner on next interaction; the request
+is closed.</li>
+<li><strong>Approval is for a now-deleted entity</strong> (e.g., the
+unit was destroyed in a later update, then this approval references the
+destroyed unit): the apply step fails transactionally; CM is shown an
+error and asked to reject with explanation.</li>
+<li><strong>CM is the submitter</strong> (e.g., CM is also a player in
+their own campaign): approval auto-routes to the next co-CM, or
+auto-approves with audit log entry if no co-CM exists.</li>
+<li><strong>Submitter is suspended mid-approval</strong>: pending
+requests auto-rejected with reason “Submitter suspended”; CM can
+override.</li>
+</ol>
+</body>
+</html>

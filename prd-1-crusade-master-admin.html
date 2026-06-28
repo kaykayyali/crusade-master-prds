@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-1-crusade-master-admin</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-1-crusade-master-admin</h1>
+</header>
+<h1 id="prd-1-crusade-master-administration">PRD-1: Crusade Master
+Administration</h1>
+<blockquote>
+<p>Crusader Master dashboard, campaign lifecycle, member management, and
+CM-only operations.</p>
+</blockquote>
+<hr />
+<h2 id="goals">1. Goals</h2>
+<p>Enable a Crusade Master to run one or more campaigns end-to-end
+without depending on a third-party service. The CM is the campaign’s
+owner; they configure it, invite players, monitor progress, generate
+narrative events, and approve post-battle updates.</p>
+<p><strong>Success metric</strong>: A CM can launch a fully-configured
+campaign with 8 players in under 15 minutes.</p>
+<hr />
+<h2 id="user-stories">2. User Stories</h2>
+<ul>
+<li><strong>As a CM</strong>, I can create a new campaign, choose the
+supplement (Armageddon for MVP), and configure house rules (point cap,
+max games/week, OoA test variant).</li>
+<li><strong>As a CM</strong>, I can generate an invite code/link that
+lets players join without me manually adding them.</li>
+<li><strong>As a CM</strong>, I can see all rosters in my campaign at a
+glance, with rank distribution, total RP, and outstanding approval
+requests.</li>
+<li><strong>As a CM</strong>, I can pause, archive, or end a
+campaign.</li>
+<li><strong>As a CM</strong>, I can override any data the system holds
+(with audit trail).</li>
+<li><strong>As a CM</strong>, I can run multiple campaigns.</li>
+</ul>
+<hr />
+<h2 id="feature-modules">3. Feature Modules</h2>
+<h3 id="campaign-creation">3.1 Campaign Creation</h3>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 30%" />
+<col style="width: 35%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>name</td>
+<td>string</td>
+<td>3-60 chars, required</td>
+</tr>
+<tr class="even">
+<td>supplement</td>
+<td>enum</td>
+<td><code>armageddon</code> for MVP; <code>nachmund</code>,
+<code>pariah</code>, <code>tyrannic</code> for future</td>
+</tr>
+<tr class="odd">
+<td>point_cap</td>
+<td>int</td>
+<td>Default 2000, range 500–3000</td>
+</tr>
+<tr class="even">
+<td>max_games_per_player_per_week</td>
+<td>int</td>
+<td>Default 2</td>
+</tr>
+<tr class="odd">
+<td>ooa_test_variant</td>
+<td>enum</td>
+<td><code>standard</code> (D6) or <code>lenient</code> (D6, 1-2
+fail)</td>
+</tr>
+<tr class="even">
+<td>allow_mixed_supplements</td>
+<td>bool</td>
+<td>Default false</td>
+</tr>
+<tr class="odd">
+<td>custom_house_rules</td>
+<td>markdown</td>
+<td>Free text, rendered on campaign page</td>
+</tr>
+<tr class="even">
+<td>start_date</td>
+<td>date</td>
+<td>When battles can begin being filed</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output</strong>: campaign record, unique join code (8-char
+alphanumeric), shareable URL.</p>
+<h3 id="member-management">3.2 Member Management</h3>
+<ul>
+<li>CM sees a member list:
+<code>displayName, faction, joinedAt, status, lastActivityAt</code></li>
+<li>CM can: invite (via email or link), remove, suspend, promote to
+co-CM</li>
+<li>Players can self-serve removal (leave campaign)</li>
+<li>Co-CMs have all CM rights except: deleting the campaign,
+transferring ownership</li>
+</ul>
+<h3 id="dashboard">3.3 Dashboard</h3>
+<p>The CM dashboard surfaces: 1. <strong>Pending approvals
+count</strong> (clickable → PRD-5 inbox) 2. <strong>Active
+campaigns</strong> (cards, with quick stats: # players, # battles, #
+pending updates) 3. <strong>Leaderboard preview</strong> (top 3 forces
+by RP, by battles played) 4. <strong>Recent activity feed</strong> (last
+10 events across the CM’s campaigns) 5. <strong>Narrative log</strong>
+(auto-aggregated from approved battles, see PRD-4) 6. <strong>Errata
+alert</strong> (banner when Wahapedia data refresh affected rules the
+campaign uses)</p>
+<h3 id="campaign-settings">3.4 Campaign Settings</h3>
+<p>Editable post-creation: point cap, max games/week, OoA variant, house
+rules, supplement (with confirmation if changes affect active
+units).</p>
+<p>Deletable: CM can archive (soft delete) or hard-delete. Hard-delete
+is logged and requires typed confirmation of campaign name.</p>
+<h3 id="override-tool">3.5 Override Tool</h3>
+<p>CMs can edit any field on any record, with required reason text.
+Every override writes to the audit log and shows in the affected
+player’s notification.</p>
+<p>Examples: - Force-set a unit’s rank after a manual re-roll - Manually
+grant a Battle Honour from a non-standard source - Reverse an erroneous
+approval</p>
+<hr />
+<h2 id="user-flow">4. User Flow</h2>
+<h3 id="happy-path-create-campaign">4.1 Happy Path: Create Campaign</h3>
+<pre class="mermaid"><code>flowchart TD
+    A[CM lands on /dashboard] --&gt; B{Has campaign?}
+    B --&gt;|No| C[Click &#39;New Campaign&#39;]
+    B --&gt;|Yes| D[Open existing]
+    C --&gt; E[Fill form: name, supplement, point cap]
+    E --&gt; F[Submit]
+    F --&gt; G[System creates campaign + join code]
+    G --&gt; H[CM shares join code/URL with players]
+    H --&gt; I[Players join (see PRD-2)]
+    I --&gt; J[CM dashboard shows member count growing]</code></pre>
+<h3 id="branch-mid-campaign-supplement-switch">4.2 Branch: Mid-Campaign
+Supplement Switch</h3>
+<p>If a CM switches supplement (e.g., to add Nachmund rules later), the
+system runs a migration step: - Existing units’ honours/scars are
+preserved - New supplement-specific fields default to safe values - CM
+sees a migration report before confirming</p>
+<hr />
+<h2 id="cm-only-operations-cross-reference">5. CM-Only Operations
+(cross-reference)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Where defined</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Generate narrative event</td>
+<td>PRD-4</td>
+</tr>
+<tr class="even">
+<td>Approve post-battle update</td>
+<td>PRD-5</td>
+</tr>
+<tr class="odd">
+<td>Adjust leaderboard scoring</td>
+<td>PRD-1 (this doc)</td>
+</tr>
+<tr class="even">
+<td>Edit campaign settings</td>
+<td>PRD-1</td>
+</tr>
+<tr class="odd">
+<td>Override any record</td>
+<td>PRD-1</td>
+</tr>
+<tr class="even">
+<td>Export campaign as PDF</td>
+<td>PRD-1 (feature)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="out-of-scope-this-prd">6. Out of Scope (this PRD)</h2>
+<ul>
+<li>Player-side roster editing (PRD-3)</li>
+<li>Approval workflow logic (PRD-5)</li>
+<li>Event generation rules (PRD-4)</li>
+</ul>
+<hr />
+<h2 id="dependencies">7. Dependencies</h2>
+<ul>
+<li><strong>PRD-0</strong> for shared data model (<code>Campaign</code>,
+<code>CampaignMember</code>, <code>User</code>,
+<code>CrusadeSupplement</code>)</li>
+<li><strong>PRD-5</strong> for the approval inbox link</li>
+<li><strong>PRD-4</strong> for the event generation trigger and
+narrative log</li>
+<li><strong>Auth service</strong> (PRD-0, infra-level) for CM role
+gating</li>
+</ul>
+<hr />
+<h2 id="success-metrics">8. Success Metrics</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Time from “create” click to “campaign live”</td>
+<td>&lt; 2 min</td>
+</tr>
+<tr class="even">
+<td>Campaigns per active CM</td>
+<td>&gt; 1 (multi-campaign supported)</td>
+</tr>
+<tr class="odd">
+<td>CM override usage rate</td>
+<td>&lt; 5% of unit changes (otherwise approval flow is broken)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="edge-cases">9. Edge Cases</h2>
+<ol type="1">
+<li><strong>CM account deleted</strong>: campaign ownership must
+transfer or campaign is archived. UI for ownership transfer is a
+single-page “Transfer ownership” wizard.</li>
+<li><strong>CM is also a player in own campaign</strong>: allowed by
+default, with a clear “playing in your own campaign” warning to other
+members.</li>
+<li><strong>All players leave</strong>: campaign goes into “dormant”
+state; auto-archive after 90 days.</li>
+<li><strong>Two CMs edit settings concurrently</strong>: last-write-wins
+with a 5-second debounce; second writer sees a “someone else just
+edited” toast.</li>
+</ol>
+</body>
+</html>

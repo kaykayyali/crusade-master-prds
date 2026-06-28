@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-0-overview</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-0-overview</h1>
+</header>
+<h1 id="prd-0-crusade-master-app-overview">PRD-0: Crusade Master App —
+Overview</h1>
+<blockquote>
+<p>Shared architecture, data model, MVP scope (Armageddon), and links to
+subsystem PRDs.</p>
+</blockquote>
+<hr />
+<h2 id="background-and-goals">1. Background and Goals</h2>
+<h3 id="background">1.1 Background</h3>
+<p>Warhammer 40,000 Crusade is a narrative play mode where units gain
+experience, ranks, and battle honors across linked games. Running a
+group Crusade (typically 4–16 players over weeks/months) requires a
+“Crusade Master” to:</p>
+<ul>
+<li>Coordinate match pairings and scheduling</li>
+<li>Verify post-battle updates (XP, ranks, honours, scars, requisition
+spends)</li>
+<li>Enforce house rules and adjudicate disputes</li>
+<li>Maintain a consistent narrative arc</li>
+</ul>
+<p>Today this is mostly done with paper rosters, spreadsheets, or paid
+tools (Administratum, ServoCrypt). The recent release of New Recruit’s
+JSON export and Wahapedia’s CSV data export make it possible to build an
+automated, self-hosted tool that any CM can run without depending on a
+third-party Patreon.</p>
+<h3 id="goals">1.2 Goals</h3>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 36%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Goal</th>
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Business</strong>: replace paper/spreadsheet Crusade
+administration</td>
+<td>Group campaigns using the app end-to-end</td>
+<td>5+ active campaigns within 90 days of launch</td>
+</tr>
+<tr class="even">
+<td><strong>User (CM)</strong>: cut per-battle admin time</td>
+<td>Time CM spends processing a post-battle update</td>
+<td>&lt; 2 minutes per battle</td>
+</tr>
+<tr class="odd">
+<td><strong>User (Player)</strong>: visibility into own force</td>
+<td>Time for a player to see their current Crusade state</td>
+<td>&lt; 10 seconds (one screen)</td>
+</tr>
+<tr class="even">
+<td><strong>Product</strong>: data ownership</td>
+<td>% of user data exportable in open formats</td>
+<td>100% (JSON + CSV)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mvp-scope">1.3 MVP Scope</h3>
+<p><strong>Crusade: Armageddon</strong> (launched June 2026 with 11th
+Edition Warhammer 40,000). The app MVP supports the full Armageddon rule
+set: alignment, supply limit, requisitions, logistics points, and
+Armageddon-specific agendas and relics.</p>
+<p><strong>Explicit non-MVP (future iterations):</strong> - Crusade:
+Leviathan (10th-ed launch book) - Crusade: Tyrannic War - Crusade:
+Pariah Nexus - Crusade: Nachmund Gauntlet</p>
+<p>These are scaffolded in the data model from day one so the schema
+doesn’t need a migration later, but their mechanic-specific UIs (e.g.,
+Nachmund’s three-alignment system) ship in PRD-6+.</p>
+<hr />
+<h2 id="user-types">2. User Types</h2>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 35%" />
+<col style="width: 48%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>User</th>
+<th>What they do</th>
+<th>What they can see</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Crusade Master (CM)</strong></td>
+<td>Owns one or more campaigns. Approves post-battle updates,
+adjudicates disputes, generates events, manages the campaign
+lifecycle</td>
+<td>All campaigns they own + all rosters in those campaigns</td>
+</tr>
+<tr class="even">
+<td><strong>Player</strong></td>
+<td>Joins a campaign. Imports their army from New Recruit, files
+post-battle updates, requests requisitions</td>
+<td>Only their own roster and public campaign info (leaderboard,
+narrative log)</td>
+</tr>
+<tr class="odd">
+<td><strong>Spectator (read-only)</strong></td>
+<td>Views campaign narrative, leaderboard, public rosters</td>
+<td>Public campaign info only</td>
+</tr>
+<tr class="even">
+<td><strong>System Admin</strong></td>
+<td>Operates the platform (errata refresh, abuse moderation)</td>
+<td>All data, audit log access</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="architecture-shared">3. Architecture (shared)</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│                    Client (Web, mobile-first)                │
+│  React or SvelteKit  ·  Tailwind  ·  IndexedDB cache         │
+└──────────────────┬───────────────────────────────────────────┘
+                   │ HTTPS
+┌──────────────────▼───────────────────────────────────────────┐
+│                     API Gateway                              │
+│  Auth (OAuth or email-magic-link)  ·  Rate limiting          │
+└──────────────────┬───────────────────────────────────────────┘
+                   │
+   ┌───────────────┼───────────────┬──────────────────┐
+   │               │               │                  │
+┌──▼─────────┐ ┌───▼──────────┐ ┌──▼─────────────┐ ┌──▼─────────┐
+│ Campaign   │ │ Roster &amp;     │ │ Battle &amp;       │ │ Approval   │
+│ Service    │ │ Crusade      │ │ Event Service  │ │ Workflow   │
+│ (CM ops)   │ │ Card Service │ │ (deltas)       │ │ Service    │
+└──┬─────────┘ └──┬───────────┘ └──┬─────────────┘ └──┬─────────┘
+   │             │                │                  │
+   └─────────────┴────────────────┴──────────────────┘
+                     │
+        ┌────────────┼─────────────┐
+        │            │             │
+   ┌────▼────┐  ┌─────▼─────┐ ┌────▼────────┐
+   │Postgres │  │ Object    │ │ Wahapedia   │
+   │ (OLTP)  │  │ Storage   │ │ Cache (CSV) │
+   └─────────┘  │ (exports) │ └─────────────┘
+                └───────────┘</code></pre>
+<p><strong>Key tech choices:</strong> - <strong>Postgres</strong> for
+relational data (campaigns, rosters, battles, audit log) -
+<strong>Object storage</strong> (S3-compatible) for NR export JSON
+blobs, PDF rosters - <strong>Wahapedia data refresh</strong> runs
+nightly; results cached in <code>wahapedia_cache</code> tables and
+joined to faction tables</p>
+<hr />
+<h2 id="shared-data-model">4. Shared Data Model</h2>
+<p>These types are referenced by every subsystem PRD. Detailed fields
+live in each subsystem’s PRD; the table here shows what crosses
+boundaries.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// === Identity ===</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>User { id<span class="op">,</span> email<span class="op">,</span> displayName<span class="op">,</span> role<span class="op">:</span> <span class="st">&#39;player&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;admin&#39;</span><span class="op">,</span> createdAt }</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> createdAt<span class="op">,</span> settings }</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>CampaignMember { campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId }</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (per player, per campaign) ===</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Roster { id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span> version<span class="op">,</span> createdAt }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>RosterVersion { id<span class="op">,</span> rosterId<span class="op">,</span> versionNumber<span class="op">,</span> sourceImportId<span class="op">,</span> snapshotJson<span class="op">,</span> pointLimit<span class="op">,</span> createdAt }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>Unit { id<span class="op">,</span> rosterVersionId<span class="op">,</span> wahapediaDatasheetId<span class="op">,</span> name<span class="op">,</span> customName<span class="op">,</span> rank<span class="op">,</span> xp<span class="op">,</span> status }</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade card (lives on Unit) ===</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>BattleHonour { id<span class="op">,</span> unitId<span class="op">,</span> name<span class="op">,</span> sourceSupplementId<span class="op">,</span> gainedAt }</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>BattleScar { id<span class="op">,</span> unitId<span class="op">,</span> name<span class="op">,</span> sourceSupplementId<span class="op">,</span> gainedAt }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// === Supplements ===</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement { id<span class="op">,</span> code<span class="op">,</span> name<span class="op">,</span> edition<span class="op">,</span> releaseDate }  <span class="co">// &#39;armageddon&#39;, &#39;nachmund&#39;, etc.</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>Battle { id<span class="op">,</span> campaignId<span class="op">,</span> playerAId<span class="op">,</span> playerBId<span class="op">,</span> scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId }</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> }</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> battleUpdateId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason }</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<p><strong>Identifiers are UUIDv7</strong> (time-ordered) so audit log
+scans are efficient.</p>
+<hr />
+<h2 id="subsystem-prds">5. Subsystem PRDs</h2>
+<table>
+<thead>
+<tr class="header">
+<th>PRD</th>
+<th>Subsystem</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PRD-1</td>
+<td>Crusade Master Administration</td>
+<td>Drafted</td>
+</tr>
+<tr class="even">
+<td>PRD-2</td>
+<td>Player Sign-Up</td>
+<td>Drafted</td>
+</tr>
+<tr class="odd">
+<td>PRD-3</td>
+<td>Army Export &amp; Versioning</td>
+<td>Drafted</td>
+</tr>
+<tr class="even">
+<td>PRD-4</td>
+<td>Events &amp; Deltas</td>
+<td>Drafted</td>
+</tr>
+<tr class="odd">
+<td>PRD-5</td>
+<td>Approval System</td>
+<td>Drafted</td>
+</tr>
+</tbody>
+</table>
+<p>Each PRD can be developed and shipped independently once the shared
+data model is implemented. Dependencies are explicit in each PRD’s
+“Dependencies” section.</p>
+<hr />
+<h2 id="crusade-supplement-coverage">6. Crusade Supplement Coverage</h2>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 13%" />
+<col style="width: 13%" />
+<col style="width: 46%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Supplement</th>
+<th>Code</th>
+<th>MVP?</th>
+<th>Mechanic highlights</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Armageddon</td>
+<td><code>armageddon</code></td>
+<td><strong>Yes</strong></td>
+<td>Alignment, Supply Limit, Armageddon-specific Requisitions</td>
+</tr>
+<tr class="even">
+<td>Nachmund Gauntlet</td>
+<td><code>nachmund</code></td>
+<td>Future</td>
+<td>3 alignments (Guardians/Despoilers/Marauders), Logistics Points</td>
+</tr>
+<tr class="odd">
+<td>Pariah Nexus</td>
+<td><code>pariah</code></td>
+<td>Future</td>
+<td>Contagion mechanic, Nephilim agendas</td>
+</tr>
+<tr class="even">
+<td>Tyrannic War</td>
+<td><code>tyrannic</code></td>
+<td>Future</td>
+<td>Tyrannic agendas, faction-gated objectives</td>
+</tr>
+</tbody>
+</table>
+<p>The MVP is <strong>Armageddon</strong> because it ships with 11th-ed,
+is the active launch supplement, and is the only supplement that
+requires no carryover from 10th-ed data.</p>
+<hr />
+<h2 id="success-metrics">7. Success Metrics</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 28%" />
+<col style="width: 42%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Definition</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Time-to-first-update</td>
+<td>From player joining a campaign to first post-battle update
+filed</td>
+<td>&lt; 30 min</td>
+</tr>
+<tr class="even">
+<td>CM admin time per battle</td>
+<td>CM time per battle approval</td>
+<td>&lt; 2 min</td>
+</tr>
+<tr class="odd">
+<td>Roster import success rate</td>
+<td>NR imports that produce a valid roster without manual fixup</td>
+<td>&gt; 90%</td>
+</tr>
+<tr class="even">
+<td>Data freshness</td>
+<td>Time from Wahapedia data update to reflected in app</td>
+<td>&lt; 24h</td>
+</tr>
+<tr class="odd">
+<td>Player retention</td>
+<td>% of players still filing updates at week 8</td>
+<td>&gt; 60%</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="non-goals-mvp">8. Non-Goals (MVP)</h2>
+<ul>
+<li>❌ Matched Play / non-Crusade 40K rules</li>
+<li>❌ Tournament mode / pairings engine</li>
+<li>❌ Mobile native apps (web-only, mobile-responsive)</li>
+<li>❌ Real-time push notifications (email + in-app only for MVP)</li>
+<li>❌ 9th-ed Crusade support</li>
+<li>❌ Other Games Workshop systems (Age of Sigmar, Kill Team, Horus
+Heresy)</li>
+</ul>
+<hr />
+<h2 id="open-questions">9. Open Questions</h2>
+<ul>
+<li><strong>Auth provider</strong>: roll our own (email magic link) or
+use Supabase/Clerk? (TBD by infra team)</li>
+<li><strong>Hosting target</strong>: Vercel + Supabase vs self-hosted
+Docker? (TBD)</li>
+<li><strong>Data residency</strong>: EU-only for GDPR, or multi-region?
+(TBD)</li>
+<li><strong>Multi-tenant CMs</strong>: can one user be CM of multiple
+campaigns? (Yes — supported in schema, UI in PRD-1)</li>
+</ul>
+<hr />
+<h2 id="references">10. References</h2>
+<ul>
+<li>Wahapedia × 10th-ed Crusade data reference (companion research doc,
+deep-research output)</li>
+<li>New Recruit JSON export format (BattleScribe schema dialect)</li>
+<li>Administratum (Goonhammer) — closest commercial competitor</li>
+<li>ServoCrypt — closest open collaborative competitor</li>
+<li><em>Crusade: Armageddon</em> (Games Workshop, June 2026)</li>
+</ul>
+</body>
+</html>
