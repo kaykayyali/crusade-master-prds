@@ -14,8 +14,39 @@ One consistent pipeline for every approval-worthy action. The CM's inbox is the 
 
 ## 2. Approval-Routed Actions
 
+### 2.1 Approval-Gating Principle
+
+Per PRD-0 §4b: any operation that mutates shared campaign state or affects the narrative **must be gateable by CM approval**. The approval system is the load-bearing mechanism for narrative integrity in this app. Auto-approve is a per-campaign CM choice, never the default; the *capability* is what's required.
+
+### 2.2 Action Categories
+
+The v1 categories of narrative-affecting actions routed through the approval queue:
+
+| Category | Concrete actions | Approval required? | Approver |
+|---|---|---|---|
+| **Army roster changes** | Player submits RosterDraft; manual roster edit; requisition purchase; roster revert | **Yes** | CM (or co-CM) |
+| **Crusade points** | RP grants/deducts from narrative events; requisition costs; manual RP adjustments | **Yes** | CM (or co-CM) |
+| **All-player effects** | Campaign-wide announcements; mass narrative events; point-cap changes; rule pack promotion (builtin → campaign) | **Yes** | CM (or co-CM) |
+| **Battle updates** | Per-unit XP, honours, scars, OoA tests, agenda ticks | **Yes** | CM (or co-CM) |
+| **Team / faction changes** | Team switch; faction switch mid-campaign | **Yes** | CM (or co-CM) |
+
+### 2.3 Self-Serve (Not Approval-Gated)
+
+Some actions are player-internal and don't enter the approval queue:
+
+| Action | Self-served by | Why no approval |
+|---|---|---|
+| Player imports RosterDraft (upload JSON) | Player | Draft is private until submitted |
+| BullMQ parse completes | System | Idempotent state transition |
+| Player acknowledges rule-check issues | Player | Per-player decision, no shared state mutation |
+| Player edits draft before submission | Player | Draft is private to the player |
+| Player UI preferences | Player | No shared state |
+| Player per-unit cosmetics (paint color, custom name draft) | Player | No shared state |
+
+### 2.4 Full Action × Approval Matrix
+
 | Action | Approval required? | Approver |
-|--------|--------------------|----------|
+|---|---|---|
 | Player imports RosterDraft (upload JSON) | No (player self-serves upload) | n/a — draft becomes `parsing` |
 | BullMQ parse completes | No (system) | n/a — draft becomes `pending_review` |
 | Player acknowledges rule-check issues | No (player self-serves) | n/a — draft becomes `pending_approval` |
@@ -25,8 +56,12 @@ One consistent pipeline for every approval-worthy action. The CM's inbox is the 
 | Player purchases Requisition | Yes | CM |
 | Player requests roster revert | Yes | CM |
 | Player switches faction mid-campaign | Yes | CM |
+| Player switches team mid-campaign | Yes | CM |
 | CM edits campaign settings | No (CM is authority) | n/a |
-| CM triggers narrative event | No (CM is authority) | n/a |
+| CM triggers narrative event (single-team scope) | No (CM is authority) | n/a |
+| CM triggers narrative event (campaign-wide, RP-affecting) | Optional co-CM approval (campaign setting) | Co-CM if enabled; otherwise CM alone |
+| CM mass-rebans a unit mid-campaign | Yes | Co-CM (mandatory) |
+| CM edits `CampaignTeam.expectedFactionIds` | No (CM is authority) | Audit-logged |
 | CM rolls back a RosterApproval | No (CM is authority) | n/a |
 | CM overrides a rule check | No (CM is authority) | n/a |
 | CM grants or strips a co-CM role | No (primary CM only) | n/a |

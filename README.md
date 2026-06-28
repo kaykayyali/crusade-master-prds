@@ -20,7 +20,20 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.4 (current) — Teams are mandatory
+### v3.5 (current) — Approval-gating as a unifying principle
+
+Per user: any operation that mutates shared campaign state or affects the narrative should be gateable by CM approval. Codified as PRD-0 §4b "Approval-Gating for Narrative Integrity" — the load-bearing mechanism for narrative integrity.
+
+- **PRD-0 §4b**: new design principle section. Lists v1 categories (army roster changes, crusade points, all-player effects, battle updates, team/faction changes) and notes that auto-approve is a CM choice, never the default.
+- **PRD-5 §2**: restructured around the principle. New §2.1 "Approval-Gating Principle", §2.2 "Action Categories" (the v1 list, grouped by category), §2.3 "Self-Serve" (what's deliberately not gated), §2.4 "Full Action × Approval Matrix" (the existing actions + new ones).
+- **PRD-5 §2.4 additions**:
+  - Team switch is approval-gated (already documented in PRD-1 §5b; now consolidated)
+  - CM-triggered campaign-wide RP-affecting narrative events: optional co-CM approval (campaign setting)
+  - CM mass-rebanning a unit mid-campaign: co-CM approval mandatory
+  - CM editing `CampaignTeam.expectedFactionIds`: self-served but audit-logged
+- The principle is open-ended: future narrative-affecting actions extend via new `ApprovalRequest.kind` values + a config entry in CM's auto-approve settings.
+
+### v3.4 — Teams are mandatory
 
 Per user direction: free-for-all mode is out of scope. Every campaign uses teams.
 

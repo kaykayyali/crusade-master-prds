@@ -216,6 +216,31 @@ AuditLog { id, tenantId, actorUserId, action, targetType, targetId, payload, occ
 
 ---
 
+## 4b. Design Principle: Approval-Gating for Narrative Integrity
+
+> Any operation that mutates shared campaign state or affects the narrative **must be gateable by CM approval**. The approval system is the load-bearing mechanism for narrative integrity in this app.
+
+The user's framing: narrative integrity is the central concern of a Crusade app, and approvals are how it is preserved. Concretely, the v1 categories that fall under this principle:
+
+| Category | Why it's narrative-affecting | v1 status |
+|---|---|---|
+| **Army roster changes** (add/remove units, requisition purchases, unit stat changes) | The roster is the player's army; changes are persistent and visible | Approval required (PRD-3 + PRD-5) |
+| **Crusade points** (RP grants/deducts, narrative event payouts) | RP is the campaign currency; movements are visible to all | Approval required (PRD-4) |
+| **All-player effects** (campaign-wide announcements, mass narrative events, point-cap changes) | Affects every player's view of the campaign state | Approval required (PRD-4) |
+| **Battle updates** (per-unit XP, honours, scars, OoA tests) | Persistent unit state; affects future battles | Approval required (PRD-4 + PRD-5) |
+| **Team changes** (player switches teams) | Reframes the player's narrative identity in the campaign | Approval required (PRD-1 §5b + PRD-5) |
+
+The principle is **open-ended**: any future operation that touches shared campaign state should be added to this list. The approval system (PRD-5) is the extension surface — new categories = new `ApprovalRequest.kind` values + a config entry in the CM's auto-approve settings.
+
+**Auto-approve as a CM choice, not a default:** the principle is about *capability*, not blanket enforcement. A CM can configure a campaign as "all routine battle updates auto-approve" (per PRD-5). The system supports both extremes: strict CMs who approve every change, and hands-off CMs who only gate the narrative-critical moments.
+
+**What is NOT approval-gated (player-internal data):**
+- Player UI preferences (theme, language, notification settings)
+- Player's own drafts (private until submitted; once submitted, they enter the approval queue)
+- Per-unit cosmetics that don't change game state (paint color, custom name drafts)
+
+---
+
 ## 5. Subsystem PRDs
 
 | PRD | Subsystem | v3 change |

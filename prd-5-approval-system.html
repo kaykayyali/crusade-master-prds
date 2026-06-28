@@ -235,11 +235,123 @@ inbox is the single view of “what needs my attention.”</p>
 within 24 hours of submission.</p>
 <hr />
 <h2 id="approval-routed-actions">2. Approval-Routed Actions</h2>
+<h3 id="approval-gating-principle">2.1 Approval-Gating Principle</h3>
+<p>Per PRD-0 §4b: any operation that mutates shared campaign state or
+affects the narrative <strong>must be gateable by CM approval</strong>.
+The approval system is the load-bearing mechanism for narrative
+integrity in this app. Auto-approve is a per-campaign CM choice, never
+the default; the <em>capability</em> is what’s required.</p>
+<h3 id="action-categories">2.2 Action Categories</h3>
+<p>The v1 categories of narrative-affecting actions routed through the
+approval queue:</p>
 <table>
 <colgroup>
-<col style="width: 21%" />
-<col style="width: 52%" />
-<col style="width: 26%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Category</th>
+<th>Concrete actions</th>
+<th>Approval required?</th>
+<th>Approver</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Army roster changes</strong></td>
+<td>Player submits RosterDraft; manual roster edit; requisition
+purchase; roster revert</td>
+<td><strong>Yes</strong></td>
+<td>CM (or co-CM)</td>
+</tr>
+<tr class="even">
+<td><strong>Crusade points</strong></td>
+<td>RP grants/deducts from narrative events; requisition costs; manual
+RP adjustments</td>
+<td><strong>Yes</strong></td>
+<td>CM (or co-CM)</td>
+</tr>
+<tr class="odd">
+<td><strong>All-player effects</strong></td>
+<td>Campaign-wide announcements; mass narrative events; point-cap
+changes; rule pack promotion (builtin → campaign)</td>
+<td><strong>Yes</strong></td>
+<td>CM (or co-CM)</td>
+</tr>
+<tr class="even">
+<td><strong>Battle updates</strong></td>
+<td>Per-unit XP, honours, scars, OoA tests, agenda ticks</td>
+<td><strong>Yes</strong></td>
+<td>CM (or co-CM)</td>
+</tr>
+<tr class="odd">
+<td><strong>Team / faction changes</strong></td>
+<td>Team switch; faction switch mid-campaign</td>
+<td><strong>Yes</strong></td>
+<td>CM (or co-CM)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="self-serve-not-approval-gated">2.3 Self-Serve (Not
+Approval-Gated)</h3>
+<p>Some actions are player-internal and don’t enter the approval
+queue:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Action</th>
+<th>Self-served by</th>
+<th>Why no approval</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Player imports RosterDraft (upload JSON)</td>
+<td>Player</td>
+<td>Draft is private until submitted</td>
+</tr>
+<tr class="even">
+<td>BullMQ parse completes</td>
+<td>System</td>
+<td>Idempotent state transition</td>
+</tr>
+<tr class="odd">
+<td>Player acknowledges rule-check issues</td>
+<td>Player</td>
+<td>Per-player decision, no shared state mutation</td>
+</tr>
+<tr class="even">
+<td>Player edits draft before submission</td>
+<td>Player</td>
+<td>Draft is private to the player</td>
+</tr>
+<tr class="odd">
+<td>Player UI preferences</td>
+<td>Player</td>
+<td>No shared state</td>
+</tr>
+<tr class="even">
+<td>Player per-unit cosmetics (paint color, custom name draft)</td>
+<td>Player</td>
+<td>No shared state</td>
+</tr>
+</tbody>
+</table>
+<h3 id="full-action-approval-matrix">2.4 Full Action × Approval
+Matrix</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -295,14 +407,34 @@ within 24 hours of submission.</p>
 <td>CM</td>
 </tr>
 <tr class="even">
+<td>Player switches team mid-campaign</td>
+<td>Yes</td>
+<td>CM</td>
+</tr>
+<tr class="odd">
 <td>CM edits campaign settings</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
 </tr>
-<tr class="odd">
-<td>CM triggers narrative event</td>
+<tr class="even">
+<td>CM triggers narrative event (single-team scope)</td>
 <td>No (CM is authority)</td>
 <td>n/a</td>
+</tr>
+<tr class="odd">
+<td>CM triggers narrative event (campaign-wide, RP-affecting)</td>
+<td>Optional co-CM approval (campaign setting)</td>
+<td>Co-CM if enabled; otherwise CM alone</td>
+</tr>
+<tr class="even">
+<td>CM mass-rebans a unit mid-campaign</td>
+<td>Yes</td>
+<td>Co-CM (mandatory)</td>
+</tr>
+<tr class="odd">
+<td>CM edits <code>CampaignTeam.expectedFactionIds</code></td>
+<td>No (CM is authority)</td>
+<td>Audit-logged</td>
 </tr>
 <tr class="even">
 <td>CM rolls back a RosterApproval</td>

@@ -543,6 +543,80 @@ XLSX</li>
 <span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
 <p><strong>Identifiers</strong>: UUIDv7.</p>
 <hr />
+<h2 id="b.-design-principle-approval-gating-for-narrative-integrity">4b.
+Design Principle: Approval-Gating for Narrative Integrity</h2>
+<blockquote>
+<p>Any operation that mutates shared campaign state or affects the
+narrative <strong>must be gateable by CM approval</strong>. The approval
+system is the load-bearing mechanism for narrative integrity in this
+app.</p>
+</blockquote>
+<p>The user’s framing: narrative integrity is the central concern of a
+Crusade app, and approvals are how it is preserved. Concretely, the v1
+categories that fall under this principle:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Category</th>
+<th>Why it’s narrative-affecting</th>
+<th>v1 status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Army roster changes</strong> (add/remove units, requisition
+purchases, unit stat changes)</td>
+<td>The roster is the player’s army; changes are persistent and
+visible</td>
+<td>Approval required (PRD-3 + PRD-5)</td>
+</tr>
+<tr class="even">
+<td><strong>Crusade points</strong> (RP grants/deducts, narrative event
+payouts)</td>
+<td>RP is the campaign currency; movements are visible to all</td>
+<td>Approval required (PRD-4)</td>
+</tr>
+<tr class="odd">
+<td><strong>All-player effects</strong> (campaign-wide announcements,
+mass narrative events, point-cap changes)</td>
+<td>Affects every player’s view of the campaign state</td>
+<td>Approval required (PRD-4)</td>
+</tr>
+<tr class="even">
+<td><strong>Battle updates</strong> (per-unit XP, honours, scars, OoA
+tests)</td>
+<td>Persistent unit state; affects future battles</td>
+<td>Approval required (PRD-4 + PRD-5)</td>
+</tr>
+<tr class="odd">
+<td><strong>Team changes</strong> (player switches teams)</td>
+<td>Reframes the player’s narrative identity in the campaign</td>
+<td>Approval required (PRD-1 §5b + PRD-5)</td>
+</tr>
+</tbody>
+</table>
+<p>The principle is <strong>open-ended</strong>: any future operation
+that touches shared campaign state should be added to this list. The
+approval system (PRD-5) is the extension surface — new categories = new
+<code>ApprovalRequest.kind</code> values + a config entry in the CM’s
+auto-approve settings.</p>
+<p><strong>Auto-approve as a CM choice, not a default:</strong> the
+principle is about <em>capability</em>, not blanket enforcement. A CM
+can configure a campaign as “all routine battle updates auto-approve”
+(per PRD-5). The system supports both extremes: strict CMs who approve
+every change, and hands-off CMs who only gate the narrative-critical
+moments.</p>
+<p><strong>What is NOT approval-gated (player-internal data):</strong> -
+Player UI preferences (theme, language, notification settings) -
+Player’s own drafts (private until submitted; once submitted, they enter
+the approval queue) - Per-unit cosmetics that don’t change game state
+(paint color, custom name drafts)</p>
+<hr />
 <h2 id="subsystem-prds">5. Subsystem PRDs</h2>
 <table>
 <colgroup>
