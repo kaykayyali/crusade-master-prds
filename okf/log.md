@@ -2,49 +2,52 @@
 
 ## 2026-06-28
 
-* **Creation**: v3.26 sync of the Crusade Master OKF bundle at upstream commit `0c3c626`. **8 PRD concepts** under `prds/` (added PRD-6 *Technical Architecture / API Surface* and PRD-7 *Testing Strategy*), **9 Domain Concepts** under `concepts/` (added *CampaignState* and *CampaignPhase*), **11 Reference concepts** under `references/`, **4 validators** under `scripts/`.
+### v3.28 sync
 
-* **Update**: Bundle-root `index.md` rewritten for v3.26 framing.
+* **Update**: Bundle synced to upstream v3.28 (commits `6cd2490` → `a916708`; v3.28.1 includes NR export detection logic). **8 PRD concepts**, **14 Domain Concepts** (added CrusadeForce, CrusadeForceVersion, CrusadeArmy, ApprovalSource, BattleUpdate, Notification), **11 Reference concepts**, **4 validators**.
 
-* **Creation**: New Domain Concepts added in this resync:
-  - [CampaignState](concepts/campaign-state.md) — Lifecycle state machine: created → started → ended → archived (v3.18). Distinct from Phase.
-  - [CampaignPhase](concepts/campaign-phase.md) — CM-authored narrative periods; cosmetic-only per v3.19 (no rule enforcement).
+* **Update**: All 8 PRDs and 9 existing concepts frontmatter updated to:
+  - `timestamp: "2026-06-28T23:28:00Z"`
+  - `resource:` URLs point at `a916708` commit
+  - Titles reflect v3.28 changes (e.g., PRD-3 title: "Roster Import, Approval, & Rule Compliance" → "CrusadeForce Import, Approval, & Rule Compliance")
 
-* **Update**: Bundle now reflects v3.17–v3.26 upstream changes:
-  - v3.17: comprehensive event taxonomy expansion (PRD-4 §3); always-fire re-assessment warning (PRD-5 §5.7)
-  - v3.18: State vs Phase distinction (PRD-0 §4, PRD-1 §4.4.5)
-  - v3.19: phase effects are cosmetic only (PRD-1 §4.4.5)
-  - v3.20: empty UI surfaces visible only to users who can act
-  - v3.21: cross-PRD consistency audit (fix 4 inconsistencies)
-  - v3.22: round 2 audit fixes
-  - v3.23: mermaid diagrams for relationships, inheritance, flows
-  - v3.25: PRD-6 (Technical Architecture / Swagger), PRD-7 (Testing Strategy) added
-  - v3.26: final cleanup, Event→Notification fanout
+* **Creation**: New Domain Concepts reflecting v3.28 data model and v3.27 authority simplification:
+  - [CrusadeForce](/concepts/crusade-force.md) — A player's army in a campaign. Replaces `Roster`. Status lifecycle. Multiple forces per player.
+  - [CrusadeForceVersion](/concepts/crusade-force-version.md) — Immutable, monotonically-numbered snapshot of a force's OoB. Replaces `RosterApproved`.
+  - [CrusadeArmy](/concepts/crusade-army.md) — Subset of units mustered from a `CrusadeForceVersion` for a specific battle. New entity in v3.28.
+  - [ApprovalSource](/concepts/approval-source.md) — 3-value enum (was 4 before v3.27 removed `co_cm_required_unavailable`). Documents the v3.27 simplification.
+  - [BattleUpdate](/concepts/battle-update.md) — Per-player post-battle submission; references `CrusadeArmy` or `CrusadeForceVersion` (v3.28).
+  - [Notification](/concepts/notification.md) — User-facing materialization of an `Event`; fanout function determines recipients.
 
-* **Update**: Linkified prose cross-references across all 8 PRDs and 9 Domain Concepts.
+* **Update**: Bundle-root `index.md` rewritten for v3.28 framing — covers data model overhaul, authority simplification, polling real-time strategy, NR export validation, retrospective view.
 
-### Upstream commit history (v3.16 → v3.26)
+* **Update**: `concepts/index.md` reorganized into sub-sections: Data model (v3.28), Approvals & audit, Roster history & groupings, Campaign lifecycle, Teams/battles/notifications.
+
+* **Update**: Existing concept descriptions updated to reflect v3.28 (e.g., Rollback mentions the split into `crusade_force_revert` and `crusade_force_rollback`).
+
+* **Update**: Public source PRDs updated to link to OKF concept pages for cross-cutting concepts (CrusadeForce, ApprovalKind, CampaignState, etc.). Example: PRD-3 now references `crusade-force`, `crusade-force-version`, `crusade-army` directly.
+
+### Upstream commit history (v3.27 → v3.28.1)
 
 | Commit | Date | Theme |
 |--------|------|-------|
-| `c5b9374` | 2026-06-28T16:31:42Z | v3.16: authority is current-ruleset; ruleset-change warning |
-| `615c782` | 2026-06-28T16:53:42Z | v3.17: always-fire warning + comprehensive event taxonomy + no live updates |
-| `e706fbe` | 2026-06-28T17:05:40Z | v3.18: State vs Phase + event archival deferred |
-| `0a03b9c` | 2026-06-28T17:15:52Z | v3.19: phase effects are cosmetic only |
-| `7ac4119` | 2026-06-28T18:27:28Z | v3.20: empty UI surfaces visible only to users who can act |
-| `00dc36d` | 2026-06-28T18:32:25Z | v3.21: cross-PRD consistency audit — fix 4 inconsistencies |
-| `0bb52c7` | 2026-06-28T18:37:16Z | v3.22: round 2 audit fixes |
-| `ccc18e7` | 2026-06-28T18:48:42Z | v3.23: mermaid diagrams for relationships, inheritance, flows |
-| `55146e8` | 2026-06-28T18:52:14Z | v3.25: PRD-6 (Technical Architecture / Swagger) + PRD-7 (Testing Strategy) |
-| `0c3c626` | 2026-06-28T20:34:04Z | v3.26: final cleanup — terminology, diagrams, inconsistencies |
+| `6cd2490` | 2026-06-28T19:43:00Z | v3.27: simplify authority hierarchy — remove co-CM concept |
+| `2766f72` | 2026-06-28T23:08:00Z | v3.28: data model overhaul + polling + retrospective view |
+| `a916708` | 2026-06-28T23:28:00Z | v3.28.1: NR export detection logic + 4 reference files |
 
-PRD body growth in this resync (v3.16 → v3.26):
-- prd-0: 494 → 669 lines (+175, +State vs Phase + glossary + audit fixes)
-- prd-1: 632 → 827 lines (+195, +state machine + phases + mermaid diagrams)
-- prd-2: 883 → 937 lines (+54, +audit fixes)
-- prd-3: 459 → 510 lines (+51, +audit fixes + v3.24 test stack)
-- prd-4: 567 → 693 lines (+126, +event taxonomy expansion + State vs Phase + fanout)
-- prd-5: 1020 → 1207 lines (+187, +always-fire warning + audit fixes + fanout)
-- prd-6: NEW, 475 lines
-- prd-7: NEW, 619 lines
-- TOTAL: 5937 lines across 8 PRDs
+### Bundled validation references (v3.28)
+
+Four `validators/nr-exports/*.json` files in the source repo shipped alongside this bundle:
+
+- `haan-crusade-10th.json` — known crusade shape, T'au Empire 10th ed
+- `cadian-67-crusade-10th.json` — known crusade shape, Astra Militarum 10th ed
+- `comp-list-non-crusade.json` — known non-crusade export (matched-play comp list)
+- `cadian-67th-legion-11th-ed.json` — known crusade shape, 11th ed (forward-compat)
+
+Plus Python and TypeScript validators. All four files classify correctly. Detection logic works for both 10th and 11th editions without modification.
+
+## 2026-06-28
+
+### v3.26 sync — initial bundle
+
+* **Creation**: v3.26 sync of the Crusade Master OKF bundle at upstream commit `0c3c626`. **8 PRD concepts** under `prds/` (added PRD-6 *Technical Architecture / API Surface* and PRD-7 *Testing Strategy*), **9 Domain Concepts** under `concepts/` (added *CampaignState* and *CampaignPhase*), **11 Reference concepts** under `references/`, **4 validators** under `scripts/`.

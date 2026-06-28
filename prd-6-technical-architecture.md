@@ -551,3 +551,20 @@ These feed into the same API but are out of scope for the API contract itself.
 - @hapi/api-version: https://github.com/hapi-community/api-version
 - Joi (validation library that @hapi/swagger converts to OpenAPI): https://joi.dev
 - Joi-to-OpenAPI conversion rules: https://github.com/hapi-swagger/hapi-swagger/blob/master/usage指南.md
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [Hapi](../okf/references/hapi.md) — Node.js HTTP framework + @hapi/swagger plugin
+- [BullMQ](../okf/references/bullmq.md) — Redis-backed job queue
+- [MinIO](../okf/references/minio.md) — S3-compatible object storage
+- [Redis](../okf/references/redis.md) — BullMQ backing store + rate limits
+- [PostgreSQL](../okf/references/postgres.md) — primary DB with RLS
+- [Rule Engine](../okf/references/rule-engine.md) — configurable compliance check engine
+- [ApprovalKind](../okf/concepts/approval-kind.md) — API contract kinds for OpenAPI generation
+- [CrusadeForce](../okf/concepts/crusade-force.md) — API resources for force CRUD
+- [CrusadeForceVersion](../okf/concepts/crusade-force-version.md) — API resources for version CRUD
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Player Sign-Up (v3.26)
+title: Player Sign-Up (v3.28)
 description: "Player onboarding. OAuth (Discord) + magic-link fallback (v3.15). 4 page surfaces (v3.14): Account, Campaign-Scoped Player, Roster, Crusade Card. Faction + team picker, Player Dashboard."
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-2-player-signup.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-2-player-signup.md"
 tags:
   - prd
   - signup
@@ -11,7 +11,7 @@ tags:
   - v3.14
   - v3.15
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-2: Player Sign-Up (v3)

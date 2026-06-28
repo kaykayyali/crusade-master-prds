@@ -954,3 +954,17 @@ Sarah's success criteria for this app:
 3. **Player wants to switch faction mid-campaign**: requires CM approval (per PRD-5), creates a new Roster while keeping the old one as a snapshot.
 4. **Email bounces**: account marked `email_unverified`; cannot file battle updates until resolved.
 5. **Player tries to join with code from a tenant they have no account in**: error with a "create an account in this tenant" link.
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [CrusadeForce](../okf/concepts/crusade-force.md) — player creates their first force on join
+- [Crusade Team Leader](../okf/concepts/crusade-team-leader.md) — team leader auto-promotion in solo campaigns (v3.28)
+- [CampaignTeam](../okf/concepts/campaign-team.md) — team picker on join
+- [ApprovalKind](../okf/concepts/approval-kind.md) — kinds players can file
+- [BattleUpdate](../okf/concepts/battle-update.md) — post-battle submissions
+- [Notification](../okf/concepts/notification.md) — in-app toast + email delivery
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

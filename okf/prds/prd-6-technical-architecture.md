@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Technical Architecture & API Surface (v3.26)
+title: Technical Architecture & API Surface (v3.28)
 description: Cross-cutting technical decisions. Hapi API contract, OpenAPI/Swagger generation (code-first via @hapi/swagger), observability (OpenTelemetry traces), API surface maintenance. v3.25 established code-first strategy.
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-6-technical-architecture.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-6-technical-architecture.md"
 tags:
   - prd
   - architecture
@@ -10,7 +10,7 @@ tags:
   - v3
   - v3.25
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-6 — Technical Architecture & API Surface

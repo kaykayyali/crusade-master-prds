@@ -618,3 +618,17 @@ End-to-end scenarios that span multiple PRDs. These are the "did we wire it up c
 - GitHub Actions: https://docs.github.com/actions
 - oauth2-mock-server: https://github.com/ptavares/oauth2-mock-server
 - MailHog (dev SMTP): https://github.com/mailhog/MailHog
+
+
+## OKF Cross-References
+
+This PRD's concepts are documented as first-class entities in the OKF bundle at [`okf/`](../okf). The most relevant:
+
+- [Hapi](../okf/references/hapi.md) — test target for API tests
+- [PostgreSQL](../okf/references/postgres.md) — RLS verification target
+- [Redis](../okf/references/redis.md) — BullMQ queue health
+- [MinIO](../okf/references/minio.md) — blob upload/download tests
+- [BullMQ](../okf/references/bullmq.md) — pipeline integration tests
+- [bs-roster-parser](../okf/references/bs-roster-parser.md) — Python parser integration tests
+
+See [`okf/index.md`](../okf/index.md) for the full bundle.

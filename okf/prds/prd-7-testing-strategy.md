@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Testing Strategy (v3.26)
+title: Testing Strategy (v3.28)
 description: "Test plan covering unit, integration, and E2E testing. Stack: Vitest (backend + frontend), pytest (parser), Playwright (e2e), testcontainers (Postgres + Redis + MinIO), GitHub Actions (CI). Test pyramid with per-PRD coverage targets."
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-7-testing-strategy.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-7-testing-strategy.md"
 tags:
   - prd
   - testing
@@ -10,7 +10,7 @@ tags:
   - v3.24
   - v3.25
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-7 — Testing Strategy

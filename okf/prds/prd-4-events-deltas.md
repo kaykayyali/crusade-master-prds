@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Events, Submissions, & Timeline (v3.26)
+title: Events, Submissions, & Timeline (v3.28)
 description: "Comprehensive event taxonomy (v3.17 expansion: campaign/member/team/roster/battle lifecycle). State vs Phase (v3.18, cosmetic-only v3.19). Per-player BattleUpdates, BattleReportForm, HistoryEntry, ChangesetGroupings, Rollback, Timeline + Narrative Log UI. Event \u2192 Notification fanout (v3.26)."
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-4-events-deltas.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-4-events-deltas.md"
 tags:
   - prd
   - events
@@ -13,7 +13,7 @@ tags:
   - v3.18
   - v3.19
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-4: Events, Submissions, & Timeline (v3)

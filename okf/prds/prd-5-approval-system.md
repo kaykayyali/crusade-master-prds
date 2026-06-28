@@ -1,8 +1,8 @@
 ---
 type: PRD
-title: Approval System (v3.26)
+title: Approval System (v3.28)
 description: ApprovalKind enum (extended v3.10/v3.12), approvalSource field, team-leader authority per kind. Campaign-scoped authority-filtered inbox (v3.15). Always-fire re-assessment warning (v3.17). Notifications UX (v3.13, fanout v3.26).
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-5-approval-system.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-5-approval-system.md"
 tags:
   - prd
   - approval
@@ -14,7 +14,7 @@ tags:
   - v3.16
   - v3.17
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-5: Approval System (v3)

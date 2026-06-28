@@ -2,7 +2,7 @@
 type: PRD
 title: Overview (v3.26)
 description: Architecture, data model, MVP scope. Approval-Gating principle, NR-as-source-of-truth, team-isolated data, v3.18 State vs Phase distinction.
-resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-0-overview.md"
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/a916708/prd-0-overview.md"
 tags:
   - prd
   - overview
@@ -10,7 +10,7 @@ tags:
   - v3
   - v3.18
   - v3.26
-timestamp: "2026-06-28T20:34:04Z"
+timestamp: "2026-06-28T23:28:00Z"
 ---
 
 # PRD-0: Crusade Master App — Overview (v3)
