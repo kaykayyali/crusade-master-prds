@@ -17,10 +17,50 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 | [prd-3-army-export-versioning.md](./prd-3-army-export-versioning.md) | BullMQ pipeline, parser integration contract, configurable rule engine |
 | [prd-4-events-deltas.md](./prd-4-events-deltas.md) | Event taxonomy, submission gating, Timeline |
 | [prd-5-approval-system.md](./prd-5-approval-system.md) | Unified approval pipeline, `roster_approval` as primary kind |
+| [prd-6-technical-architecture.md](./prd-6-technical-architecture.md) | Hapi API contract, OpenAPI/Swagger generation, drift detection |
+| [prd-7-testing-strategy.md](./prd-7-testing-strategy.md) | Test pyramid, dev/staging/prod environments, e2e API + UI, RLS verification |
 
 ## CHANGELOG
 
-### v3.23 (current) — Mermaid diagrams for relationships, inheritance, and flows
+### v3.25 (current) — PRD-6 (Technical Architecture) + PRD-7 (Testing Strategy)
+
+Per user: "we should include a general test plan PRD, that talks about enabling testing in a dev vs prod env, and how to go about e2e for apis, and ui. Finally, a swagger doc would be required. Thinking about how to keep it up to date is key."
+
+Two new PRDs added:
+
+**PRD-6 — Technical Architecture & API Surface (Swagger/OpenAPI):**
+- Code-first API strategy with `@hapi/swagger` (route definitions are source of truth; OpenAPI generated at build time)
+- Why code-first over schema-first: avoids drift, schemas double as runtime validation + OpenAPI metadata
+- Alternative approaches considered and rejected: schema-first (Stoplight), tRPC, GraphQL
+- **Drift detection strategy** (the user's emphasis):
+  - Generated spec is committed to git as `apps/api/openapi.snapshot.json`
+  - CI compares regenerated spec against committed snapshot on every PR
+  - Drift = build failure with clear "run pnpm update:openapi-snapshot" message
+  - Frontend types regenerated from same snapshot in same workflow
+  - Both diffs appear in PRs for review
+- Versioning strategy: URL-versioned major, schema-versioned minor, ≥6-month deprecation window
+- OpenAPI extensions we use (x-tenant-scoped, x-requires-role, etc.)
+
+**PRD-7 — Testing Strategy:**
+- Test pyramid with concrete numbers (1500 unit / 300 integration / 100 API e2e / 50 UI e2e)
+- Three environments (dev / staging / prod) with strict isolation
+- Tooling: Vitest (backend + frontend), pytest (parser), Playwright (e2e), testcontainers (integration)
+- **RLS verification as a dedicated test category** — every domain table gets per-tenant SELECT/INSERT/UPDATE/DELETE tests; CI breaks immediately if a schema change drops RLS coverage
+- Multi-tenant verification: cross-tenant attack scenarios
+- Security tests: auth (token replay, expiration), authorization (RBAC + RLS), input validation (SQLi, XSS, path traversal)
+- Test data: factories (composable) + fixtures (JSON for parser samples)
+- CI gating: lint → typecheck → unit → integration → e2e-api → RLS → e2e-ui (with thresholds per branch protection)
+- Coverage thresholds: 80% backend, 70% frontend, 90% parser wrapper
+- **Cross-PRD test scenarios** — four end-to-end user journeys:
+  1. "Player Sarah's journey" — OAuth → invite → upload → approve → battle → timeline
+  2. "CM Mike runs the campaign" — wizard → teams → invites → start → configure rules → mid-campaign change
+  3. "Auto-approve + pipeline runs" — CM-as-player (PRD-1 §5 invariant test)
+  4. "RLS prevents cross-tenant access" — multi-tenant attack scenarios
+- Deferred: load testing (k6), mutation testing (Stryker), property-based (fast-check), visual regression
+
+**Why both PRDs together:** Swagger is the API contract; testing depends on the contract. PRD-6's OpenAPI snapshot becomes input to PRD-7's e2e tests (typed request/response bodies, generated fixtures).
+
+### v3.23 — Mermaid diagrams for relationships, inheritance, and flows
 
 Per user request: "mermaid diagrams for complicated arrangements, inheritance and association would be great." Added 6 new mermaid diagrams:
 

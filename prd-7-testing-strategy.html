@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-7-testing-strategy</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-7-testing-strategy</h1>
+</header>
+<h1 id="prd-7-testing-strategy">PRD-7 — Testing Strategy</h1>
+<p><strong>Subsystem</strong>: Test plan covering unit, integration, and
+end-to-end testing across dev, staging, and production environments.
+References all prior PRDs.</p>
+<p><strong>Stack additions</strong> (v3.24): Vitest (backend + frontend
+unit/integration), pytest (parser), Playwright (e2e API + UI),
+testcontainers (Postgres + Redis + MinIO for integration), GitHub
+Actions (CI).</p>
+<p><strong>MVP scope</strong>: every code path that ships to production
+must be covered by at least one test. Critical paths (auth, RLS,
+approval routing, parser pipeline) must have e2e coverage. UI coverage
+focuses on user flows, not every component variant.</p>
+<hr />
+<h2 id="glossary-per-prd-0-3b">0. Glossary (per PRD-0 §3b)</h2>
+<ul>
+<li><strong>Unit test</strong>: tests a single function or class in
+isolation. No I/O. Mocked dependencies.</li>
+<li><strong>Integration test</strong>: tests a module boundary against
+real dependencies (DB, queue, storage) but in a hermetic test
+environment.</li>
+<li><strong>E2E test</strong>: tests a full user journey from the UI
+through the API through the DB. Highest confidence, slowest to run.</li>
+<li><strong>Smoke test</strong>: a small set of E2E tests run against
+the live production deployment to detect catastrophic failures.</li>
+<li><strong>Fixture</strong>: a piece of pre-built test data (user,
+campaign, roster) used as the starting state for a test.</li>
+<li><strong>Factory</strong>: a function that creates fresh test data on
+demand (often with overrides).</li>
+<li><strong>Hermetic</strong>: a test environment with no external
+dependencies (no live OAuth, no live SMTP, no live Discord).</li>
+</ul>
+<hr />
+<h2 id="goals">1. Goals</h2>
+<ol type="1">
+<li><strong>Catch regressions before merge.</strong> Every PR must pass
+unit + integration + targeted E2E.</li>
+<li><strong>Verify cross-cutting concerns explicitly.</strong> RLS
+isolation, multi-tenancy, approval routing, and auth are easy to break
+with a single schema change. They get dedicated test suites.</li>
+<li><strong>Enable confident refactoring.</strong> When we restructure
+the approval pipeline, the existing tests should still pass without
+modification.</li>
+<li><strong>Keep test maintenance low.</strong> Tests should fail for
+the right reason. Avoid brittle selectors; prefer testing behavior over
+implementation.</li>
+<li><strong>Stay fast.</strong> Unit tests run in &lt;30s total.
+Integration tests run in &lt;5min. E2E tests run in &lt;15min. If they
+get slower, split them.</li>
+</ol>
+<p><strong>Non-goals</strong> (v1): mutation testing, property-based
+testing (e.g., fast-check), formal verification. Defer to v2+.</p>
+<hr />
+<h2 id="the-test-pyramid">2. The Test Pyramid</h2>
+<pre class="mermaid"><code>flowchart TB
+    UI[&quot;E2E UI&lt;br/&gt;Playwright&lt;br/&gt;~50 tests&lt;br/&gt;10-15 min&quot;]
+    API[&quot;E2E API&lt;br/&gt;Playwright API mode&lt;br/&gt;~100 tests&lt;br/&gt;5-8 min&quot;]
+    INT[&quot;Integration&lt;br/&gt;Vitest + testcontainers&lt;br/&gt;~300 tests&lt;br/&gt;3-5 min&quot;]
+    UNIT[&quot;Unit&lt;br/&gt;Vitest + pytest&lt;br/&gt;~1500 tests&lt;br/&gt;20-30 sec&quot;]
+
+    UI --&gt; API --&gt; INT --&gt; UNIT</code></pre>
+<p><strong>Why this shape:</strong> unit tests are cheap and give fast
+feedback; E2E tests are slow but cover real user value. The pyramid is
+wide at the bottom (many units) and narrow at the top (few E2E).
+Inverted pyramids (mostly E2E, few units) become flaky and slow.</p>
+<p><strong>Per-PRD coverage targets:</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Subsystem</th>
+<th>Unit</th>
+<th>Integration</th>
+<th>E2E</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PRD-0 (shared data model)</td>
+<td>Schema validation</td>
+<td>RLS policies, RLS bypass for system jobs</td>
+<td>Multi-tenant isolation scenarios</td>
+</tr>
+<tr class="even">
+<td>PRD-1 (CM admin)</td>
+<td>Routing logic, state machine guards</td>
+<td>API endpoints against testcontainers</td>
+<td>Full campaign lifecycle (create → start → end → archive)</td>
+</tr>
+<tr class="odd">
+<td>PRD-2 (player signup)</td>
+<td>OAuth state machine, magic-link token validation</td>
+<td>Identity linking, tenant assignment</td>
+<td>Sign-in via Discord test app + magic-link roundtrip</td>
+</tr>
+<tr class="even">
+<td>PRD-3 (roster pipeline)</td>
+<td>Parser contract, diff logic, rule engine</td>
+<td>Full BullMQ pipeline with real worker</td>
+<td>Upload JSON → diff → rule check → approve flow</td>
+</tr>
+<tr class="odd">
+<td>PRD-4 (events)</td>
+<td>Event taxonomy, delta computation</td>
+<td>Event-to-Notification fanout</td>
+<td>Player timeline view</td>
+</tr>
+<tr class="even">
+<td>PRD-5 (approvals)</td>
+<td>Routing decision logic (per PRD-5 §3.2)</td>
+<td>Full approval request → decision → history</td>
+<td>Approval inbox, CM-as-player auto-approve, TL approval flow</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="test-environments">3. Test Environments</h2>
+<p>Three environments, with strict isolation between them.</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Environment</th>
+<th>Purpose</th>
+<th>Data</th>
+<th>Infrastructure</th>
+<th>External services</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>dev</strong> (developer machine)</td>
+<td>Local development, TDD, manual testing</td>
+<td>Synthetic (seeded per-developer)</td>
+<td><code>docker-compose.dev.yml</code> with hot reload</td>
+<td>Discord test app, MailHog (fake SMTP)</td>
+</tr>
+<tr class="even">
+<td><strong>staging</strong> (CI + pre-prod)</td>
+<td>PR checks, full test suite, manual QA</td>
+<td>Synthetic (fresh per test run)</td>
+<td>Docker Compose + testcontainers in CI; long-running staging cluster
+mirrors prod</td>
+<td>Discord test app, real SMTP (Mailgun sandbox)</td>
+</tr>
+<tr class="odd">
+<td><strong>prod</strong></td>
+<td>Live users</td>
+<td>Real</td>
+<td>Docker Compose on instance</td>
+<td>Real Discord OAuth, real SMTP</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>flowchart LR
+    subgraph Dev
+        D1[Developer machine&lt;br/&gt;docker-compose.dev.yml]
+    end
+    subgraph CI
+        C1[GitHub Actions runner&lt;br/&gt;testcontainers&lt;br/&gt;fresh per job]
+    end
+    subgraph Staging
+        S1[Long-running cluster&lt;br/&gt;same config as prod&lt;br/&gt;synthetic data]
+    end
+    subgraph Prod
+        P1[Live cluster&lt;br/&gt;real data]
+    end
+
+    D1 --&gt;|git push| C1
+    C1 --&gt;|merge to main| S1
+    S1 --&gt;|manual promote| P1
+    P1 -.-&gt;|smoke tests only| P1</code></pre>
+<p><strong>Key rules:</strong> - <strong>No shared data between
+environments.</strong> Each environment starts from a known seed. -
+<strong>Test data is NEVER migrated to prod.</strong> Staging seeds are
+synthetic; prod is real user data. - <strong>Prod never runs the test
+suite.</strong> Only smoke tests (subset of E2E) against prod. -
+<strong>External services are mocked or sandboxed in dev/CI.</strong>
+Real OAuth/SMTP only in staging and prod.</p>
+<hr />
+<h2 id="unit-tests">4. Unit Tests</h2>
+<h3 id="backend-vitest-nodets">4.1 Backend (Vitest, Node/TS)</h3>
+<p><strong>Location</strong>: <code>apps/api/src/**/*.test.ts</code>
+(co-located with source)</p>
+<p><strong>Coverage targets</strong>: 80% line coverage, 70% branch
+coverage.</p>
+<p><strong>What’s tested:</strong> - Pure functions (diff computation,
+delta generation, rule evaluation) - Validation schemas (Joi)
+accept/reject - State machine guards
+(<code>canTransition(from, to)</code>) - Routing decisions (PRD-5 §3.2
+routing logic in isolation) - Authorization checks (does this user have
+permission to do X?) - Event taxonomy validation (every emitted event
+has a known kind)</p>
+<p><strong>What’s NOT unit-tested</strong> (covered by integration
+instead): - Hapi route handlers (touch DB, queue, storage) - Database
+queries (covered by integration tests against real Postgres) - BullMQ
+job processors (covered by integration tests with real Redis)</p>
+<p><strong>Example (routing decision):</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { decide } <span class="im">from</span> <span class="st">&#39;./routing&#39;</span><span class="op">;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="st">&#39;decide(roster_approval)&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">it</span>(<span class="st">&#39;routes to team leader when TL authority enabled&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> decision <span class="op">=</span> <span class="fu">decide</span>({</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      kind<span class="op">:</span> <span class="st">&#39;roster_approval&#39;</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>      submittedByUserId<span class="op">:</span> <span class="st">&#39;player-1&#39;</span><span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>      campaign<span class="op">:</span> { teamLeaderAuthority<span class="op">:</span> { roster_approval<span class="op">:</span> <span class="kw">true</span> } }<span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>      teamLeaders<span class="op">:</span> [{ teamId<span class="op">:</span> <span class="st">&#39;team-a&#39;</span><span class="op">,</span> userId<span class="op">:</span> <span class="st">&#39;tl-1&#39;</span> }]<span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>      affectedTeamId<span class="op">:</span> <span class="st">&#39;team-a&#39;</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">expect</span>(decision<span class="op">.</span><span class="at">autoApprove</span>)<span class="op">.</span><span class="fu">toBe</span>(<span class="kw">false</span>)<span class="op">;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">expect</span>(decision<span class="op">.</span><span class="at">targetApprovers</span>)<span class="op">.</span><span class="fu">toEqual</span>([<span class="st">&#39;tl-1&#39;</span>])<span class="op">;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... 20 more cases covering each kind × each role × edge cases</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="frontend-vitest-vuetest-utils-vue-3">4.2 Frontend (Vitest +
+<span class="citation" data-cites="vue/test-utils">@vue/test-utils</span>, Vue 3)</h3>
+<p><strong>Location</strong>: <code>apps/web/src/**/*.test.ts</code>
+(co-located)</p>
+<p><strong>Coverage targets</strong>: 70% line coverage. (UI is harder
+to test than logic; focus on critical paths.)</p>
+<p><strong>What’s tested:</strong> - Component logic (composables,
+computed properties, event handlers) - Form validation (in isolation,
+not via UI) - Store mutations (Pinia) - Date/number formatting utilities
+- Permission-gating logic (does this user see the right buttons?)</p>
+<p><strong>What’s NOT unit-tested:</strong> - Component rendering
+(covered by E2E + visual regression if needed) - User interaction flows
+(covered by E2E) - CSS / Tailwind classes (linted, not tested)</p>
+<p><strong>Example:</strong></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { mount } <span class="im">from</span> <span class="st">&#39;@vue/test-utils&#39;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> RosterDiff <span class="im">from</span> <span class="st">&#39;./RosterDiff.vue&#39;</span><span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="st">&#39;RosterDiff&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">it</span>(<span class="st">&#39;groups deltas by category&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> wrapper <span class="op">=</span> <span class="fu">mount</span>(RosterDiff<span class="op">,</span> {</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>      props<span class="op">:</span> { deltas<span class="op">:</span> sampleDeltas }<span class="op">,</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">expect</span>(wrapper<span class="op">.</span><span class="fu">findAll</span>(<span class="st">&#39;[data-testid=&quot;diff-group&quot;]&#39;</span>))<span class="op">.</span><span class="fu">toHaveLength</span>(<span class="dv">3</span>)<span class="op">;</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="parser-pytest-python">4.3 Parser (pytest, Python)</h3>
+<p><strong>Location</strong>: <code>apps/parser/tests/</code></p>
+<p><strong>Note</strong>: The parser is the user’s existing
+<code>bs-roster-parser</code> library, not our code. We test the
+<strong>integration contract</strong> (how we call it), not the library
+itself.</p>
+<p><strong>Coverage targets</strong>: 90% for the wrapper code (the
+subprocess invocation, stdout parsing, error handling).</p>
+<p><strong>What’s tested:</strong> - Subprocess invocation: correct
+args, timeout, signal handling - stdout parsing: valid JSON, malformed
+JSON, partial output - Error mapping: parser error codes → our error
+categories - Determinism: same input → same output (within timestamp
+fields)</p>
+<p><strong>Example:</strong></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_handles_malformed_json():</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> run_parser(<span class="st">b&quot;not json at all&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.exit_code <span class="op">==</span> <span class="dv">1</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.error_category <span class="op">==</span> <span class="st">&quot;malformed_input&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_handles_timeout():</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> run_parser_with_timeout(<span class="st">b&quot;...&quot;</span>, timeout_ms<span class="op">=</span><span class="dv">100</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.exit_code <span class="op">==</span> <span class="dv">124</span>  <span class="co"># timeout</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.error_category <span class="op">==</span> <span class="st">&quot;timeout&quot;</span></span></code></pre></div>
+<hr />
+<h2 id="integration-tests">5. Integration Tests</h2>
+<h3 id="tooling-testcontainers">5.1 Tooling: testcontainers</h3>
+<p>Use <strong>testcontainers</strong> (testcontainers-node for Hapi,
+testcontainers-python for parser) to spin up real Postgres, Redis, and
+MinIO containers per test file. The app is configured to talk to these
+containers via env vars set by the test harness.</p>
+<pre class="mermaid"><code>flowchart LR
+    Test[&quot;Vitest test&quot;] --&gt; Harness[&quot;Test harness&lt;br/&gt;(global setup)&quot;]
+    Harness --&gt; TC[&quot;testcontainers&quot;]
+    TC --&gt; PG[(&quot;Postgres 16&lt;br/&gt;:5432&quot;)]
+    TC --&gt; RD[(&quot;Redis 7&lt;br/&gt;:6379&quot;)]
+    TC --&gt; MN[(&quot;MinIO&lt;br/&gt;:9000&quot;)]
+
+    Test --&gt;|ENV vars point to containers| App[&quot;Hapi app&lt;br/&gt;(in-process)&quot;]
+    App --&gt; PG
+    App --&gt; RD
+    App --&gt; MN</code></pre>
+<p><strong>Harness responsibilities:</strong> - Before each test file:
+start containers, run migrations, seed fixtures - After each test file:
+stop containers (faster than after each test) - Provide a
+<code>getApp()</code> function that returns a configured Hapi server
+instance pointing at the containers</p>
+<h3 id="what-integration-tests-cover">5.2 What integration tests
+cover</h3>
+<ul>
+<li><strong>API endpoints</strong> against real Postgres + Hapi
+in-process
+<ul>
+<li>Every endpoint, every status code, every error path</li>
+<li>Auth: valid token, expired token, missing token, wrong tenant token
+(RLS), wrong role</li>
+<li>Validation: missing required fields, wrong types, out-of-range
+values</li>
+</ul></li>
+<li><strong>BullMQ pipeline end-to-end</strong> with real worker + real
+Redis
+<ul>
+<li>Upload → parse → diff → rule-check → notification</li>
+<li>Failure modes: parser crash, queue timeout, malformed blob</li>
+</ul></li>
+<li><strong>MinIO operations</strong>: blob upload, retrieval,
+deletion</li>
+<li><strong>RLS enforcement</strong>: every test runs queries both as a
+user (should be filtered) and as a system job (should not be
+filtered)</li>
+<li><strong>OAuth callback flow</strong> with a mock Discord OAuth
+server (using <code>oauth2-mock-server</code> npm package)</li>
+</ul>
+<h3 id="rls-verification-critical-prd-0-4b">5.3 RLS verification
+(critical — PRD-0 §4b)</h3>
+<p>This is its own test category because RLS bypass is a top-3 way to
+leak tenant data.</p>
+<p><strong>Per-table test pattern:</strong></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">describe</span>(<span class="st">&#39;RLS: campaigns table&#39;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">it</span>(<span class="st">&#39;user in tenant A cannot SELECT campaigns in tenant B&#39;</span><span class="op">,</span> <span class="kw">async</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Setup: campaigns in tenant A and tenant B</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Act: connect as user in tenant A, SELECT *</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assert: only tenant A campaigns returned</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">it</span>(<span class="st">&#39;user in tenant A cannot INSERT a campaign for tenant B&#39;</span><span class="op">,</span> <span class="kw">async</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Setup: user in tenant A</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Act: INSERT campaign with tenantId=B</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assert: error or no row created</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">it</span>(<span class="st">&#39;system job can SELECT across tenants when RLS bypass enabled&#39;</span><span class="op">,</span> <span class="kw">async</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Setup: campaigns in A and B</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Act: connect with role that has BYPASSRLS, SELECT *</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Assert: both tenants returned</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Audit log row created for the cross-tenant access</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Every domain table gets these tests.</strong> A schema change
+that drops RLS coverage breaks CI immediately.</p>
+<h3 id="multi-tenant-verification">5.4 Multi-tenant verification</h3>
+<p>Beyond RLS, verify: - Same email can have User rows in two tenants
+(PRD-2 §3.1 design) - Invite link with one tenant slug does not grant
+access to another tenant - Audit log entries are tenant-scoped
+(cross-tenant reads blocked)</p>
+<hr />
+<h2 id="e2e-api-tests-playwright-api-mode">6. E2E API Tests (Playwright
+API mode)</h2>
+<p><strong>Tooling</strong>: Playwright (<code>@playwright/test</code>)
+using its <code>request</code> API (no browser needed).</p>
+<p><strong>Location</strong>: <code>e2e/api/**/*.spec.ts</code></p>
+<p><strong>What’s tested:</strong> - Full request/response cycles
+against a running Hapi instance (started by the test harness with
+<code>startServer()</code>) - Auth flows that span multiple requests
+(OAuth callback, session refresh, magic-link roundtrip) - Approval
+workflows end-to-end (player files → CM approves → history created →
+notification fired) - Cross-tenant attack scenarios: a tenant-A token
+trying to read tenant-B resources → expect 403/404</p>
+<p><strong>Example:</strong></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { test<span class="op">,</span> expect } <span class="im">from</span> <span class="st">&#39;@playwright/test&#39;</span><span class="op">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(<span class="st">&#39;player files battle update; CM approves; event fires&#39;</span><span class="op">,</span> <span class="kw">async</span> ({ request }) <span class="kw">=&gt;</span> {</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Setup: create campaign, add player, file roster</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Player files battle update</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> fileRes <span class="op">=</span> <span class="cf">await</span> request<span class="op">.</span><span class="fu">post</span>(<span class="vs">`/api/campaigns/</span><span class="sc">${</span>c<span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">/battle-updates`</span><span class="op">,</span> {</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">:</span> { Authorization<span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>playerToken<span class="sc">}</span><span class="vs">`</span> }<span class="op">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    data<span class="op">:</span> { battleId<span class="op">,</span> <span class="op">...</span> }<span class="op">,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect</span>(fileRes<span class="op">.</span><span class="fu">status</span>())<span class="op">.</span><span class="fu">toBe</span>(<span class="dv">202</span>)<span class="op">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// CM sees it in inbox</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> inboxRes <span class="op">=</span> <span class="cf">await</span> request<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/api/campaigns/</span><span class="sc">${</span>c<span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">/inbox`</span><span class="op">,</span> {</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">:</span> { Authorization<span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>cmToken<span class="sc">}</span><span class="vs">`</span> }<span class="op">,</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect</span>(inboxRes<span class="op">.</span><span class="fu">status</span>())<span class="op">.</span><span class="fu">toBe</span>(<span class="dv">200</span>)<span class="op">;</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> items <span class="op">=</span> <span class="cf">await</span> inboxRes<span class="op">.</span><span class="fu">json</span>()<span class="op">;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect</span>(items<span class="op">.</span><span class="fu">find</span>(i <span class="kw">=&gt;</span> i<span class="op">.</span><span class="at">kind</span> <span class="op">===</span> <span class="st">&#39;post_battle_update&#39;</span>))<span class="op">.</span><span class="fu">toBeTruthy</span>()<span class="op">;</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// CM approves</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> approveRes <span class="op">=</span> <span class="cf">await</span> request<span class="op">.</span><span class="fu">post</span>(<span class="vs">`/api/approval-requests/</span><span class="sc">${</span>reqId<span class="sc">}</span><span class="vs">/approve`</span><span class="op">,</span> {</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">:</span> { Authorization<span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>cmToken<span class="sc">}</span><span class="vs">`</span> }<span class="op">,</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    data<span class="op">:</span> { reason<span class="op">:</span> <span class="st">&#39;looks good&#39;</span> }<span class="op">,</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect</span>(approveRes<span class="op">.</span><span class="fu">status</span>())<span class="op">.</span><span class="fu">toBe</span>(<span class="dv">200</span>)<span class="op">;</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Verify history entry created</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> historyRes <span class="op">=</span> <span class="cf">await</span> request<span class="op">.</span><span class="fu">get</span>(<span class="vs">`/api/campaigns/</span><span class="sc">${</span>c<span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">/history?grouping=battle`</span><span class="op">,</span> {</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    headers<span class="op">:</span> { Authorization<span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>playerToken<span class="sc">}</span><span class="vs">`</span> }<span class="op">,</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> entries <span class="op">=</span> <span class="cf">await</span> historyRes<span class="op">.</span><span class="fu">json</span>()<span class="op">;</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">expect</span>(entries)<span class="op">.</span><span class="fu">toContainEqual</span>(expect<span class="op">.</span><span class="fu">objectContaining</span>({ kind<span class="op">:</span> <span class="st">&#39;battle_update.approved&#39;</span> }))<span class="op">;</span></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<hr />
+<h2 id="e2e-ui-tests-playwright">7. E2E UI Tests (Playwright)</h2>
+<p><strong>Tooling</strong>: Playwright with browser contexts (Chromium,
+Firefox, WebKit).</p>
+<p><strong>Location</strong>: <code>e2e/ui/**/*.spec.ts</code></p>
+<p><strong>Coverage focus</strong> (per v3.20’s “empty UI surfaces
+visible only to users who can act”): - <strong>Critical user
+flows</strong> — the 6 page surfaces (PRD-2 §5c, §5d): - Account page
+(settings, identity management) - Player dashboard (roster, battles,
+requisitions) - Roster page (diff view, rule check results) - Crusade
+Card (compact summary view) - Campaign inbox (CM/TL) - Crusade
+Administration panel - <strong>Permission-gated UI</strong>: empty
+states are visible only to users who can act (v3.20) - <strong>OAuth
+login flow</strong> (against Discord test app) - <strong>Magic-link
+flow</strong> (against MailHog in dev/CI; check inbox via MailHog
+API)</p>
+<p><strong>Example:</strong></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { test<span class="op">,</span> expect } <span class="im">from</span> <span class="st">&#39;@playwright/test&#39;</span><span class="op">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(<span class="st">&#39;Sarah uploads a roster and sees diff&#39;</span><span class="op">,</span> <span class="kw">async</span> ({ page }) <span class="kw">=&gt;</span> {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> page<span class="op">.</span><span class="fu">goto</span>(<span class="st">&#39;/campaigns/aurelian&#39;</span>)<span class="op">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> page<span class="op">.</span><span class="fu">click</span>(<span class="st">&#39;[data-testid=&quot;import-roster&quot;]&#39;</span>)<span class="op">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> page<span class="op">.</span><span class="fu">setInputFiles</span>(<span class="st">&#39;[data-testid=&quot;file-input&quot;]&#39;</span><span class="op">,</span> <span class="st">&#39;fixtures/sample-roster.json&#39;</span>)<span class="op">;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">expect</span>(page<span class="op">.</span><span class="fu">locator</span>(<span class="st">&#39;[data-testid=&quot;diff-summary&quot;]&#39;</span>))<span class="op">.</span><span class="fu">toBeVisible</span>({ timeout<span class="op">:</span> <span class="dv">30_000</span> })<span class="op">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">expect</span>(page<span class="op">.</span><span class="fu">locator</span>(<span class="st">&#39;[data-testid=&quot;rule-check-pass&quot;]&#39;</span>))<span class="op">.</span><span class="fu">toBeVisible</span>()<span class="op">;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="fu">test</span>(<span class="st">&#39;empty state for requisitions is only shown to players who can buy&#39;</span><span class="op">,</span> <span class="kw">async</span> ({ page }) <span class="kw">=&gt;</span> {</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Login as a player who has no requisitions</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">loginAsPlayer</span>(page<span class="op">,</span> <span class="st">&#39;player-no-reqs&#39;</span>)<span class="op">;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">expect</span>(page<span class="op">.</span><span class="fu">locator</span>(<span class="st">&#39;[data-testid=&quot;empty-requisitions&quot;]&#39;</span>))<span class="op">.</span><span class="fu">toBeVisible</span>()<span class="op">;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Login as a spectator — should NOT see the empty state</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">loginAsSpectator</span>(page)<span class="op">;</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> <span class="fu">expect</span>(page<span class="op">.</span><span class="fu">locator</span>(<span class="st">&#39;[data-testid=&quot;empty-requisitions&quot;]&#39;</span>))<span class="op">.</span><span class="at">not</span><span class="op">.</span><span class="fu">toBeVisible</span>()<span class="op">;</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Browser matrix:</strong> - Chromium (primary) - Firefox
+(regression coverage) - WebKit / Safari (iOS user coverage)</p>
+<p><strong>Test data:</strong> Playwright fixtures (JSON files in
+<code>e2e/fixtures/</code>) committed to the repo. Each test that needs
+a campaign creates one fresh via API (faster than seeding via UI).</p>
+<hr />
+<h2 id="load-tests-optional-deferred">8. Load Tests (optional,
+deferred)</h2>
+<p><strong>Tooling</strong>: k6 (Grafana k6, OSS)</p>
+<p><strong>Status</strong>: Deferred. v1 ships without formal load
+testing. We monitor staging CPU/memory/latency and rely on Hapi/BullMQ
+defaults.</p>
+<p><strong>When we’d add load tests</strong> (v1.x trigger): - Pipeline
+p95 latency exceeds 30s under realistic staging load - User reports of
+slow roster diffs - Approaching connection-pool limits on Postgres</p>
+<p><strong>What we’d test:</strong> concurrent roster uploads (10, 50,
+100 simultaneous), burst pattern (all players upload after a
+tournament), rule-check heavy campaign (many configured rules).</p>
+<hr />
+<h2 id="security-tests">9. Security Tests</h2>
+<h3 id="auth-tests">9.1 Auth tests</h3>
+<ul>
+<li>OAuth state parameter is signed and expires</li>
+<li>Magic-link tokens are single-use and expire (default 15 min)</li>
+<li>Session cookies are httpOnly, secure (in prod), sameSite=lax</li>
+<li>Password-less (no passwords; OAuth + magic-link only)</li>
+<li>Replay attacks: same magic-link used twice → second fails</li>
+</ul>
+<h3 id="authorization-tests-rbac-rls">9.2 Authorization tests (RBAC +
+RLS)</h3>
+<ul>
+<li>A <code>player</code> cannot access
+<code>/api/campaigns/:id/admin/*</code> endpoints</li>
+<li>A <code>crusade_team_leader</code> can only approve requests for
+their team</li>
+<li>A <code>spectator</code> cannot file any approval request</li>
+<li>Cross-tenant access always denied</li>
+<li>CM of campaign A cannot approve a request in campaign B</li>
+</ul>
+<h3 id="input-validation-tests">9.3 Input validation tests</h3>
+<ul>
+<li>SQL injection: every string field tested with
+<code>&#39;; DROP TABLE users; --</code></li>
+<li>XSS: every user-input field tested with
+<code>&lt;script&gt;alert(1)&lt;/script&gt;</code> (verify stored as
+text, not executed on render)</li>
+<li>Path traversal: blob keys with <code>../</code> rejected</li>
+<li>Oversized uploads: &gt;10MB rejected at validation</li>
+<li>Malformed JSON: parser subprocess handles gracefully</li>
+</ul>
+<h3 id="penetration-testing-v1.x">9.4 Penetration testing (v1.x)</h3>
+<p>Not in v1. Use a third-party pen test before public release of v1.0.
+Internal security review only in v1 dev.</p>
+<hr />
+<h2 id="test-data-seeding">10. Test Data Seeding</h2>
+<h3 id="factories">10.1 Factories</h3>
+<p>TypeScript factories in
+<code>packages/test-utils/src/factories/</code>:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> makeCampaign <span class="op">=</span> (overrides<span class="op">?:</span> <span class="bu">Partial</span><span class="op">&lt;</span>Campaign<span class="op">&gt;</span>)<span class="op">:</span> Campaign <span class="kw">=&gt;</span> ({</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="fu">randomUUID</span>()<span class="op">,</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">:</span> <span class="st">&#39;tenant-1&#39;</span><span class="op">,</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="st">&#39;Test Campaign&#39;</span><span class="op">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  supplementId<span class="op">:</span> <span class="st">&#39;armageddon&#39;</span><span class="op">,</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  cmUserId<span class="op">:</span> <span class="st">&#39;cm-1&#39;</span><span class="op">,</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;created&#39;</span><span class="op">,</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  settings<span class="op">:</span> <span class="fu">defaultSettings</span>()<span class="op">,</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">:</span> <span class="kw">new</span> <span class="bu">Date</span>()<span class="op">,</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ...</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>overrides<span class="op">,</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> makeRoster <span class="op">=</span> (overrides<span class="op">?:</span> <span class="bu">Partial</span><span class="op">&lt;</span>Roster<span class="op">&gt;</span>)<span class="op">:</span> Roster <span class="kw">=&gt;</span> ({</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="fu">randomUUID</span>()<span class="op">,</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  campaignMemberId<span class="op">:</span> <span class="st">&#39;member-1&#39;</span><span class="op">,</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  factionId<span class="op">:</span> <span class="st">&#39;astra_militarum&#39;</span><span class="op">,</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>  currentApprovedId<span class="op">:</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ...</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">...</span>overrides<span class="op">,</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Why factories, not fixtures:</strong> tests can compose
+scenarios by combining factories; fixed fixtures constrain tests.</p>
+<h3 id="fixture-files">10.2 Fixture files</h3>
+<p>For things that are easier to read as JSON:
+<code>bs-roster-parser</code> output samples, complex battle reports,
+multi-team campaign setups. Stored in <code>e2e/fixtures/</code> and
+<code>packages/test-utils/src/fixtures/</code>.</p>
+<h3 id="cleanup">10.3 Cleanup</h3>
+<ul>
+<li><strong>Unit tests</strong>: no cleanup needed (no shared
+state).</li>
+<li><strong>Integration tests</strong>: per-test cleanup (each test
+starts with empty DB). Use a transaction wrapper that rolls back at end
+of test (faster than truncate).</li>
+<li><strong>E2E tests</strong>: per-test-file cleanup. Each test file
+creates its own tenant in setup.</li>
+</ul>
+<hr />
+<h2 id="ci-gating-github-actions">11. CI Gating (GitHub Actions)</h2>
+<pre class="mermaid"><code>flowchart LR
+    PR[PR opened/updated] --&gt; Lint[ESLint + Prettier]
+    Lint --&gt; TypeCheck[tsc --noEmit]
+    TypeCheck --&gt; Unit[&quot;Unit tests&lt;br/&gt;(Vitest + pytest)&lt;br/&gt;~30s&quot;]
+    Unit --&gt; Int[&quot;Integration tests&lt;br/&gt;(testcontainers)&lt;br/&gt;~5 min&quot;]
+    Int --&gt; E2E_API[&quot;E2E API tests&lt;br/&gt;(Playwright API)&lt;br/&gt;~5 min&quot;]
+    E2E_API --&gt; RLS[&quot;RLS verification&lt;br/&gt;(subset of integration)&lt;br/&gt;~1 min&quot;]
+    RLS --&gt; Visual[&quot;E2E UI tests&lt;br/&gt;(Playwright)&lt;br/&gt;~10 min&quot;]
+    Visual --&gt; Review{All pass?}
+    Review -- Yes --&gt; Approve[Ready for review]
+    Review -- No --&gt; Block[Block merge]</code></pre>
+<p><strong>Per-job configuration:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>Job</th>
+<th>Triggers</th>
+<th>Runs on</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>lint</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>30s</td>
+</tr>
+<tr class="even">
+<td>typecheck</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>1m</td>
+</tr>
+<tr class="odd">
+<td>unit-tests</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>30s</td>
+</tr>
+<tr class="even">
+<td>integration-tests</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>5m</td>
+</tr>
+<tr class="odd">
+<td>e2e-api</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>5m</td>
+</tr>
+<tr class="even">
+<td>rls-verification</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>1m</td>
+</tr>
+<tr class="odd">
+<td>e2e-ui</td>
+<td>every push</td>
+<td>ubuntu-latest (with display server)</td>
+<td>10m</td>
+</tr>
+<tr class="even">
+<td>security-scan</td>
+<td>every push + weekly cron</td>
+<td>ubuntu-latest</td>
+<td>2m</td>
+</tr>
+<tr class="odd">
+<td>coverage-report</td>
+<td>every push</td>
+<td>ubuntu-latest</td>
+<td>30s</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Branch protection:</strong> main requires lint + typecheck +
+unit + integration + e2e-api + rls-verification to pass before merge.
+e2e-ui runs as required check on main but advisory on PRs (too slow to
+gate every PR; PRs target a smaller smoke set).</p>
+<p><strong>Pre-commit hooks</strong> (husky): - Prettier on staged files
+- ESLint on staged files - TypeScript typecheck on the whole project
+(fast enough)</p>
+<hr />
+<h2 id="coverage-thresholds">12. Coverage Thresholds</h2>
+<p><strong>Enforced by Vitest’s <code>coverage.thresholds</code>
+config:</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Subsystem</th>
+<th>Lines</th>
+<th>Branches</th>
+<th>Functions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Backend (<code>apps/api/src</code>)</td>
+<td>80%</td>
+<td>70%</td>
+<td>80%</td>
+</tr>
+<tr class="even">
+<td>Frontend (<code>apps/web/src</code>)</td>
+<td>70%</td>
+<td>60%</td>
+<td>70%</td>
+</tr>
+<tr class="odd">
+<td>Parser wrapper (<code>apps/parser/src/wrapper</code>)</td>
+<td>90%</td>
+<td>85%</td>
+<td>90%</td>
+</tr>
+<tr class="even">
+<td>Shared types (<code>packages/shared-types</code>)</td>
+<td>n/a (types only)</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+<tr class="odd">
+<td>Test utilities (<code>packages/test-utils</code>)</td>
+<td>excluded</td>
+<td>excluded</td>
+<td>excluded</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why these numbers:</strong> - Backend has the most logic and
+the highest regression cost (data corruption, RLS bypass) → high
+threshold - Frontend is mostly UI glue; over-testing it is busywork →
+lower threshold - Parser wrapper is critical (garbage in, garbage out) →
+highest threshold</p>
+<p><strong>Coverage drops below threshold = CI fails.</strong> Forced to
+either add tests or get explicit approval to exclude the line (with a
+comment explaining why).</p>
+<hr />
+<h2 id="cross-prd-test-scenarios">13. Cross-PRD Test Scenarios</h2>
+<p>End-to-end scenarios that span multiple PRDs. These are the “did we
+wire it up correctly” tests.</p>
+<h3 id="player-sarahs-journey-prd-2-prd-3-prd-5">13.1 “Player Sarah’s
+journey” (PRD-2 + PRD-3 + PRD-5)</h3>
+<ol type="1">
+<li>Sarah signs in via Discord OAuth (PRD-2)</li>
+<li>Sarah accepts invite to Aurelian campaign, joins Helsreach
+Defenders, picks Astra Militarum (PRD-2)</li>
+<li>Sarah uploads her first roster (PRD-3)</li>
+<li>Pipeline parses, diffs vs. nothing (first time), runs rule checks
+(PRD-3)</li>
+<li>Sarah submits for approval (PRD-5)</li>
+<li>Mike (TL of Helsreach Defenders) sees in inbox, approves
+(PRD-5)</li>
+<li>Sarah sees RosterApproved in her roster view (PRD-3)</li>
+<li>Sarah files a battle update (PRD-4 §7b.1)</li>
+<li>Mike approves; battle update becomes part of history (PRD-5)</li>
+<li>Sarah views her Timeline (PRD-4 §7)</li>
+</ol>
+<h3 id="cm-mike-runs-the-campaign-prd-1-prd-3-prd-5">13.2 “CM Mike runs
+the campaign” (PRD-1 + PRD-3 + PRD-5)</h3>
+<ol type="1">
+<li>Mike creates Aurelian campaign via 6-step wizard (PRD-1 §4.1)</li>
+<li>Mike creates 4 teams, sets expected factions (PRD-1 §5b)</li>
+<li>Mike invites players; they accept (PRD-2)</li>
+<li>Mike promotes Sarah to TL of Helsreach Defenders (PRD-1 §4.2)</li>
+<li>Mike starts the campaign (gate: every team has ≥1 TL) (PRD-1
+§4.1)</li>
+<li>Mike configures rules per PRD-1 §4.4 (PRD-3 §6)</li>
+<li>Mike sees campaign inbox, approves various requests (PRD-5)</li>
+<li>Mike changes a rule mid-campaign; system shows warning (PRD-1 §4.4,
+v3.17)</li>
+<li>Mike ends campaign; everyone can read across teams (PRD-1 §4.1,
+post-crusade relaxation)</li>
+</ol>
+<h3 id="auto-approve-pipeline-runs-prd-1-prd-5">13.3 “Auto-approve +
+pipeline runs” (PRD-1 + PRD-5)</h3>
+<ol type="1">
+<li>Mike is also a player on Helsreach Defenders (PRD-1 §5)</li>
+<li>Mike files a battle update as a player</li>
+<li>ApprovalRequest is created (not skipped); approvalSource =
+‘self_approved’</li>
+<li>Rule checks run (PRD-5 §3.3)</li>
+<li>History entry created</li>
+<li>Event emitted; notification fired for Mike’s own record</li>
+<li>Future event hook (Discord, team view page) works without
+modification</li>
+</ol>
+<h3 id="rls-prevents-cross-tenant-access-prd-0">13.4 “RLS prevents
+cross-tenant access” (PRD-0)</h3>
+<ol type="1">
+<li>Two tenants: Aurelian (instance’s main) and Beta (test)</li>
+<li>User in Beta has a valid token</li>
+<li>User in Beta requests
+<code>/api/campaigns/&lt;aurelian-campaign-id&gt;</code></li>
+<li>RLS returns 404 (campaign not visible to Beta user)</li>
+<li>Audit log records the access attempt</li>
+</ol>
+<hr />
+<h2 id="open-questions">14. Open Questions</h2>
+<ul>
+<li><strong>Snapshot testing for Vue components</strong>: not adopted in
+v1; reconsider if UI regressions become common.</li>
+<li><strong>Mutation testing (Stryker)</strong>: deferred to v2; would
+catch tests that don’t actually verify behavior.</li>
+<li><strong>Property-based testing (fast-check)</strong>: deferred;
+would be valuable for the parser contract (roundtrip JSON → parse → diff
+→ parse again should be idempotent) but adds significant
+complexity.</li>
+<li><strong>Visual regression (Percy, Chromatic)</strong>: deferred;
+we’re a utility app, not a marketing site.</li>
+<li><strong>Contract testing (Pact)</strong>: deferred; the front-end
+and back-end are owned by the same team, so consumer-driven contract
+tests are overkill in v1.</li>
+</ul>
+<hr />
+<h2 id="dependencies">15. Dependencies</h2>
+<ul>
+<li><strong>PRD-0</strong>: data model, tenancy, RLS policies</li>
+<li><strong>PRD-1</strong>: campaign lifecycle, CM-as-player</li>
+<li><strong>PRD-2</strong>: auth, OAuth, magic-link</li>
+<li><strong>PRD-3</strong>: roster pipeline</li>
+<li><strong>PRD-4</strong>: events, history</li>
+<li><strong>PRD-5</strong>: approval routing</li>
+<li><strong>PRD-6</strong>: OpenAPI/Swagger spec (test data generation,
+request validation, e2e API test scaffolding)</li>
+</ul>
+<hr />
+<h2 id="references">16. References</h2>
+<ul>
+<li>Vitest: https://vitest.dev</li>
+<li><span class="citation" data-cites="vue/test-utils">@vue/test-utils</span>:
+https://test-utils.vuejs.org</li>
+<li>Playwright: https://playwright.dev</li>
+<li>testcontainers-node: https://node.testcontainers.org</li>
+<li>testcontainers-python:
+https://github.com/testcontainers/testcontainers-python</li>
+<li>pytest: https://docs.pytest.org</li>
+<li>GitHub Actions: https://docs.github.com/actions</li>
+<li>oauth2-mock-server:
+https://github.com/ptavares/oauth2-mock-server</li>
+<li>MailHog (dev SMTP): https://github.com/mailhog/MailHog</li>
+</ul>
+</body>
+</html>
