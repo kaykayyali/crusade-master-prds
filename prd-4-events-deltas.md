@@ -26,26 +26,58 @@ The gating check is a single SQL query on every form submit. The UI surfaces the
 
 ---
 
-## 3. Event Taxonomy (v3 additions)
+## 3. Event Taxonomy (v3 additions + v3.17 expansion)
+
+**All campaign events are tracked.** Per user: "All events in a campaign should be tracked. Including starting, ending, moving between phases, player join, player leave, team creation, team changes, team removal. There might be more."
+
+The taxonomy below is the canonical list of events the system emits. New events are added as extensions (the `Event.kind` column is `text` or a wide enum, not a hard constraint). Every event has `activeRosterApprovedId` (the linchpin of the Timeline view, PRD-4 §6) and a `visibility` setting (PRD-4 §8).
+
+**Approvals are campaign-owned, not user-owned.** Per user (v3.17): changing the rules for who can approve an `ApprovalRequest` does not mutate the request object — it changes the API/UI ruleset. The `Event` for an approved request records `actorUserId: <reviewer>`, but the request itself remains a campaign-level entity. Past approvals stand regardless of subsequent role changes.
 
 ```ts
 type EventKind =
-  // === Roster lifecycle (v3 async pipeline additions) ===
-  | 'roster.import_enqueued'            // BullMQ parse-job created
+  // === Campaign lifecycle (v3.17) ===
+  | 'campaign.created'
+  | 'campaign.settings_updated'          // generic catch-all; specific kinds below
+  | 'campaign.started'                   // CM flips status: pending → active
+  | 'campaign.archived'                  // CM flips status: active → archived
+  | 'campaign.unarchived'                // CM flips status: archived → active
+  | 'campaign.phase_changed'             // setup | active | endgame | concluded
+
+  // === Member lifecycle (v3.17) ===
+  | 'member.joined'                      // user accepted campaign invite
+  | 'member.left'                        // user self-removed
+  | 'member.removed'                     // CM removed a member
+  | 'member.role_changed'                // promoted to TL, demoted, granted CM, etc.
+
+  // === Team lifecycle (v3.17) ===
+  | 'team.created'
+  | 'team.changed'                       // renamed, color, expectedFactionIds, narrativeLogFilter
+  | 'team.removed'                       // soft-delete
+  | 'team_member.added'                  // player assigned to team
+  | 'team_member.removed'                // player removed from team
+  | 'team_switch.requested'
+  | 'team_switch.approved'
+  | 'team_switch.rejected'
+
+  // === Roster lifecycle (v3 async pipeline) ===
+  | 'roster.import_enqueued'             // BullMQ parse-job created
   | 'roster.parse_started'
   | 'roster.parse_succeeded'
-  | 'roster.parse_failed'              // parseError populated
-  | 'roster.app_parse_succeeded'        // app-side Order of Battle extraction
+  | 'roster.parse_failed'                // parseError populated
+  | 'roster.app_parse_succeeded'         // app-side Order of Battle extraction
   | 'roster.diff_computed'
   | 'roster.rule_check_run'
-  | 'roster.draft_reviewed'            // player opened the diff
-  | 'roster.draft_acknowledged'        // player acknowledged rule check issues
-  | 'roster.draft_submitted'           // player submitted for CM approval
+  | 'roster.draft_reviewed'              // player opened the diff
+  | 'roster.draft_acknowledged'          // player acknowledged rule check issues
+  | 'roster.draft_submitted'             // player submitted for CM approval
   | 'roster.approved'
   | 'roster.rejected'
   | 'roster.override_applied'
   | 'roster.rolled_back'
-  | 'roster.points_updated'            // system: Wahapedia errata
+  | 'roster.reassigned'                  // PRD-1 §5b team_switch re-associated roster
+  | 'roster.points_updated'              // system: Wahapedia errata
+  | 'roster.superseded'                  // newer draft replaced older
 
   // === Battle lifecycle ===
   | 'battle.scheduled'
@@ -54,7 +86,8 @@ type EventKind =
   | 'battle.rejected'
   | 'battle.disputed'
 
-  // === Unit state changes ===
+  // === Unit state changes (mostly NR-derived; PRD-0 §4b.2 read-only display) ===
+  // These are recorded for the timeline view (PRD-4 §6); the data itself lives in NR.
   | 'unit.xp_gained'
   | 'unit.xp_lost'
   | 'unit.rank_promoted'
@@ -68,7 +101,7 @@ type EventKind =
   // === Crusade state changes ===
   | 'crusade.rp_gained'
   | 'crusade.rp_spent'
-  | 'crusade.req_purchased'
+  | 'crusade.req_purchased'              // CM-gifted (player-bought requisitions come from NR roster diff)
   | 'crusade.supply_changed'
   | 'crusade.logistics_changed'
   | 'crusade.alignment_changed'
@@ -77,19 +110,34 @@ type EventKind =
   | 'rule_check.run'
   | 'rule_check.warn_acknowledged'
   | 'rule_check.fail_overridden'
+  | 'rule_pack.enabled'
+  | 'rule_pack.disabled'
 
-  // === Campaign-wide ===
-  | 'campaign.created'
-  | 'campaign.settings_updated'
-  | 'campaign.member_joined'
-  | 'campaign.member_left'
-  | 'campaign.narrative_event'
-  | 'campaign.archived'
+  // === Approval pipeline (campaign-owned per v3.17) ===
+  | 'approval.requested'
+  | 'approval.approved'
+  | 'approval.rejected'
+  | 'approval.changes_requested'
+  | 'approval.withdrawn'
+  | 'approval.overridden'
+  | 'approval.bulk_approved'
+  | 'approval.bulk_reverted'
+
+  // === Rollback ===
+  | 'rollback.executed'                  // PRD-4 §7b.4
+  | 'rollback.compensating_entry'        // the entry created to record the rollback
+
+  // === Narrative / CM-triggered ===
+  | 'campaign.narrative_event'           // PRD-4 §7 (template or custom)
+  | 'campaign.announcement.filed'
+  | 'campaign.point_cap.changed'
+  | 'campaign.mass_reban.applied'
 
   // === System ===
   | 'system.errata_applied'
-  | 'system.parse_pipeline_alert'      // v3: BullMQ queue health degraded
-  ;
+  | 'system.parse_pipeline_alert'        // BullMQ queue health degraded
+  | 'system.notification.email_sent'
+  | 'system.notification.failed'
 
 interface Event {
   id: string;
@@ -97,19 +145,19 @@ interface Event {
   campaignId: string | null;
   kind: EventKind;
   occurredAt: timestamp;
-  actorUserId: string | null;     // null for system events
-  targetType: 'roster' | 'unit' | 'battle' | 'crusade' | 'rule_check' | 'campaign';
+  actorUserId: string | null;            // null for system events
+  targetType: 'campaign' | 'member' | 'team' | 'roster' | 'unit' | 'battle' | 'crusade' | 'rule_check' | 'rule_pack' | 'approval';
   targetId: string;
   payload: Record<string, unknown>;
   delta: Delta | null;
-  visibility: 'public' | 'campaign' | 'cm_only' | 'private';
+  visibility: 'public' | 'campaign' | 'team' | 'cm_only' | 'private';
   activeRosterApprovedId: string | null;
 }
 
 interface Delta {
   id: string;
   eventId: string;
-  entityType: 'unit' | 'crusade' | 'roster';
+  entityType: 'unit' | 'crusade' | 'roster' | 'team' | 'member' | 'campaign';
   entityId: string;
   field: string;
   beforeValue: any;
@@ -118,7 +166,17 @@ interface Delta {
 }
 ```
 
-Every Event has `activeRosterApprovedId` — the linchpin of the Timeline.
+**Extending the taxonomy:** new `EventKind` values are added as needed; the data model doesn't break (the kind column is `text` or a wide enum that gets updated). v1 ships the kinds above. v1.x may add kinds for Discord integration, multi-supplement campaigns, etc.
+
+**Default visibility per kind** is documented in PRD-4 §8.
+
+### 3.1 Event visibility rules (recap from PRD-4 §8)
+
+- `public` — cross-team; all players in the campaign see.
+- `campaign` — all players in the campaign see (default for most events).
+- `team` — only the affected team's players + CM see.
+- `cm_only` — only the primary CM + team leaders (when relevant to their team) see.
+- `private` — only the affected user + CM see (e.g., a player self-removing).
 
 ---
 

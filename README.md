@@ -20,7 +20,43 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.16 (current) — Authority is current-ruleset; ruleset-change warning
+### v3.17 (current) — Always-fire warning + comprehensive event taxonomy + no live updates
+
+Four refinements:
+
+**1. Warning UI always fires when ruleset changes (PRD-1 §4.4, PRD-5 §5.4).**
+Per user: "always show the user what in flight approvals would be affected. If there are none, show the same flow, confirm nothing is affected."
+- Modal opens every time the CM saves a ruleset change (Approvals section or Rules section).
+- Two variants: Variant A (pending approvals affected, shows the count + breakdown) and Variant B (no pending approvals affected, shows the 0 count with confirmation message).
+- Past approvals still NOT affected; change is still "difficult to rollback" because the audit log reflects it.
+- Other settings changes (team rename, etc.) do NOT fire this warning — they don't affect who can approve.
+
+**2. No live updates in v1 (PRD-5 §5.4).**
+Per user: "browser refresh is fine."
+- v1 ships with refresh-based UI. When the CM saves a ruleset change, affected users see the new state on their next page load or manual refresh.
+- No WebSocket / SSE / polling infrastructure.
+- v1.x may add real-time updates; v1 ships simple.
+
+**3. Approvals are campaign-owned, not user-owned (PRD-4 §3, PRD-5 §5.4).**
+Per user: "Approvals are never 'owned' by user. They are owned by the campaign. Changing the rules for who can approve just drives the ui and api rules, it doesn't mutate each approval object."
+- The API enforces the ruleset; the UI abides.
+- The `Event` for an approval records `actorUserId` at decision time, but the `ApprovalRequest` itself is campaign-owned.
+- TL A's approval of item X is permanent. If TL A leaves and TL B wants to undo it, TL B files a NEW `roster_rollback` approval — the original is untouched.
+- The "limitation" on visibility is at the data layer (RLS) + application layer (API filter). Some events are team-contextual, some are CM-only (e.g., starting/ending the campaign).
+
+**4. Comprehensive event taxonomy (PRD-4 §3).**
+Per user: "All events in a campaign should be tracked. Including starting, ending, moving between phases, player join, player leave, team creation, team changes, team removal. There might be more."
+- New categories added:
+  - **Campaign lifecycle**: `campaign.created`, `campaign.started`, `campaign.archived`, `campaign.unarchived`, `campaign.phase_changed`, `campaign.settings_updated`
+  - **Member lifecycle**: `member.joined`, `member.left`, `member.removed`, `member.role_changed`
+  - **Team lifecycle**: `team.created`, `team.changed`, `team.removed`, `team_member.added`, `team_member.removed`, `team_switch.requested`, `team_switch.approved`, `team_switch.rejected`
+  - **Approval pipeline**: `approval.requested`, `approval.approved`, `approval.rejected`, `approval.changes_requested`, `approval.withdrawn`, `approval.overridden`, `approval.bulk_approved`, `approval.bulk_reverted`
+  - **Rollback**: `rollback.executed`, `rollback.compensating_entry`
+  - **System**: `system.notification.email_sent`, `system.notification.failed`
+- Extending the taxonomy is a data-model-agnostic change (the `kind` column is `text` or a wide enum). v1.x can add kinds for Discord integration, multi-supplement campaigns, etc.
+- Default visibility per kind documented in PRD-4 §8.
+
+### v3.16 — Authority is current-ruleset; ruleset-change warning
 
 Per user: **there is no concept of "in flight authority change."** All open items requiring approval are associated to a campaign, and the API/UI enforces whatever setting is currently set in the campaign. When team leaders change OR when the ruleset changes, the eligible-approver set updates immediately.
 

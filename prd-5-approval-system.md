@@ -661,6 +661,12 @@ API: no authority filter (CM sees everything). Mike sees all 13 items across all
 
 Per user direction: **there is no concept of "intent at filing time."** All open items requiring approval are associated with a campaign, and the API/UI enforces whatever setting is currently set in the campaign at query time. When team leaders change OR when the ruleset changes, the eligible-approver set updates immediately. Past decisions stand (they're already done); in-flight requests are re-assessed automatically by the next API call.
 
+**Approvals are campaign-owned, not user-owned (v3.17).** Per user: "Approvals are never 'owned' by user. They are owned by the campaign. Changing the rules for who can approve just drives the ui and api rules, it doesn't mutate each approval object." The API enforces the ruleset; the UI abides. The `Event` for an approval records the `actorUserId` at decision time, but the `ApprovalRequest` row itself has no "owner" field — it's a campaign-level entity. When TL A approves, leaves, and TL B wants to rollback, TL B files a NEW `roster_rollback` approval request. The original approval is untouched; TL B's rollback is a separate, traceable decision.
+
+**No live updates in v1 (v3.17).** Per user: "browser refresh is fine." When the CM saves a ruleset change, affected users (e.g., Alice with a detail view open) see the new state on their next page load or manual refresh. No WebSocket / Server-Sent Events / polling infrastructure. v1.x may add real-time updates; v1 ships with refresh-based UI.
+
+**The limitation on visibility:** the ruleset change affects "who can see" which approvals (some are team-contextual, some are CM-only — e.g., starting/ending the campaign). The query in PRD-0 §3.4 enforces RLS at the data layer; the API applies the authority filter at the application layer. A user without authority doesn't even see the item in their inbox, let alone approve it.
+
 **Concrete example:**
 
 1. Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k's roster) open in her detail view.
@@ -678,13 +684,15 @@ This is the simplest model: authority is **derived** from the campaign's current
 
 If Mike (CM-as-player) files a high-impact kind like `mass_reban`, the auto-approval logic at PRD-5 §3.3 evaluates the current ruleset. If the kind requires co-CM and a co-CM exists, Mike's request routes to them. If Mike later removes the co-CM, the request stays pending (no co-CM available). If a co-CM joins later, the request becomes actionable again. The current ruleset — applied at query time — always wins.
 
-### Re-assessment warning UI (when CM changes ruleset that affects pending approvals)
+### Re-assessment warning UI (v3.17: always fires)
 
-Per user: when the CM is about to save a ruleset change that would affect pending approvals, the UI must warn them before saving, because the change is difficult to rollback.
+Per user (v3.17): when approval settings change, **always show the CM what in-flight approvals would be affected, even if there are none.** The CM should always see the impact assessment before saving — a "0 affected" message is still meaningful confirmation. The change is difficult to rollback (the audit log will reflect it).
 
-**When the warning fires:** the CM opens the Crusade Administration panel → Approvals (PRD-1 §4.4), edits `teamLeaderAuthority` or `teamLeaderApprovalMode`, and clicks "Save." Before the save, the system evaluates: "Are there any pending `ApprovalRequest`s in this campaign that would change eligible approvers under the new settings?"
+**When the warning fires:** the CM opens the Crusade Administration panel → Approvals (PRD-1 §4.4) or Rules section, edits `teamLeaderAuthority` / `teamLeaderApprovalMode` / rule packs / per-kind enforcement, and clicks "Save." The system evaluates: "How many pending `ApprovalRequest`s in this campaign would change eligible approvers under the new settings?"
 
-If yes, the warning modal opens:
+The warning modal **always** opens with one of two variants:
+
+**Variant A: pending approvals affected (non-zero):**
 
 ```
 +----------------------------------------------------------+
@@ -716,13 +724,34 @@ If yes, the warning modal opens:
 +----------------------------------------------------------+
 ```
 
+**Variant B: no pending approvals affected (zero):**
+
+```
++----------------------------------------------------------+
+| Confirm ruleset change                                  |
++----------------------------------------------------------+
+| You are about to change campaign settings.              |
+|                                                         |
+| Changes:                                                |
+|   - Disable team leader authority for: roster_approval |
+|                                                         |
+| Affected pending approvals: 0                            |
+|   (No pending roster_approval requests right now)       |
+|                                                         |
+| Future requests for this kind will route to you        |
+| (the primary CM) only.                                   |
+|                                                         |
+| [Cancel] [Confirm change]                                |
++----------------------------------------------------------+
+```
+
 **What "difficult to rollback" means (the audit trail doesn't lie):** if the CM disables `roster_approval` for TLs, then re-enables it an hour later, the pending approvals become actionable again. But the audit log shows that the ruleset changed twice, and during that hour, the pending requests were CM-only. The CM can't pretend the ruleset was stable.
 
-If the CM wants to avoid this, they should communicate with the team leader(s) before the change. Or wait for the queue to drain.
-
-**No warning when the change does NOT affect pending approvals.** If the CM disables `roster_approval` for TLs and there are zero pending `roster_approval` requests, the warning does not fire. The change saves silently.
+If the CM wants to avoid this for high-impact changes, they should communicate with the team leader(s) before the change. Or wait for the queue to drain.
 
 **No warning for past-approved or rejected approvals.** Those are immutable; the ruleset change doesn't affect them.
+
+**No warning for changes that don't affect approvals at all** (e.g., the CM renames a team in the Teams section — that's a `team.changed` event but doesn't change who can approve what). The warning fires specifically for ruleset changes (Approvals + Rules sections per PRD-1 §4.4).
 
 ### Player view (e.g., Sarah on Helsreach)
 
