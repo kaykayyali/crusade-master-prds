@@ -1,0 +1,730 @@
+---
+type: PRD
+title: Events, Submissions, & Timeline (v3.26)
+description: "Comprehensive event taxonomy (v3.17 expansion: campaign/member/team/roster/battle lifecycle). State vs Phase (v3.18, cosmetic-only v3.19). Per-player BattleUpdates, BattleReportForm, HistoryEntry, ChangesetGroupings, Rollback, Timeline + Narrative Log UI. Event \u2192 Notification fanout (v3.26)."
+resource: "https://github.com/kaykayyali/crusade-master-prds/blob/0c3c626/prd-4-events-deltas.md"
+tags:
+  - prd
+  - events
+  - timeline
+  - v3
+  - v3.10
+  - v3.17
+  - v3.18
+  - v3.19
+  - v3.26
+timestamp: "2026-06-28T20:34:04Z"
+---
+
+# PRD-4: Events, Submissions, & Timeline (v3)
+
+> Every meaningful state transition is an Event. The Timeline is the source of truth for "what was the army's state when this battle happened?" Submission gating ensures every event links to an approved roster.
+
+> v3: async pipeline acknowledged; the same event model applies, with a few new event kinds tied to the parse pipeline.
+
+---
+
+## 1. Goals
+
+Capture every state transition in a campaign as a structured, queryable Event. Build a Timeline that lets a CM (or a spectator) reconstruct any moment.
+
+**Success metric**: 100% of state transitions produce an event. Any timestamp is queryable as "show me the campaign state at that moment" with < 200ms response.
+
+---
+
+## 2. Submission Gating
+
+**No event of any kind can be filed unless the submitter's Roster is in `RosterApproved` state at the relevant timestamp.**
+
+- Battle update for a battle on 2026-08-15 → submitter must have a `RosterApproved` whose `approvedAt <= 2026-08-15`
+- Requisition purchase today → submitter must have a `RosterApproved` whose `approvedAt <= now`
+- CM-triggered narrative event affecting a player → that player must have a `RosterApproved`
+
+The gating check is a single SQL query on every form submit. The UI surfaces the gating check pre-submit.
+
+---
+
+## 3. Event Taxonomy (v3 additions + v3.17 expansion)
+
+**All campaign events are tracked.** Per user: "All events in a campaign should be tracked. Including starting, ending, moving between phases, player join, player leave, team creation, team changes, team removal. There might be more."
+
+The taxonomy below is the canonical list of events the system emits. New events are added as extensions (the `Event.kind` column is `text` or a wide enum, not a hard constraint). Every event has `activeRosterApprovedId` (the linchpin of the Timeline view, [PRD-4](/prds/prd-4-events-deltas.md) §6) and a `visibility` setting ([PRD-4](/prds/prd-4-events-deltas.md) §8).
+
+**Approvals are campaign-owned, not user-owned.** Per user (v3.17): changing the rules for who can approve an `ApprovalRequest` does not mutate the request object — it changes the API/UI ruleset. The `Event` for an approved request records `actorUserId: <reviewer>`, but the request itself remains a campaign-level entity. Past approvals stand regardless of subsequent role changes.
+
+```ts
+type EventKind =
+  // === Campaign lifecycle (v3.17 + v3.18) ===
+  | 'campaign.created'
+  | 'campaign.settings_updated'          // generic catch-all; specific kinds below
+  | 'campaign.started'                   // CM flips state: created → started
+  | 'campaign.ended'                     // CM flips state: started → ended (v3.18; was previously collapsed into archived)
+  | 'campaign.archived'                  // CM flips state: ended → archived (full read-only)
+  | 'campaign.unarchived'                // CM flips state: archived → started (re-open)
+  // Phases (v3.18) — distinct from state (see PRD-0 §4 / PRD-1 §4.4.5).
+  // Phases are CM-authored narrative periods; state is system lifecycle.
+  | 'campaign.phase_created'             // CM creates a new phase (preparation)
+  | 'campaign.phase_activated'           // CM activates a phase; the campaign's activePhaseId updates
+  | 'campaign.phase_deactivated'         // CM deactivates the active phase (or it was auto-deactivated by activating another)
+  | 'campaign.phase_updated'             // CM edits phase name or description
+  | 'campaign.phase_removed'             // soft-delete; historical events still reference the phase
+
+  // === Member lifecycle (v3.17) ===
+  | 'member.joined'                      // user accepted campaign invite
+  | 'member.left'                        // user self-removed
+  | 'member.removed'                     // CM removed a member
+  | 'member.role_changed'                // promoted to TL, demoted, granted CM, etc.
+
+  // === Team lifecycle (v3.17) ===
+  | 'team.created'
+  | 'team.changed'                       // renamed, color, expectedFactionIds, narrativeLogFilter
+  | 'team.removed'                       // soft-delete
+  | 'team_member.added'                  // player assigned to team
+  | 'team_member.removed'                // player removed from team
+  | 'team_switch.requested'
+  | 'team_switch.approved'
+  | 'team_switch.rejected'
+
+  // === Roster lifecycle (v3 async pipeline) ===
+  | 'roster.import_enqueued'             // BullMQ parse-job created
+  | 'roster.parse_started'
+  | 'roster.parse_succeeded'
+  | 'roster.parse_failed'                // parseError populated
+  | 'roster.app_parse_succeeded'         // app-side Order of Battle extraction
+  | 'roster.diff_computed'
+  | 'roster.rule_check_run'
+  | 'roster.draft_reviewed'              // player opened the diff
+  | 'roster.draft_acknowledged'          // player acknowledged rule check issues
+  | 'roster.draft_submitted'             // player submitted for CM approval
+  | 'roster.approved'
+  | 'roster.rejected'
+  | 'roster.override_applied'
+  | 'roster.rolled_back'
+  | 'roster.reassigned'                  // PRD-1 §5b team_switch re-associated roster
+  | 'roster.superseded'                  // newer draft replaced older
+
+  // === Battle lifecycle ===
+  | 'battle.scheduled'
+  | 'battle.filed'
+  | 'battle.approved'
+  | 'battle.rejected'
+  | 'battle.disputed'
+
+  // === Unit state changes (mostly NR-derived; PRD-0 §4b.2 read-only display) ===
+  // These are recorded for the timeline view (PRD-4 §6); the data itself lives in NR.
+  | 'unit.xp_gained'
+  | 'unit.xp_lost'
+  | 'unit.rank_promoted'
+  | 'unit.honour_gained'
+  | 'unit.honour_lost'
+  | 'unit.scar_gained'
+  | 'unit.scar_removed'
+  | 'unit.destroyed'
+  | 'unit.replaced'
+
+  // === Crusade state changes ===
+  | 'crusade.rp_gained'
+  | 'crusade.rp_spent'
+  | 'crusade.req_purchased'              // CM-gifted (player-bought requisitions come from NR roster diff)
+  | 'crusade.supply_changed'
+  | 'crusade.logistics_changed'
+  | 'crusade.alignment_changed'
+
+  // === Rule compliance ===
+  | 'rule_check.run'
+  | 'rule_check.warn_acknowledged'
+  | 'rule_check.fail_overridden'
+  | 'rule_pack.enabled'
+  | 'rule_pack.disabled'
+
+  // === Approval pipeline (campaign-owned per v3.17) ===
+  | 'approval.requested'
+  | 'approval.approved'
+  | 'approval.rejected'
+  | 'approval.changes_requested'
+  | 'approval.withdrawn'
+  | 'approval.overridden'
+  | 'approval.bulk_approved'
+  | 'approval.bulk_reverted'
+
+  // === Rollback ===
+  | 'rollback.executed'                  // PRD-4 §7b.4
+  | 'rollback.compensating_entry'        // the entry created to record the rollback
+
+  // === Narrative / CM-triggered ===
+  | 'campaign.narrative_event'           // PRD-4 §7 (template or custom)
+  | 'campaign.announcement.filed'
+  | 'campaign.point_cap.changed'
+  | 'campaign.mass_reban.applied'
+
+  // === System ===
+  | 'system.errata_applied'
+  | 'system.parse_pipeline_alert'        // BullMQ queue health degraded
+  | 'system.notification.email_sent'
+  | 'system.notification.failed'
+
+interface Event {
+  id: string;
+  tenantId: string;
+  campaignId: string | null;
+  kind: EventKind;
+  occurredAt: timestamp;
+  actorUserId: string | null;            // null for system events
+  targetType: 'campaign' | 'member' | 'team' | 'roster' | 'unit' | 'battle' | 'crusade' | 'rule_check' | 'rule_pack' | 'approval';
+  targetId: string;
+  payload: Record<string, unknown>;
+  delta: Delta | null;
+  visibility: 'public' | 'campaign' | 'team' | 'cm_only' | 'private';
+  activeRosterApprovedId: string | null;
+}
+
+interface Delta {
+  id: string;
+  eventId: string;
+  entityType: 'unit' | 'crusade' | 'roster' | 'team' | 'member' | 'campaign';
+  entityId: string;
+  field: string;
+  beforeValue: any;
+  afterValue: any;
+  reason: string;
+}
+```
+
+**Extending the taxonomy:** new `EventKind` values are added as needed; the data model doesn't break (the kind column is `text` or a wide enum that gets updated). v1 ships the kinds above. v1.x may add kinds for Discord integration, multi-supplement campaigns, etc.
+
+**Default visibility per kind** is documented in [PRD-4](/prds/prd-4-events-deltas.md) §8.
+
+### 3.1 Event visibility rules (recap from [PRD-4](/prds/prd-4-events-deltas.md) §8)
+
+- `public` — cross-team; all players in the campaign see.
+- `campaign` — all players in the campaign see (default for most events).
+- `team` — only the affected team's players + CM see.
+- `cm_only` — only the primary CM + team leaders (when relevant to their team) see.
+- `private` — only the affected user + CM see (e.g., a player self-removing).
+
+---
+
+### 3.2 State vs Phase (v3.18 + v3.19: cosmetic-only clarification)
+
+Per user: **campaign state and campaign phase are two distinct concepts.** Don't conflate them.
+
+- **State** is the internal lifecycle of the campaign — system-managed. Stored in `Campaign.status`. Transitions: `created` → `started` → `ended` → `archived` (with optional `archived` → `started` re-open).
+- **Phase** is a CM-authored narrative period within a `started` campaign. Stored in the `CampaignPhase` table. Multiple phases can exist; at most one is active at a time in v1. The active phase is a narrative context, not a lifecycle state.
+
+**Per v3.19: phase effects are cosmetic only.** The system does NOT interpret or enforce the `description` or `effects` content of a phase. The `description` is markdown text displayed to players (banner on dashboard, header in narrative log, phase delimiter in timeline). The `effects` field is reserved for v1.x but always null in v1. Players read the phase description and apply any rule modifications themselves at the table — the app is not a rules adjudicator. This is consistent with [PRD-0](/prds/prd-0-overview.md) §4b.2 (NR-as-source-of-truth) and [PRD-3](/prds/prd-3-army-export-versioning.md) §6 (rule engine is campaign-level only).
+
+**Concrete difference:**
+
+| Question | State | Phase |
+|---|---|---|
+| Has the campaign begun? | `status = 'started'` | n/a |
+| What's the narrative period right now? | n/a | `Campaign.activePhaseId` |
+| Can players file approvals? | Yes if `status = 'started'` | Yes (any active phase; phase doesn't gate approvals) |
+| Can players see the campaign? | Yes if `status ∈ {started, ended, archived}` | Only see the active phase (if any) |
+| Is the campaign over? | `status = 'ended' \| 'archived'` | The active phase can be deactivated; phases don't gate state transitions |
+| Who manages it? | System (state transitions are CM-triggered but the lifecycle is enforced) | CM (free-form narrative periods) |
+| Does the system enforce phase rules? | n/a | **No** (v3.19). Players enforce at the table. |
+
+**Lifecycle interactions:**
+
+- A campaign in `created` state has no active phase (activation requires `started`).
+- When the CM flips `started` → `ended`, the active phase is implicitly deactivated (emit `campaign.phase_deactivated`).
+- When the CM flips `started` → `archived`, same — the active phase is deactivated.
+- When the CM re-opens via `archived` → `started`, the campaign has no active phase until the CM activates one.
+
+**Why separate them:**
+
+- State is enforced by the system; the app gates functionality on it (no approvals unless `started`; read-only mode if `archived`).
+- Phase is narrative context that the CM controls freely; it doesn't gate system behavior in v1.
+
+Mixing them would mean the CM's narrative choices accidentally gate functionality (e.g., "if I haven't defined a 'Phase 1' yet, players can't play"). Keeping them separate means the CM can run a `started` campaign with no phases (just defaults) or run a campaign with rich phase descriptions that players see.
+
+### 3.3 Event → Notification fanout (v3.26)
+
+When any system action creates an `Event`, the system also fans out `Notification` rows to the appropriate recipients. The fanout logic is identical regardless of where the event came from (UI button, BullMQ worker, scheduled job), which is why CM-as-player, system jobs, and player actions all flow through the same notification path.
+
+```mermaid
+flowchart LR
+    Src[Source of action<br/>player UI / CM UI /<br/>BullMQ worker / scheduled job]
+    Src --> Emit[Emit Event row]
+    Emit --> Bus[Event fanout logic<br/>pure function:<br/>event → recipients]
+    Bus --> Rec1{Recipient calculation<br/>per kind × visibility × role × team scope}
+    Rec1 --> N1[Notification row for recipient 1<br/>loudness per kind + user preference]
+    Rec1 --> N2[Notification row for recipient 2]
+    Rec1 --> Nn[Notification rows for N recipients]
+    N1 --> Del[Delivery workers<br/>in-app WebSocket + email]
+    N2 --> Del
+    Nn --> Del
+
+    Bus --> Hist[History writer<br/>only if event is a delta-producing action]
+    Hist --> HE[HistoryEntry + Delta rows]
+```
+
+**Why a pure function:** the fanout logic is testable in isolation (unit tests with event fixtures → expected recipients). The same function powers the live notification path AND the email summary path.
+
+**Loudness:** `loud | normal | quiet`. Defaults by kind (e.g., `approval.requested` = `loud`; `rule_check.run` = `quiet`). Users can override per kind in their account page ([PRD-2](/prds/prd-2-player-signup.md) §5d).
+
+---
+
+## 4. Post-Battle Update Flow
+
+```mermaid
+flowchart TD
+    A[Battle happens in real life] --> B[Submitter is winner or CM]
+    B --> C{Submitter has approved Roster?}
+    C -->|No| D[Block: 'Import roster first']
+    C -->|Yes| E[Form: opponent, mission, result, agendas, per-unit changes]
+    E --> F[System computes deltas against active RosterApproved]
+    F --> G[Show preview to submitter]
+    G --> H{Submit?}
+    H -->|No| I[Save as draft]
+    H -->|Yes| J[Create BattleUpdate status=pending]
+    J --> K[Enqueue approval-job]
+    K --> L[CM reviews per PRD-5]
+    L --> M{Approved?}
+    M -->|Yes| N[Apply events with activeRosterApprovedId set]
+    M -->|No| O[Rejected, submitter can edit + resubmit]
+    N --> P[Both players' active Roster unchanged; events live in timeline]
+```
+
+### 4.1 Battle Update Form — Supplement-Specific, Campaign-Level Only
+
+Each player in a battle files **their own** `BattleUpdate`. A 1v1 battle = 2 BattleUpdates (one per player); a 4-player free-for-all = 4 BattleUpdates. Each becomes its own `ApprovalRequest { kind: 'post_battle_update' }` ([PRD-5](/prds/prd-5-approval-system.md) §3.2). The CM bulk-approves routine ones via the inbox; disputes (e.g., both players claim victory) surface as a `disputed` flag on both.
+
+**Form is campaign-level only (per [PRD-0](/prds/prd-0-overview.md) §4b.2):**
+
+Per the architectural principle that **unit/roster data lives in NR**, this app's battle update form collects only **campaign-level** data. Per-unit XP gains, honour assignments, scar acquisitions, relic pickups, OoA test rolls — all of that happens in New Recruit. The player updates their NR list after the battle, exports JSON, and uploads it. The diff between the pre-battle and post-battle NR rosters is how the app represents unit changes from a battle; this is **read-only display data**, not a form field.
+
+What this app's form DOES collect:
+- **Opponent** (must be a valid `CampaignMember`)
+- **Mission** (free text or pick from a campaign-specific list)
+- **Result** (win / loss / draw)
+- **Agendas attempted** (checklist from the active supplement's agenda list)
+- **Agendas achieved** (subset)
+- **Free-text battle report** (markdown; min chars per `Campaign.require_battle_report_chars`)
+- **Source roster reference** (`sourceRosterApprovedId` — the NR roster the player used for this battle)
+- **Reference to the new roster** (if the player re-imported mid-flow, the new `RosterDraft` id; this is what shows the post-battle unit state)
+
+What this app's form does NOT collect (per [PRD-0](/prds/prd-0-overview.md) §4b.2):
+- Per-unit XP, honours, scars, relics, wargear changes — those happen in NR
+- OoA test results — those are in NR (the player rolls the D6, marks the result)
+- Unit roster mutations of any kind
+
+**Form schema is per `Campaign` (pinned at creation):**
+
+`Campaign.battleReportSchema: JSONSchema | null` is **set at campaign creation** by copying `CrusadeSupplement.battleReportSchema` at that moment. Once pinned, the schema does not change for the campaign's lifetime — even if the underlying supplement later updates its schema. This guarantees a campaign's form is stable. Custom schemas per campaign are possible in principle (CM homebrew) but v1 has no UI to author them; v1.x may add a schema editor.
+
+**v1 ships defaults per supplement:**
+- **Armageddon (v1)**: standard Crusade form — opponent, mission, result, agendas attempted/achieved, free-text battle report, sourceRosterApprovedId.
+- **Nachmund Gauntlet (v1.x)**: multi-player form — same fields plus per-player Crusade Blessings.
+- The system default covers Armageddon v1 without bespoke UI.
+
+**Form UX behavior:**
+- The form is auto-generated from the pinned `Campaign.battleReportSchema` at runtime.
+- Validation rules from the schema (e.g., "exactly 1 result", "1-3 agendas attempted") fire on submit.
+- Required fields surface inline before submit.
+- Players see a preview of the resulting campaign-level delta ("Sarah's Helsreach Defenders: agenda 'Extermination Targets' achieved, +1 RP") before submitting. Per-unit deltas are NOT in the form; they show up as a side-by-side roster diff (read-only display) sourced from the linked roster versions.
+
+**Disambiguation: 3 different per-Crusade PDFs:**
+
+| PDF the user linked | What it represents in the app |
+|---|---|
+| `ArmageddonCrusadeCards.pdf` | Per-unit tracking card — derived from NR roster's unit state. UI: per-unit timeline view (PRD-2 §6 Flow 4). Auto-generated, **read-only display**. No form to fill. |
+| `ArmageddonBlankOrderOfBattle.pdf` | Roster-level snapshot — derived from `RosterApproved`. UI: printable roster view (auto-generated, read-only). No form to fill. |
+| `MissionRecordSheet.pdf` (Nachmund) | Per-battle form — the supplement-specific piece. UI: post-battle update form. JSON Schema-driven, campaign-level only. |
+
+### 4.2 Per-Unit Change Entry
+
+Two paths:
+1. **Quick entry**: "Did any units gain XP? Lose XP? Get destroyed? Take OoA test?" — system applies universal rules
+2. **Manual entry**: select specific unit, edit rank, add honour, etc.
+
+System warnings:
+- Spending RP the player doesn't have
+- Applying a honour that doesn't exist in the active supplement
+- Changing unit XP / rank in ways that don't match what prior events would produce
+
+### 4.3 Battle Approval
+
+When approved, events are written. The **active RosterApproved is NOT modified** — events live in the timeline as the source of truth. This is important because:
+- Multiple battles between roster approvals accumulate in the timeline
+- A future re-import shows the player "your Castellan should be Battle-ready by now based on Battle 12"
+- The Timeline reconstructs state at any timestamp
+
+---
+
+## 5. Requisition Purchase
+
+```mermaid
+flowchart TD
+    A[Player opens Requisition shop] --> B{Approved Roster?}
+    B -->|No| C[Block: 'Need approved roster first']
+    B -->|Yes| D[Show available Requisitions]
+    D --> E[Player picks one, sees cost in RP]
+    E --> F{Player has RP?}
+    F -->|No| G[Block: 'Not enough RP']
+    F -->|Yes| H[Player submits purchase request]
+    H --> I[Create ApprovalRequest]
+    I --> J[CM approves per PRD-5]
+    J --> K[Emit crusade.req_purchased event + unit.replaced if applicable]
+```
+
+---
+
+## 6. Timeline View (v3.13)
+
+A dedicated UI surface: "show me the campaign state at this moment."
+
+```mermaid
+flowchart LR
+    A[User picks timestamp] --> B[Find active RosterApproved for each player at that timestamp]
+    B --> C[Find approved battle events before that timestamp]
+    C --> D[Compute per-unit: base state + cumulative deltas]
+    D --> E[Render: roster view, crusade view, narrative log]
+```
+
+**Performance**: single SQL query against events table, indexed on `occurredAt` and `(targetType, targetId)`. Materialize `CampaignStateSnapshot` per timestamp on demand.
+
+### 6.1 Timeline UI (per-unit, G1 grouping — [PRD-4](/prds/prd-4-events-deltas.md) §7b)
+
+When Sarah clicks on a unit (e.g., her Cadian Castellan), she sees the unit's timeline:
+
+```
++----------------------------------------------------------+
+| Cadian Castellan          [+3 XP] [Battle Scar: Lost]   |
+| Owner: sarah_k · Helsreach Defenders · 2026-08-01 added |
++----------------------------------------------------------+
+| 2026-08-29  Requisition: Replaced Leman Russ           |
+|             Approved by Mike · -3 RP                    |
+| 2026-08-22  Battle 14: sarah_k vs. mike_t (Tyranids)   |
+|             Result: L · +3 XP · +1 kill                 |
+|             Battle Scar gained: Lost in the Fog         |
+|             [View battle report (480 chars)]            |
+|             — rollback-able                             |
+| 2026-08-15  Battle 13: sarah_k vs. jake42 (Orks)        |
+|             Result: W · +3 XP · Promotion: Blooded      |
+|             Agendas: Extermination Targets achieved     |
+|             [View battle report (320 chars)]            |
+| 2026-08-01  Unit added (Battle-ready)                   |
+|             Roster v1 approved by Mike                  |
++----------------------------------------------------------+
+| [Show rolled-back history] [Export as markdown]         |
++----------------------------------------------------------+
+```
+
+Each event card shows:
+- Date
+- Event type icon
+- Summary line (auto-generated from event payload)
+- For battle reports: expandable inline
+- For requisitions: RP cost
+- For promotions: rank transition (Battle-ready → Blooded)
+- For tombstones: rendered as struck-through entries behind a "Show rolled-back" toggle
+
+**Filter chips:** by event kind (XP gain, rank promotion, honour, scar, OoA test, requisition, roster update). "Show rolled-back history" toggle reveals tombstoned entries ([PRD-4](/prds/prd-4-events-deltas.md) §7b.4) with a struck-through visual.
+
+**Export as markdown** copies the timeline as a markdown block for sharing in Discord or printing. Sarah uses this to show off her army's journey.
+
+### 6.2 Timeline view per grouping ([PRD-4](/prds/prd-4-events-deltas.md) §7b.3)
+
+The timeline view supports all 6 v1 groupings:
+
+- **Per-Unit (G1)**: as above. Default view when clicking a unit.
+- **Per-Roster-Version (G2)**: when clicking a RosterApproved in the roster history, shows everything that changed in that import.
+- **Per-Battle (G3)**: a battle-detail view showing all events attributable to one battle (roster diff + agenda outcomes + RP delta + requisitions bought during that battle).
+- **Per-Requisition (G4)**: a requisition-detail view showing the unit added/removed + RP cost + the battle context where the requisition was earned.
+- **Per-ApprovalRequest (G5)**: an approval-detail view showing the full state change authorized by that one approval. Always available from any approval link.
+- **Per-State-Field (G6)**: the granular view — one entry per field change. Default: hidden behind a "Show granular" toggle for technical users / CMs investigating.
+
+The same underlying `HistoryEntry` rows power all 6 views; the UI just re-groups for display.
+
+---
+
+## 7. CM-Triggered Narrative Events
+
+Minimal v3 — focus is enforcement, not narrative flavor.
+
+```ts
+type NarrativeEventEffect =
+  | { type: 'rp_grant', amount: number, filter?: FilterExpr }
+  | { type: 'rp_deduct', amount: number, filter?: FilterExpr }
+  | { type: 'campaign_announcement', message: string };
+
+// FilterExpr can match on:
+//   - teamId:    affects only one campaign team (e.g., "Helsreach Defenders")
+//   - factionId: affects only one 40K faction (e.g., "Orks")
+//   - memberIds: explicit player list
+//   - (combinations of the above with AND/OR)
+```
+
+Armageddon templates:
+- **"Yarrick's Broadcast"** — all Imperial factions +1 RP (faction filter)
+- **"Ork WAAAGH!"** — all non-Ork factions −1 RP (faction filter, inverted)
+- **"Armageddon Stands"** — campaign announcement, no state change
+
+For team-based campaigns ([PRD-1](/prds/prd-1-crusade-master-admin.md) §5b), CMs can target events to a specific campaign team (e.g., "Helsreach Defenders gain +1 RP for holding the wall this week"). The filter expression supports `teamId` as a first-class axis alongside `factionId` — these are distinct dimensions and both are honored by the filter engine.
+
+### 7.1 Team Rollups via Events (Future Team View Pages)
+
+Every event has a `targetId` (e.g., a `RosterApproved`, `BattleUpdate`, `CampaignMember`). For team-based rollups, the join path is:
+
+```
+Event.targetId (e.g., RosterApproved.id)
+  → RosterApproved.teamId  (snapshotted at approval time per PRD-0)
+    → CampaignTeam.id (PRD-0 schema)
+      → rollup aggregates per team
+```
+
+This is the data path the v1.x **team view page** will use: a per-team dashboard showing aggregate progress, recent events, active rosters, RP totals, requisition spend. Because every delta (including CM-as-player deltas per [PRD-5](/prds/prd-5-approval-system.md) §3.3) fires the same events, the rollup naturally includes CM-as-player's contributions without special-casing.
+
+**v1 design choice:** `Event` does NOT carry a denormalized `teamId` — rollups join through the target. v2 may denormalize for query speed if the join cost becomes a bottleneck, but v1 keeps the schema normalized to avoid drift bugs (e.g., a denormalized `teamId` going stale after a `team_switch`).
+
+**CM-as-player in team rollups:** Mike is on Helsreach Defenders. When he updates his Cadian Shock Troops list (auto-approved per [PRD-1](/prds/prd-1-crusade-master-admin.md) §5), the `roster.approved` event fires with `targetId = RosterApproved.id`. The team view joins through to find `RosterApproved.teamId = helsreach`. Helsreach's rollup shows Mike's deltas. This works because [PRD-5](/prds/prd-5-approval-system.md) §3.3 keeps the pipeline uniform — no special case for CM-as-player.
+
+---
+
+## 7b. History & Changeset Groupings (v3.10)
+
+Per the user's clarification: every approved changeset generates **history objects** that surface as a **timeline over the campaign**. Multiple grouping dimensions are supported on the same data so different views (per-unit, per-battle, per-requisition) all read from one underlying event store.
+
+### 7b.1 History generation
+
+When an `ApprovalRequest` is approved (by CM, by self-approval per [PRD-1](/prds/prd-1-crusade-master-admin.md) §5, or by auto-approve per [PRD-5](/prds/prd-5-approval-system.md) §9), the system materializes `HistoryEntry` rows:
+
+- One entry per **primary grouping** (configurable; v1 default: `unit` for roster changes, `battle` for battle updates, `requisition` for requisition purchases).
+- Cross-grouping indexes on `HistoryEntryIndex` so a single entry is queryable from multiple grouping dimensions.
+- The `approvalRequestId` ties every entry back to its authorization (G5 grouping; [PRD-5](/prds/prd-5-approval-system.md) §3.2).
+- Tombstoned entries (after rollback) are hidden from timeline views but retained in the audit log.
+
+**History is only computed once the changeset is approved.** Drafts and pending approvals do not generate history. This keeps the audit trail aligned with what actually happened in the campaign.
+
+### 7b.2 Requisitions in NR (read-only history)
+
+Per the user's clarification: requisitions are **done in New Recruit**. The player adds the unit, marks the requisition in NR, exports JSON, and uploads to this app. The app parses the new roster, sees the new unit + the requisition marker, and shows the requisition as a **history entry** — not as an in-app action. The player's requisition shop history view ([PRD-2](/prds/prd-2-player-signup.md)) lists past requisitions from these history entries.
+
+Implication: the `requisition_purchase` `ApprovalRequest` kind ([PRD-5](/prds/prd-5-approval-system.md) §3.2) is reserved for **CM-gifted or narrative-driven** requisitions (e.g., a CM grants a free Leman Russ replacement as a narrative reward). Routine player-bought requisitions don't go through approval — they show up in the history when the player re-imports their NR list with the new unit.
+
+### 7b.3 Changeset grouping proposals (review and approve)
+
+The user requested proposed groupings. v1 ships G1–G6 (derived from the data; G6 is the base layer that G1–G5 group over). G7 (per-narrative-arc) deferred to v2.
+
+| # | Grouping | One history entry covers | Primary use | Ship in v1? |
+|---|---|---|---|---|
+| **G1** | **Per-Unit** | All field changes to one unit within a single approval | PRD-2 §6 Flow 4 — Sarah's per-unit timeline | **Yes — default for roster changes** |
+| **G2** | **Per-Roster-Version** | All changes from one NR import (lumps all units + roster meta) | "What changed in this import" — CM inbox row, audit log | **Yes — default for roster approvals** |
+| **G3** | **Per-Battle** | All changes attributable to one battle (roster diff + agenda outcomes + RP delta) | "What happened in Battle 22" — narrative log | **Yes — default for battle updates** |
+| **G4** | **Per-Requisition** | RP cost + unit addition/removal + any wargear swap from one requisition | Requisition history view | **Yes — default for requisitions** |
+| **G5** | **Per-ApprovalRequest** | All changes that were authorized by one approval (broadest grouping; ties history to its authorization) | Audit log, rollback targets, "show me everything from approval X" | **Yes — always stored as a metadata field** |
+| **G6** | **Per-State-Field** | One field change = one entry (e.g., "Unit X XP: 5→8" + "Unit X kills: 1→2") | Granular audit log, debugging, technical drill-down | **Yes — base layer that G1–G5 group over** |
+| **G7** | **Per-Narrative-Arc** | Manually-tagged changesets that form an arc | End-of-campaign summary, long-form narrative log | **No — v2+ (manual tagging is open-ended)** |
+
+**Time-bucketed rollups** (Per-Day, Per-Week, Per-Session) are computed on read from G3 + G4 — not stored separately. The campaign progress dashboard groups by week by default.
+
+### 7b.4 Rollback mechanics
+
+When a roster update was bad, or a player changes their mind, the player (or CM) can request to **rollback** a changeset. Per the user, rollback is a **CM-approved action**.
+
+**New `ApprovalRequest` kinds:**
+
+- **`roster_rollback`** — player or CM requests rollback of a specific `RosterApproved`. On approval, all `HistoryEntry` rows tied to that approval's `approvalRequestId` (G5) get `tombstoned = true`, hidden from timeline views, retained in the audit log. A compensating history entry is created: "Roster v17 rolled back on YYYY-MM-DD." The active roster reverts to the prior `RosterApproved`.
+- **`history_rollback`** — finer-grained rollback. Targets one or more `HistoryEntry` rows by their id (e.g., "rollback just Unit X's XP gain from Battle 22, keep everything else"). Same tombstoning + compensating entry pattern.
+
+**Why tombstone instead of delete:** the audit log must record what happened (CM approved, then later CM approved a rollback). Hard-deleting history entries would lose that trail. Tombstoning preserves both: timelines show only the rolled-back state, audit logs show the full chronology including the rollback event.
+
+**Co-approval rule:** `roster_rollback` requires CM approval (the actor might be the player, in which case CM reviews). If the actor is the CM themselves (CM-as-player rollback), auto-approve per [PRD-1](/prds/prd-1-crusade-master-admin.md) §5. `history_rollback` follows the same rule.
+
+**Cascading invalidation (UI behavior, not data):** when a roster rollback is approved, any battle reports that referenced the rolled-back roster are surfaced with a "referenced roster was rolled back" badge. The battle report itself remains approved (it was a real event), but the unit-level diff shown to the player is now empty (the post-battle state was rolled back). This is a UI affordance, not a data mutation.
+
+### 7b.5 Example: Sarah's Cadian Castellan across the campaign
+
+Timeline view (per-unit, G1) — what Sarah sees:
+
+```
+2026-08-01 — Unit added (Battle-ready)
+  (Roster v1 approved)
+2026-08-15 — Battle 1: +3 XP (Battle-ready → Blooded)
+  (Roster v3 approved; Battle 1 report approved)
+2026-08-22 — Battle 2: +3 XP, +1 kill, Battle Scar "Lost in the Fog"
+  (Roster v5 approved; Battle 2 report approved)
+2026-08-29 — Requisition: Replaced destroyed Leman Russ (-3 RP, +1 unit)
+  (Roster v6 approved; requisition reflected via NR re-import)
+2026-09-05 — Roster v7 rolled back (history entries 2026-08-29 tombstoned)
+  (Rollback approved by Mike)
+```
+
+Same history, viewed per-battle (G3):
+```
+Battle 1 (2026-08-15) — Helsreach vs. Gorgutz, win, +1 RP, +3 XP on 4 units
+Battle 2 (2026-08-22) — Helsreach vs. Skari, loss, +1 kill, Battle Scar on Castellan
+```
+
+Same history, viewed per-requisition (G4):
+```
+2026-08-29 — Replaced Leman Russ, -3 RP
+  (rolled back 2026-09-05)
+```
+
+---
+
+## 8. Narrative Log — Per-Team + Public Scopes (v3.11)
+
+A scrubbed, readable narrative view of the campaign. Per v3.11, the narrative log is split into **three scopes**, not just one "public" log:
+
+1. **Team-scoped narrative log** (default for players) — events with `visibility = 'team'` or `visibility = 'public'` for events affecting the player's team. A player on Team A sees Team A's log only.
+2. **Public narrative log** — events with `visibility = 'public'`. Cross-team. Visible to all players in the campaign (regardless of team). Use sparingly: cross-team battles, campaign-wide announcements.
+3. **CM-only events** — events with `visibility = 'cm'`. Visible to the primary CM and (per [PRD-1](/prds/prd-1-crusade-master-admin.md) §4.3.1) to Crusade Team Leaders when the event affects their team.
+
+### 8.1 Narrative Log UI (v3.13)
+
+**Player view (team-scoped, default):**
+
+```
++----------------------------------------------------------+
+| Helsreach Defenders — Narrative Log                     |
+| [Public announcements only]                              |
++----------------------------------------------------------+
+| 2026-09-05                                                |
+|   Mike approved your roster update (v18 → v19)          |
+|     2 units added, 1 wargear swap                        |
+| 2026-09-04                                                |
+|   You filed Battle Update #14                            |
+|     Result: L · 1 unit promoted, 1 Battle Scar          |
+|     [View battle report]                                 |
+| 2026-09-01                                                |
+|   Mike triggered "Ork WAAAGH!" — Helsreach +1 RP        |
+|     "The sky darkened over Hive Helsreach..."           |
+| 2026-08-28                                                |
+|   jake42 joined Helsreach Defenders                      |
++----------------------------------------------------------+
+```
+
+- Date-grouped, reverse chronological
+- Each entry has a 1-line summary + optional expand for the full battle report or narrative text
+- The "Public announcements only" tab shows only `visibility = 'public'` events (e.g., campaign-wide narrative triggers, point-cap changes)
+- Filter chips: by event kind, by player, by date range
+
+**Crusade Team Leader view (team-scoped + cm-only-for-team):**
+
+Same as player view but additionally includes `visibility = 'cm'` events that affect their team:
+- Team leader grants/revocations (when they happen)
+- Approval override reasons (when those approvals affected their team)
+- Rollback audit events
+
+The CM-only cross-team events (other teams' overrides, other teams' team-leader grants) are NOT shown.
+
+**Primary CM view (full):**
+
+The CM sees all three scopes, plus a "Visibility" filter column:
+- All events
+- Filter by visibility (`team` / `public` / `cm`)
+- Filter by team
+- Filter by player
+- Filter by event kind
+- Filter by date
+
+The CM can click any event to override its visibility ([PRD-4](/prds/prd-4-events-deltas.md) §8 default visibility can be changed per-event).
+
+**Crusade-end retrospective view (when `Campaign.status = 'archived'`):**
+
+A special read-only mode that supersedes all the above. All events across all teams are visible to every player, in chronological order. A banner at the top reads: "End of crusade — this campaign has been archived. Retrospective view enabled."
+
+Retrospective mode disables all approvals, uploads, and edits. The narrative log is the only write-protected surface; it becomes the campaign's permanent record.
+
+**Empty states (v3.13):**
+
+| State | Message |
+|---|---|
+| New campaign, no events yet | "The campaign has just begun. The narrative log fills as you play." |
+| Player with no team activity | "Your team hasn't started yet. Reach out to your CM." |
+| Filter returns nothing | "No events match this filter." |
+
+**Event visibility defaults (v3.11):**
+
+| Event kind | Default visibility |
+|---|---|
+| `roster.approved` | `team` (the player's own team sees it; other teams do not) |
+| `roster.rolled_back` | `team` |
+| `battle_report.filed` | `team` (the two players' teams see it; other teams do not) |
+| `battle_report.approved` | `team` |
+| `requisition_purchased` (CM-gifted) | `team` |
+| `narrative_event.cm_triggered` (single-team scope) | `team` |
+| `narrative_event.cm_triggered` (campaign-wide scope) | `public` |
+| `campaign_announcement.filed` | `public` |
+| `point_cap.changed` | `public` |
+| `mass_reban.applied` | `public` |
+| `team_switch.filed` / `team_switch.approved` | `cm` (sensitive — CM-only) |
+| `approval.overridden` | `cm` |
+| `rollback.executed` | `cm` (audit-detail) |
+
+The CM can override visibility per event in the narrative log view. The defaults above reflect a privacy-respecting baseline.
+
+**Crusade-end archival (v3.11):**
+
+When the primary CM archives a campaign (`Campaign.status = 'archived'`), the narrative log switches to **post-crusade retrospective mode**:
+- All events become readable by every player across all teams (per [PRD-0](/prds/prd-0-overview.md) §3b data-isolation relaxation).
+- No new events can be filed (approvals are frozen; uploads blocked).
+- The narrative log is the central retrospective surface: full chronology, all teams, all events, in chronological order.
+- The UI adds an "End of crusade" header with the archival date.
+
+The campaign can be re-opened by the primary CM (status goes back to `started`) but that's a deliberate action and is logged.
+
+---
+
+## 9. Out of Scope ([PRD-4](/prds/prd-4-events-deltas.md))
+
+- AI-generated battle reports from data
+- Real-time push notifications (email + in-app only for MVP)
+- Battle result photo / video upload
+- Cross-campaign event correlation
+
+---
+
+## 10. Dependencies
+
+- **[PRD-0](/prds/prd-0-overview.md)**: `Event`, `Delta`, `Battle`, `BattleUpdate`
+- **[PRD-3](/prds/prd-3-army-export-versioning.md)**: roster approval state machine feeds into `activeRosterApprovedId`
+- **[PRD-5](/prds/prd-5-approval-system.md)**: approval pipeline triggers event application
+- **[PRD-1](/prds/prd-1-crusade-master-admin.md)**: CM dashboard surfaces the timeline + event feed
+- **BullMQ**: the approval-job for battle updates is async; same queue infrastructure as the parse pipeline
+
+---
+
+## 11. Success Metrics
+
+| Metric | Target |
+|--------|--------|
+| Time to file a post-battle update | < 5 min median |
+| CM approval time per battle update | < 2 min median |
+| Submission-gating block rate (false positives) | < 1% |
+| Timeline query response (any timestamp) | < 200ms |
+| Public narrative log freshness | < 5 min after approval |
+
+---
+
+## 12. Edge Cases
+
+1. **Both players file conflicting updates** (one says they won): flagged as `disputed`, CM adjudicates.
+2. **Player files update for a battle against someone not in the campaign**: rejected at form level.
+3. **Battle update filed while a new RosterDraft is in `pending_review`**: the update goes through (the draft isn't approved yet, so it doesn't gate). After the new roster is approved, the events in the timeline apply retroactively to the new state.
+4. **CM-triggered RP grant fails (player already at cap)**: clamped, system emits a warning event for the audit log.
+5. **Player attempts to add an honour not in the active supplement**: form-level warning; CM override at approval time.
+6. **Submitter loses their active RosterApproved mid-approval** (e.g., CM rolls it back): pending BattleUpdate fails the gating check; CM is notified to reject.
+
+
+# Cross-references
+
+- [ApprovalKind](/concepts/approval-kind.md)
+- [BattleReportForm](/concepts/battle-report-form.md)
+- [CampaignPhase](/concepts/campaign-phase.md)
+- [CampaignState](/concepts/campaign-state.md)
+- [CampaignTeam](/concepts/campaign-team.md)
+- [ChangesetGrouping](/concepts/changeset-grouping.md)
+- [Crusade Team Leader](/concepts/crusade-team-leader.md)
+- [HistoryEntry](/concepts/history-entry.md)
+- [PRD-0](/prds/prd-0-overview.md)
+- [PRD-1](/prds/prd-1-crusade-master-admin.md)
+- [PRD-2](/prds/prd-2-player-signup.md)
+- [PRD-3](/prds/prd-3-army-export-versioning.md)
+- [PRD-5](/prds/prd-5-approval-system.md)
+- [PostgreSQL](/references/postgres.md)
+- [Rollback](/concepts/rollback.md)
