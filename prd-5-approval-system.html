@@ -674,8 +674,8 @@ consume it.</p>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  visibility<span class="op">:</span> <span class="st">&#39;all&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;private_to_cm&#39;</span><span class="op">,</span></span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  targetTeamId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span>       <span class="co">// when visibility = &#39;team&#39;</span></span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h4 id="point_cap_change-all-player-effects-co-cm-approval"><code>point_cap_change</code>
-(All-player effects — co-CM approval)</h4>
+<h4 id="point_cap_change-all-player-effects-second-cm-approval"><code>point_cap_change</code>
+(All-player effects — second CM approval)</h4>
 <div class="sourceCode" id="cb15"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  fromCap<span class="op">:</span> int<span class="op">,</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  toCap<span class="op">:</span> int<span class="op">,</span></span>
@@ -849,11 +849,11 @@ approved.</p>
 is created, the rule engine runs the rules configured for that kind. The
 CM can, e.g., make <code>team-narrative-alignment</code> fire on
 <code>roster_approval</code> but not on <code>post_battle_update</code>.
-| <code>mass_reban</code> | Co-CM | <strong>Mandatory</strong> (per
+| <code>mass_reban</code> | Second CM | <strong>Mandatory</strong> (per
 PRD-5 §2.4) | | <code>campaign_announcement</code> | CM | Optional
 (campaign setting — default off for routine, on for high-impact) | |
-<code>point_cap_change</code> | Co-CM | <strong>Mandatory</strong> | |
-<code>custom</code> | Per <code>schemaRef</code> | Per
+<code>point_cap_change</code> | Second CM | <strong>Mandatory</strong> |
+| <code>custom</code> | Per <code>schemaRef</code> | Per
 <code>schemaRef</code> |</p>
 <h3 id="cm-as-player-auto-approval-prd-1-5">3.3 CM-as-Player
 Auto-Approval (PRD-1 §5)</h3>
@@ -1447,11 +1447,11 @@ settings.</p>
 principle:</strong></p>
 <p>If Mike (CM-as-player) files a high-impact kind like
 <code>mass_reban</code>, the auto-approval logic at PRD-5 §3.3 evaluates
-the current ruleset. If the kind requires co-CM and a co-CM exists,
-Mike’s request routes to them. If Mike later removes the co-CM, the
-request stays pending (no co-CM available). If a co-CM joins later, the
-request becomes actionable again. The current ruleset — applied at query
-time — always wins.</p>
+the current ruleset. If the kind requires a second CM and one exists,
+Mike’s request routes to them. If Mike later removes the other CM
+(leaving only himself), the request stays pending (no second CM
+available). If a second CM joins later, the request becomes actionable
+again. The current ruleset — applied at query time — always wins.</p>
 <h3 id="re-assessment-warning-ui-v3.17-always-fires">Re-assessment
 warning UI (v3.17: always fires)</h3>
 <p>Per user (v3.17): when approval settings change, <strong>always show

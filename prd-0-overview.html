@@ -329,7 +329,7 @@ schema-ready, UI is not</li>
 </table>
 <p>A user can hold multiple roles. A CM playing in their own campaign
 gets a “playing in your own campaign” badge; their own approvals
-self-approve with audit log if no co-CM exists.</p>
+self-approve with audit log if no second CM exists.</p>
 <hr />
 <h2 id="architecture">3. Architecture</h2>
 <h3 id="tech-stack-locked-v3">3.1 Tech Stack (locked v3)</h3>
@@ -519,6 +519,18 @@ XLSX</li>
 <h2 id="shared-data-model">4. Shared Data Model</h2>
 <p>``<code>ts // === Tenancy === Tenant { id, name, slug, createdAt, settings } User { id, tenantId, email, displayName, roles, createdAt } Roles = &#39;instance_admin&#39; | &#39;cm&#39; | &#39;crusade_team_leader&#39; | &#39;player&#39; | &#39;spectator&#39;   // user can hold multiple // A user with the</code>cm<code>role for a campaign has full authority on that campaign. // A user with the</code>crusade_team_leader<code>role for a team has scoped authority on that team only. // A user with the</code>player<code>role for a campaign is on exactly one team. // A user can be both</code>cm<code>AND</code>player<code>for the same campaign (CM-as-player per PRD-1 §5). // A user who is</code>crusade_team_leader<code>for a team is by definition also</code>player`
 on that team.</p>
+<p>// === Faction (40K in-universe army, seeded from Wahapedia) === //
+Added in v3.21 audit. Referenced via Roster.factionId,
+CampaignMember.factionId, // CampaignTeam.expectedFactionIds. Global
+(not per-tenant or per-campaign). Faction { id, // stable identifier
+(e.g., ‘astra_militarum’) name, // display name (e.g., ‘Astra
+Militarum’) description, // 1-line description logoUrl, // icon (served
+from MinIO or external CDN) wahapediaId, // upstream ID in wahapedia.ru
+source: ‘wahapedia’ | ‘custom’, // v1: only wahapedia seeded; v1.x may
+allow custom homebrew factions // Custom factions (v1.x): CMs can create
+factions not in Wahapedia // (homebrew chapters, custom Imperial Guard
+regiments). For v1, this field // is always ‘wahapedia’ and only the 26
+seeded rows exist. }</p>
 <p>// === Campaign === // Teams are MANDATORY in v1: every campaign has
 at least one team. Free-for-all // mode is out of scope. Campaign { id,
 tenantId, name, supplementId, cmUserId, status, settings, createdAt, //
@@ -697,8 +709,8 @@ avoid.</p>
 <tr class="even">
 <td><strong>Primary CM</strong></td>
 <td>A user with the <code>cm</code> role for a specific campaign. One
-per campaign (more can be promoted to co-CM-via-secondary-CM, but that’s
-a separate concept).</td>
+per campaign (more CMs can be promoted; multi-CM campaigns are a
+separate concept from Crusade Team Leaders).</td>
 <td>Full campaign authority: create campaign, configure rules, approve
 any action, see all teams’ data, edit any roster.</td>
 </tr>

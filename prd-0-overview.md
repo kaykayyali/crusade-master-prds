@@ -40,7 +40,7 @@ The user's existing `bs-roster-parser` Python library already handles the messy 
 | **Player** | One tenant, can join multiple campaigns |
 | **Spectator (read-only)** | Public campaigns (cross-tenant if `allow_cross_tenant_spectators: true`) |
 
-A user can hold multiple roles. A CM playing in their own campaign gets a "playing in your own campaign" badge; their own approvals self-approve with audit log if no co-CM exists.
+A user can hold multiple roles. A CM playing in their own campaign gets a "playing in your own campaign" badge; their own approvals self-approve with audit log if no second CM exists.
 
 ---
 
@@ -176,6 +176,21 @@ Roles = 'instance_admin' | 'cm' | 'crusade_team_leader' | 'player' | 'spectator'
 // A user with the `player` role for a campaign is on exactly one team.
 // A user can be both `cm` AND `player` for the same campaign (CM-as-player per PRD-1 §5).
 // A user who is `crusade_team_leader` for a team is by definition also `player` on that team.
+
+// === Faction (40K in-universe army, seeded from Wahapedia) ===
+// Added in v3.21 audit. Referenced via Roster.factionId, CampaignMember.factionId,
+// CampaignTeam.expectedFactionIds. Global (not per-tenant or per-campaign).
+Faction {
+  id,                                   // stable identifier (e.g., 'astra_militarum')
+  name,                                 // display name (e.g., 'Astra Militarum')
+  description,                          // 1-line description
+  logoUrl,                              // icon (served from MinIO or external CDN)
+  wahapediaId,                          // upstream ID in wahapedia.ru
+  source: 'wahapedia' | 'custom',        // v1: only wahapedia seeded; v1.x may allow custom homebrew factions
+  // Custom factions (v1.x): CMs can create factions not in Wahapedia
+  // (homebrew chapters, custom Imperial Guard regiments). For v1, this field
+  // is always 'wahapedia' and only the 26 seeded rows exist.
+}
 
 // === Campaign ===
 // Teams are MANDATORY in v1: every campaign has at least one team. Free-for-all
@@ -379,7 +394,7 @@ Per v3.11 — these terms have specific meanings in this app. Drift between "wha
 | Role | Who they are | What they can do |
 |---|---|---|
 | **Instance Admin** | A user with the `instance_admin` role. Cross-tenant. | Provisions tenants, sees all campaigns, doesn't play. |
-| **Primary CM** | A user with the `cm` role for a specific campaign. One per campaign (more can be promoted to co-CM-via-secondary-CM, but that's a separate concept). | Full campaign authority: create campaign, configure rules, approve any action, see all teams' data, edit any roster. |
+| **Primary CM** | A user with the `cm` role for a specific campaign. One per campaign (more CMs can be promoted; multi-CM campaigns are a separate concept from Crusade Team Leaders). | Full campaign authority: create campaign, configure rules, approve any action, see all teams' data, edit any roster. |
 | **Crusade Team Leader** | A user with the `crusade_team_leader` role for one specific team. **They are also a player on that team** (they have a roster, they play in battles). The primary CM promotes them by granting the role for a specific team. **A team can have multiple team leaders.** The CM is the only role that can add or update the team leader list for any team (policy). | Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; **cannot see or approve anything for other teams**. The primary CM controls which actions a team leader can approve, per `ApprovalKind`. When multiple team leaders exist on a team, **any one** of them can approve a request in their team's scope (default OR-semantics; the primary CM can switch to AND-semantics per campaign setting if desired). |
 | **Player** | A user with the `player` role for a campaign. On exactly one team. | Sees their own roster + their team's narrative log + their own data. Files approvals, plays games, edits nothing about other teams. |
 | **Spectator** | Read-only public-link user. | Sees what the campaign's `publicVisibility` setting exposes. No team membership. |

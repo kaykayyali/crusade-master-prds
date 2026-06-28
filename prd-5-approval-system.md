@@ -300,7 +300,7 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 }
 ```
 
-#### `point_cap_change` (All-player effects — co-CM approval)
+#### `point_cap_change` (All-player effects — second CM approval)
 ```ts
 {
   fromCap: int,
@@ -367,9 +367,9 @@ The CM can switch modes at any time. Mid-flight requests follow the mode that wa
 **Per-kind rule-pack enforcement (v3.11):**
 
 The CM's configuration of which rules fire on which kinds (PRD-1 §4.4) is enforced at approval time: when an `ApprovalRequest` is created, the rule engine runs the rules configured for that kind. The CM can, e.g., make `team-narrative-alignment` fire on `roster_approval` but not on `post_battle_update`.
-| `mass_reban` | Co-CM | **Mandatory** (per PRD-5 §2.4) |
+| `mass_reban` | Second CM | **Mandatory** (per PRD-5 §2.4) |
 | `campaign_announcement` | CM | Optional (campaign setting — default off for routine, on for high-impact) |
-| `point_cap_change` | Co-CM | **Mandatory** |
+| `point_cap_change` | Second CM | **Mandatory** |
 | `custom` | Per `schemaRef` | Per `schemaRef` |
 
 ### 3.3 CM-as-Player Auto-Approval (PRD-1 §5)
@@ -682,7 +682,7 @@ This is the simplest model: authority is **derived** from the campaign's current
 
 **The CM-as-player auto-approval path follows the same principle:**
 
-If Mike (CM-as-player) files a high-impact kind like `mass_reban`, the auto-approval logic at PRD-5 §3.3 evaluates the current ruleset. If the kind requires co-CM and a co-CM exists, Mike's request routes to them. If Mike later removes the co-CM, the request stays pending (no co-CM available). If a co-CM joins later, the request becomes actionable again. The current ruleset — applied at query time — always wins.
+If Mike (CM-as-player) files a high-impact kind like `mass_reban`, the auto-approval logic at PRD-5 §3.3 evaluates the current ruleset. If the kind requires a second CM and one exists, Mike's request routes to them. If Mike later removes the other CM (leaving only himself), the request stays pending (no second CM available). If a second CM joins later, the request becomes actionable again. The current ruleset — applied at query time — always wins.
 
 ### Re-assessment warning UI (v3.17: always fires)
 

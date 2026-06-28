@@ -222,17 +222,16 @@ interface RuleResult {
 
 ### 6.2 Built-in rules (v1 ship list)
 
+All built-in rules are **campaign-level only** (per PRD-3 §6 + PRD-0 §4b.2). The v3.21 audit removed three unit-level rules that violated the principle (see §6.5).
+
 | Rule key | Default severity | Description |
 |----------|------------------|-------------|
 | `point-cap` | fail | Roster total > `campaign.point_cap` |
 | `faction-lock` | fail | Unit has a faction keyword not in player's faction |
 | `unit-cap-universal` | warn | More than 3 of the same datasheet (universal Crusade rule) |
 | `unit-provenance` | warn | Unit in roster not in prior RosterApproved AND no requisition event since |
-| `wargear-legality` | warn | Wargear option not in matching datasheet's Wahapedia options |
 | `legends-unit` | warn | Unit flagged as Legend in Wahapedia |
 | `removed-unit` | warn | Unit in prior approved but not in new draft (could be intentional) |
-| `honour-provenance` | warn | New honour in draft not earned via prior approved event |
-| `xp-consistency` | fail | Unit XP/rank in draft doesn't match what prior events would produce |
 
 ### 6.3 Configurable rules (per-CM, per-crusade)
 
@@ -316,6 +315,16 @@ flowchart TD
 - The rule pack gallery is also accessible from the Roster Approval detail view (CM can add a rule on the fly while reviewing a roster that triggered no rule but they want to enforce going forward)
 
 **Future (v2+):** custom rule logic via a sandboxed JS expression language, or uploaded rule packs. Data model and engine already support it (the `RuleDefinition` could carry an `expression` field); v1 just doesn't expose it.
+
+### 6.5 Rules removed in v3.21 (audit cleanup)
+
+Per v3.21 cross-PRD audit: three rules from the v1 ship list violated the campaign-level-only principle (PRD-0 §4b.2, PRD-3 §6). These rules were removed:
+
+- **`wargear-legality`** (was: warn) — checked if a wargear option was legal for a unit's datasheet. This is unit-level (per-datasheet) and lives in NR + Wahapedia, not in the campaign management layer. Removed.
+- **`honour-provenance`** (was: warn) — checked if a new honour in the draft was earned via prior approved event. Unit-level (which honours are legal for which units) and assumes the app tracks unit-level state — which it doesn't per PRD-0 §4b.2. Removed.
+- **`xp-consistency`** (was: fail) — checked if unit XP/rank in the draft matches what prior events would produce. The app doesn't compute XP arithmetic; XP lives in NR. Removed.
+
+The remaining v1 ship list (`point-cap`, `faction-lock`, `unit-cap-universal`, `unit-provenance`, `legends-unit`, `removed-unit`) is all campaign-level: they check properties of the roster-as-a-whole or campaign-configured rules, not unit-by-unit legality per GW datasheets.
 
 ---
 

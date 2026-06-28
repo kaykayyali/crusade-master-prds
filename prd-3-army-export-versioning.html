@@ -499,6 +499,9 @@ data.</p>
 <span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="built-in-rules-v1-ship-list">6.2 Built-in rules (v1 ship
 list)</h3>
+<p>All built-in rules are <strong>campaign-level only</strong> (per
+PRD-3 §6 + PRD-0 §4b.2). The v3.21 audit removed three unit-level rules
+that violated the principle (see §6.5).</p>
 <table>
 <colgroup>
 <col style="width: 24%" />
@@ -535,31 +538,15 @@ list)</h3>
 since</td>
 </tr>
 <tr class="odd">
-<td><code>wargear-legality</code></td>
-<td>warn</td>
-<td>Wargear option not in matching datasheet’s Wahapedia options</td>
-</tr>
-<tr class="even">
 <td><code>legends-unit</code></td>
 <td>warn</td>
 <td>Unit flagged as Legend in Wahapedia</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>removed-unit</code></td>
 <td>warn</td>
 <td>Unit in prior approved but not in new draft (could be
 intentional)</td>
-</tr>
-<tr class="even">
-<td><code>honour-provenance</code></td>
-<td>warn</td>
-<td>New honour in draft not earned via prior approved event</td>
-</tr>
-<tr class="odd">
-<td><code>xp-consistency</code></td>
-<td>fail</td>
-<td>Unit XP/rank in draft doesn’t match what prior events would
-produce</td>
 </tr>
 </tbody>
 </table>
@@ -718,6 +705,31 @@ triggered no rule but they want to enforce going forward)</li>
 expression language, or uploaded rule packs. Data model and engine
 already support it (the <code>RuleDefinition</code> could carry an
 <code>expression</code> field); v1 just doesn’t expose it.</p>
+<h3 id="rules-removed-in-v3.21-audit-cleanup">6.5 Rules removed in v3.21
+(audit cleanup)</h3>
+<p>Per v3.21 cross-PRD audit: three rules from the v1 ship list violated
+the campaign-level-only principle (PRD-0 §4b.2, PRD-3 §6). These rules
+were removed:</p>
+<ul>
+<li><strong><code>wargear-legality</code></strong> (was: warn) — checked
+if a wargear option was legal for a unit’s datasheet. This is unit-level
+(per-datasheet) and lives in NR + Wahapedia, not in the campaign
+management layer. Removed.</li>
+<li><strong><code>honour-provenance</code></strong> (was: warn) —
+checked if a new honour in the draft was earned via prior approved
+event. Unit-level (which honours are legal for which units) and assumes
+the app tracks unit-level state — which it doesn’t per PRD-0 §4b.2.
+Removed.</li>
+<li><strong><code>xp-consistency</code></strong> (was: fail) — checked
+if unit XP/rank in the draft matches what prior events would produce.
+The app doesn’t compute XP arithmetic; XP lives in NR. Removed.</li>
+</ul>
+<p>The remaining v1 ship list (<code>point-cap</code>,
+<code>faction-lock</code>, <code>unit-cap-universal</code>,
+<code>unit-provenance</code>, <code>legends-unit</code>,
+<code>removed-unit</code>) is all campaign-level: they check properties
+of the roster-as-a-whole or campaign-configured rules, not unit-by-unit
+legality per GW datasheets.</p>
 <hr />
 <h2 id="the-diff-player-first">7. The Diff (Player-First)</h2>
 <p>The diff is <strong>for the player, not just the CM</strong>. The

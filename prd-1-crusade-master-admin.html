@@ -421,7 +421,7 @@ not a single form. Steps in order:</p>
     H --&gt; I{Campaign has &gt;=1 player invited?}
     I --&gt;|No| J[Block: invite at least 1 player before starting]
     J --&gt; G
-    I --&gt;|Yes| K[Campaign.status: &#39;pending&#39; → &#39;active&#39;]</code></pre>
+    I --&gt;|Yes| K[Campaign.status: &#39;created&#39; → &#39;started&#39;]</code></pre>
 <p><strong>Step 1: Basics</strong></p>
 <table style="width:100%;">
 <colgroup>
@@ -521,15 +521,17 @@ shareable link. Each invite is a single use or multi-use
 + a magic-link-style auth URL.</p>
 <p><strong>Step 6: Review &amp; Start</strong> — summary of all
 settings. CM clicks “Start campaign” to flip
-<code>Campaign.status: &#39;pending&#39; → &#39;active&#39;</code>. <strong>Hard
-gate:</strong> if any team still has no team leader (the pending invites
-haven’t been accepted), the system blocks Start with: “Team X has no
-team leader. Either assign one or wait for invites to be accepted.”</p>
+<code>Campaign.status: &#39;created&#39; → &#39;started&#39;</code> (per PRD-0 §4 v3.18
+enum: <code>created</code> → <code>started</code> → <code>ended</code> →
+<code>archived</code>). <strong>Hard gate:</strong> if any team still
+has no team leader (the pending invites haven’t been accepted), the
+system blocks Start with: “Team X has no team leader. Either assign one
+or wait for invites to be accepted.”</p>
 <p><strong>Pre-campaign state
-(<code>Campaign.status: &#39;pending&#39;</code>):</strong> the campaign exists
+(<code>Campaign.status: &#39;created&#39;</code>):</strong> the campaign exists
 but is not yet active. Players can join via invite but cannot file
 approvals or play in battles. The CM can still edit settings. The state
-transitions to <code>active</code> when the CM clicks Start (and the
+transitions to <code>started</code> when the CM clicks Start (and the
 team-leader gate passes). | start_date | date | When battles can begin
 being filed |</p>
 <p><strong>Output</strong>: campaign record, unique 8-char invite code,
@@ -1044,8 +1046,8 @@ only thing skipped is the wait for a human approver.</li>
 (<code>mass_reban</code>, <code>point_cap_change</code>,
 <code>roster_manual_edit</code>, <code>requisition_rp_override</code>,
 <code>campaign_announcement</code>, <code>team_switch</code>): the
-primary CM cannot self-approve these even as a player. They go to a
-co-CM if one exists (multiple-CM campaigns), or stay pending with
+primary CM cannot self-approve these even as a player. They go to
+another CM if one exists (multiple-CM campaigns), or stay pending with
 <code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> (audit-logged,
 must be approved when a co-CM becomes available or by CM at a later
 point). The CM can also configure team-leader authority for some of
@@ -1550,7 +1552,7 @@ provisioning, Postgres RLS policies, BullMQ workers</li>
 <li><strong>Instance Admin lost access</strong>: env-var path stores
 admin email; recovery requires re-running the bootstrap block, which is
 idempotent and resets the admin user.</li>
-<li><strong>CM is also a player, no co-CM</strong>: own deltas
+<li><strong>CM is also a player, no second CM</strong>: own deltas
 auto-approve via <code>approvalSource: &#39;self_approved&#39;</code> (per PRD-5
 §3.3) and the <strong>full pipeline still runs</strong> —
 ApprovalRequest created, rule checks fire, events emit, audit trail

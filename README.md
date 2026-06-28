@@ -20,7 +20,34 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.20 (current) — Empty UI surfaces visible only to users who can act
+### v3.21 (current) — Cross-PRD consistency audit
+
+Per user direction: "take a pass over our prds, and look for any inconsistencies." Identified and fixed:
+
+**Inconsistency 1: `Campaign.status` enum mismatch.**
+- PRD-0 v3.18 set: `'created' | 'started' | 'ended' | 'archived'`
+- PRD-1 §4.1 still used OLD values: `'pending' | 'active'`
+- **Fix**: PRD-1 §4.1 updated to use the new enum. Mermaid diagram, Step 6 description, and "Pre-campaign state" all use the new values.
+
+**Inconsistency 2: PRD-3 §6.2 had 3 unit-level rules that violated the campaign-level-only principle (PRD-0 §4b.2).**
+- `wargear-legality` (was: warn) — checks per-datasheet wargear legality. Unit-level; NR/Wahapedia's domain. **Removed.**
+- `honour-provenance` (was: warn) — checks if honours are earned per unit. Unit-level; assumes app tracks unit-level state. **Removed.**
+- `xp-consistency` (was: fail) — checks if unit XP matches prior events. The app doesn't compute XP arithmetic. **Removed.**
+- **Fix**: PRD-3 §6.2 lists the cleaned v1 ship list (6 rules, all campaign-level). New §6.5 documents what was removed and why.
+
+**Inconsistency 3: Stale "co-CM" role references.**
+- The terminology was deprecated in v3.11/v3.12 in favor of "Crusade Team Leader" + "second CM" (for multi-CM campaigns). Several places still used "co-CM" as a role concept.
+- **Fix**: PRD-0 §3b Glossary, PRD-1 §5 CM-as-Player, PRD-5 §3.2 routing table, PRD-5 §3.3, PRD-5 §14 edge cases — all updated to use "second CM" / "another CM" where the multi-CM case is meant, and "team leader" where the team-scope case is meant. The data-model identifier `co_cm_required_unavailable` is intentional (it describes the data-model state) and stays.
+
+**Inconsistency 4: Faction table not in PRD-0 schema.**
+- PRD-2 §3.3, PRD-1 §5b, PRD-3 §6.4 all reference `Faction` and `Faction.factionId`, but PRD-0 schema didn't define the `Faction` table.
+- **Fix**: PRD-0 §4 schema adds `Faction { id, name, description, logoUrl, wahapediaId, source }`. Global (not per-tenant). 26 seeded from Wahapedia in v1. Custom homebrew factions noted as v1.x.
+
+**Other (not fixed in this pass):**
+- `tenant_id` snake_case vs `tenantId` camelCase — minor; codebase-wide style question, not blocking.
+- PRD-2 §3.3 doesn't reference `teamLeaderApprovalMode` (`any` vs `all`) which PRD-1 §4.4 documents — the picker is CM-controlled in v1, so player-side impact is minimal. Can be added in v1.x if needed.
+
+### v3.20 — Empty UI surfaces visible only to users who can act
 
 Per user: "If there is no phase, only show it empty to the cm. Other players shouldn't see default or placeholders unless it's something they can change."
 

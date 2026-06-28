@@ -132,7 +132,7 @@ flowchart TD
     H --> I{Campaign has >=1 player invited?}
     I -->|No| J[Block: invite at least 1 player before starting]
     J --> G
-    I -->|Yes| K[Campaign.status: 'pending' → 'active']
+    I -->|Yes| K[Campaign.status: 'created' → 'started']
 ```
 
 **Step 1: Basics**
@@ -166,9 +166,9 @@ The CM creates the campaign's teams. For Armageddon, the system pre-fills the 4 
 
 **Step 5: Invite Players** — CM invites by email or shareable link. Each invite is a single use or multi-use (CM-configurable). The invite email includes the campaign name + CM name + a magic-link-style auth URL.
 
-**Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'pending' → 'active'`. **Hard gate:** if any team still has no team leader (the pending invites haven't been accepted), the system blocks Start with: "Team X has no team leader. Either assign one or wait for invites to be accepted."
+**Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'created' → 'started'` (per PRD-0 §4 v3.18 enum: `created` → `started` → `ended` → `archived`). **Hard gate:** if any team still has no team leader (the pending invites haven't been accepted), the system blocks Start with: "Team X has no team leader. Either assign one or wait for invites to be accepted."
 
-**Pre-campaign state (`Campaign.status: 'pending'`):** the campaign exists but is not yet active. Players can join via invite but cannot file approvals or play in battles. The CM can still edit settings. The state transitions to `active` when the CM clicks Start (and the team-leader gate passes).
+**Pre-campaign state (`Campaign.status: 'created'`):** the campaign exists but is not yet active. Players can join via invite but cannot file approvals or play in battles. The CM can still edit settings. The state transitions to `started` when the CM clicks Start (and the team-leader gate passes).
 | start_date | date | When battles can begin being filed |
 
 **Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
@@ -443,7 +443,7 @@ A CM is allowed to be a player in their own campaign. **A Crusade Team Leader is
 - **CM-as-player:**
   - "Playing in your own campaign" badge shown next to their name
   - **All CM-as-player's deltas auto-approve, but still go through the full pipeline.** PRD-0 §4b's approval-gating principle still applies — the system creates the `ApprovalRequest`, runs rule checks, persists the diff, fires events, and emits notifications. The only thing skipped is the wait for a human approver.
-  - **High-impact kinds with CM-only authority** (`mass_reban`, `point_cap_change`, `roster_manual_edit`, `requisition_rp_override`, `campaign_announcement`, `team_switch`): the primary CM cannot self-approve these even as a player. They go to a co-CM if one exists (multiple-CM campaigns), or stay pending with `approvalSource: 'co_cm_required_unavailable'` (audit-logged, must be approved when a co-CM becomes available or by CM at a later point). The CM can also configure team-leader authority for some of these per PRD-1 §4.4 — by default team leaders cannot approve high-impact kinds.
+  - **High-impact kinds with CM-only authority** (`mass_reban`, `point_cap_change`, `roster_manual_edit`, `requisition_rp_override`, `campaign_announcement`, `team_switch`): the primary CM cannot self-approve these even as a player. They go to another CM if one exists (multiple-CM campaigns), or stay pending with `approvalSource: 'co_cm_required_unavailable'` (audit-logged, must be approved when a co-CM becomes available or by CM at a later point). The CM can also configure team-leader authority for some of these per PRD-1 §4.4 — by default team leaders cannot approve high-impact kinds.
   - Own battle filings, requisition purchases, team switches — auto-approve but go through the pipeline.
 
 - **Team Leader as player:**
@@ -712,7 +712,7 @@ Mike's success criteria for this app:
 ## 10. Edge Cases
 
 1. **Instance Admin lost access**: env-var path stores admin email; recovery requires re-running the bootstrap block, which is idempotent and resets the admin user.
-2. **CM is also a player, no co-CM**: own deltas auto-approve via `approvalSource: 'self_approved'` (per PRD-5 §3.3) and the **full pipeline still runs** — ApprovalRequest created, rule checks fire, events emit, audit trail recorded. Future team view pages and event hooks work without special-casing the CM-as-player.
+2. **CM is also a player, no second CM**: own deltas auto-approve via `approvalSource: 'self_approved'` (per PRD-5 §3.3) and the **full pipeline still runs** — ApprovalRequest created, rule checks fire, events emit, audit trail recorded. Future team view pages and event hooks work without special-casing the CM-as-player.
 3. **All players leave a campaign**: dormant; auto-archive after 90 days.
 4. **Two CMs edit settings concurrently**: last-write-wins with 5s debounce; second writer sees "someone else just edited" toast.
 5. **Tenant suspended mid-campaign**: all in-flight approvals auto-rejected with reason "tenant suspended"; campaigns frozen.
