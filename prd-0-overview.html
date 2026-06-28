@@ -450,7 +450,7 @@ no-op or a re-process, never a re-upload.</p>
 <h3 id="tenancy-model">3.4 Tenancy Model</h3>
 <p>Multi-tenant on a single Docker instance:</p>
 <ul>
-<li>Every domain table has <code>tenant_id UUID NOT NULL</code> with
+<li>Every domain table has <code>tenantId UUID NOT NULL</code> with
 row-level security policies</li>
 <li><strong>Per v3.11: team-isolation policies.</strong> Most queries
 also filter by the requesting user’s team membership. A player on Team A

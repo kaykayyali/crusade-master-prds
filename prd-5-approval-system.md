@@ -857,8 +857,6 @@ Filter chips at the top of the inbox are additive (multiple filters AND together
 
 ## 6. Drift Detection
 
-## 6. Drift Detection
-
 If the current state has changed since submission (e.g., the player imported a new RosterDraft while approval was pending), the CM sees a "Drift detected" warning. Side-by-side: original vs. recomputed.
 
 Options:
@@ -935,7 +933,7 @@ Useful for "what happened to my army last month?" — the player can scroll back
 
 ### 8.4 Email notifications
 
-Email is sent only for `loud` notifications by default. CM can adjust per-user preference (PRD-2 §3.5 — user settings page). Email content mirrors the toast but includes a "View in app" CTA.
+Email is sent only for `loud` notifications by default. CM can adjust per-user preference (PRD-2 §5d — account page). Email content mirrors the toast but includes a "View in app" CTA.
 
 Email delivery goes through BullMQ `notification-job` (already documented) — the user-facing email is generated from the `Notification` row, not directly from the Event.
 
@@ -946,8 +944,6 @@ When the CM-as-player self-approves their own delta (PRD-1 §5), the resulting n
 When a Team Leader approves another player's request on their team, the notification to the player is `loud` (player benefits from knowing). The notification to the team leader is `normal` (they just did it).
 
 ---
-
-## 9. Campaign-Level Approval Policies
 
 ## 9. Campaign-Level Approval Policies
 

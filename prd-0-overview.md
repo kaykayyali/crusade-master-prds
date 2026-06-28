@@ -121,7 +121,7 @@ Each step is idempotent and re-runnable on failure. The blob in MinIO is the sou
 
 Multi-tenant on a single Docker instance:
 
-- Every domain table has `tenant_id UUID NOT NULL` with row-level security policies
+- Every domain table has `tenantId UUID NOT NULL` with row-level security policies
 - **Per v3.11: team-isolation policies.** Most queries also filter by the requesting user's team membership. A player on Team A cannot read Team B's data; a Crusade Team Leader of Team A cannot read Team B's data; only the Primary CM (and Instance Admin) cross team boundaries. RLS policies enforce this at the database layer — no application-layer bug can leak cross-team data.
 - **Post-crusade relaxation:** when `Campaign.status = 'archived'`, the team-isolation policies relax to allow cross-team reads in read-only mode. The campaign is over; retrospective access is allowed.
 - Wahapedia data, parser output schema, and reference data are shared across all tenants

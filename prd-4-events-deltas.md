@@ -83,7 +83,6 @@ type EventKind =
   | 'roster.override_applied'
   | 'roster.rolled_back'
   | 'roster.reassigned'                  // PRD-1 §5b team_switch re-associated roster
-  | 'roster.points_updated'              // system: Wahapedia errata
   | 'roster.superseded'                  // newer draft replaced older
 
   // === Battle lifecycle ===

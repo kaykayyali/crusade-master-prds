@@ -20,7 +20,27 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.21 (current) — Cross-PRD consistency audit
+### v3.22 (current) — Round 2 audit fixes
+
+Per user: "fix them as you find them, rather than depending on memory." Round 2 audit caught and fixed:
+
+**1. Duplicate `## 6. Drift Detection` header in PRD-5** (lines 858 and 860). Removed the duplicate. The section content is preserved; the duplicate header was a copy-paste artifact.
+
+**2. Duplicate `## 9. Campaign-Level Approval Policies` header in PRD-5** (lines 948 and 950). Same fix.
+
+**3. Stale `PRD-2 §3.5` cross-reference** — PRD-2 §3.5 doesn't exist (PRD-2 jumps from §3.4 First-Time Onboarding to §4 User Flow). Two references updated:
+- PRD-2 §3.1 line 82 (OAuth identity linking): "switch tenants (PRD-2 §3.5)" → "switch tenants via the account page (PRD-2 §5d)"
+- PRD-5 §8.4 line 936 (email notifications): "PRD-2 §3.5 — user settings page" → "PRD-2 §5d — account page"
+
+**4. `tenant_id` snake_case vs `tenantId` camelCase inconsistency.** PRD-0 §3.4 mentioned `tenant_id UUID NOT NULL`; rest of schema uses `tenantId`. Standardized to `tenantId`.
+
+**5. PRD-3 §6.2 had `roster.points_updated` event** (PRD-4 §3) which had no clear producer/consumer in v1. Wahapedia points updates affect unit-level rules that we don't enforce (per PRD-0 §4b.2). Removed from PRD-4 §3 event taxonomy.
+
+**6. PRD-2 §3.3 didn't reference `teamLeaderApprovalMode`** — added a note explaining that multi-leader teams use this setting and that it's CM-side (not player-facing).
+
+**Section-existence verification:** ran a regex check across all PRD cross-references. All cited sections exist except PRD-2 §3.5 (which was the stale reference fixed above). All other `PRD-X §Y` and `PRD-X §Y.Z` references point to real sections.
+
+### v3.21 — Cross-PRD consistency audit
 
 Per user direction: "take a pass over our prds, and look for any inconsistencies." Identified and fixed:
 

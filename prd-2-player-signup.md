@@ -79,7 +79,7 @@ flowchart TD
 2. System queries: `User` in this tenant where `email = user@example.com`?
 3. If found: link the Discord identity to that User (add `Identity` row).
 4. If not: create new `User` + `Identity` + magic-link identity (so user can also sign in via email later).
-5. If the user has multiple `User` rows across tenants, they're prompted to switch tenants (PRD-2 §3.5).
+5. If the user has multiple `User` rows across tenants, they're prompted to switch tenants via the account page (PRD-2 §5d) or sign in to a specific tenant via tenant-scoped invite links.
 
 **Profile fields:**
 
@@ -160,6 +160,7 @@ When a player joins a campaign, they pick two things — a 40K faction and a cam
 - Sets `CampaignMember.teamId`
 - The picker does NOT filter the 40K faction picker — any player can pick any team regardless of faction
 - Teams are mandatory in v1; there is no teamless mode (free-for-all is out of scope)
+- A team can have multiple team leaders (v3.12). The campaign's `teamLeaderApprovalMode: 'any' | 'all'` setting (PRD-1 §4.4) controls whether any one team leader or all of them must approve player requests. Players don't directly interact with this setting — it's CM-side — but it's worth noting that a team with multiple leaders doesn't slow down the player's filing process; only the approval process.
 
 **Narrative-fit hint (when faction and team don't match expectedFactionIds):**
 
