@@ -17,6 +17,41 @@ Get a player from "uploaded JSON" to "RosterDraft ready for review" in under 30 
 
 ## 2. The Roster State Machine
 
+```mermaid
+stateDiagram-v2
+    [*] --> parsing : player uploads JSON
+    parsing --> pending_review : parse-job OK
+    parsing --> failed : parse-job error
+    failed --> parsing : player retries (re-uses MinIO blob)
+    pending_review --> pending_approval : player submits
+    pending_review --> failed : rule-check-job error (terminal; player re-uploads)
+    pending_approval --> pending_review : CM requests changes
+    pending_approval --> rejected : CM rejects
+    pending_approval --> approved : CM approves
+    approved --> parsing : player uploads newer roster
+    rejected --> parsing : player fixes issues, re-uploads
+
+    note right of pending_review
+        Player sees diff vs last approved
+        Rule check results visible
+        No CM action required yet
+    end note
+
+    note right of pending_approval
+        CM reviews in inbox (PRD-5)
+        May request changes
+        Or approve (creates RosterApproved)
+    end note
+
+    note right of approved
+        Immutable snapshot
+        RosterApproved becomes "active"
+        Battle updates gated on this
+    end note
+```
+
+**ASCII version (legacy, kept for printability):**
+
 ```
                         ┌──────────────────────┐
                         │   (no Roster yet)    │

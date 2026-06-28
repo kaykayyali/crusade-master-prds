@@ -381,6 +381,52 @@ tenant. If a player needs to be in multiple tenants, they sign up
 separately in each — the email can be the same; the <code>User</code>
 rows are per-tenant. The invite link carries the tenant slug, so the
 user is automatically routed to the right tenant.</p>
+<p><strong>OAuth + magic-link sign-in sequence (v3.23):</strong></p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor User
+    participant FE as Frontend&lt;br/&gt;(Vue)
+    participant API as Hapi
+    participant Discord
+    participant DB as Postgres
+    participant Mail as SMTP
+
+    alt Discord OAuth path
+        User-&gt;&gt;FE: Click &quot;Sign in with Discord&quot;
+        FE-&gt;&gt;API: GET /auth/discord/start?invite=&lt;token&gt;
+        API-&gt;&gt;Discord: 302 redirect to OAuth URL
+        User-&gt;&gt;Discord: Approves (identify + email)
+        Discord-&gt;&gt;API: GET /auth/discord/callback?code=...
+        API-&gt;&gt;Discord: POST /oauth2/token (exchange code)
+        Discord--&gt;&gt;API: access_token
+        API-&gt;&gt;Discord: GET /users/@me
+        Discord--&gt;&gt;API: { id, username, email, avatar }
+        API-&gt;&gt;DB: lookup User by tenantId + email
+        alt User exists
+            API-&gt;&gt;DB: insert Identity (provider=discord)
+        else User new
+            API-&gt;&gt;DB: insert User + Identity (provider=discord)&lt;br/&gt;+ Identity (provider=email)
+        end
+        API-&gt;&gt;API: create session, set cookie
+        API--&gt;&gt;FE: 302 redirect to /campaigns/&lt;invite-code&gt;
+    else Magic-link path
+        User-&gt;&gt;FE: Enter email
+        FE-&gt;&gt;API: POST /auth/email/start { email }
+        API-&gt;&gt;DB: insert MagicLink { token, expiresAt }
+        API-&gt;&gt;Mail: send email with link /auth/email/callback?token=...
+        Mail-&gt;&gt;User: email with magic link
+        User-&gt;&gt;FE: Click magic link
+        FE-&gt;&gt;API: GET /auth/email/callback?token=...
+        API-&gt;&gt;DB: lookup MagicLink, mark consumed
+        API-&gt;&gt;DB: lookup User by tenantId + email
+        alt User exists
+            API-&gt;&gt;API: create session, set cookie
+        else User new (first sign-in via magic-link)
+            API-&gt;&gt;DB: insert User + Identity (provider=email)
+            API-&gt;&gt;API: create session, set cookie
+        end
+        API--&gt;&gt;FE: 302 redirect to /campaigns/&lt;invite-code&gt;
+    end</code></pre>
 <h3 id="join-via-invite">3.2 Join via Invite</h3>
 <ul>
 <li>Single text field: “Paste invite code or link”</li>

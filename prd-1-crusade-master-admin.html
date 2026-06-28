@@ -532,8 +532,46 @@ or wait for invites to be accepted.”</p>
 but is not yet active. Players can join via invite but cannot file
 approvals or play in battles. The CM can still edit settings. The state
 transitions to <code>started</code> when the CM clicks Start (and the
-team-leader gate passes). | start_date | date | When battles can begin
-being filed |</p>
+team-leader gate passes).</p>
+<p><strong>Campaign lifecycle state machine (v3.23):</strong></p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; created : CM finishes wizard
+    created --&gt; started : CM clicks Start (gates pass)
+    created --&gt; archived : CM aborts (e.g., abandoned setup)
+    started --&gt; ended : CM clicks End Campaign
+    started --&gt; archived : CM force-archives
+    ended --&gt; archived : CM clicks Archive
+    archived --&gt; [*] : instance retention window expires
+
+    note right of created
+        Players can join via invite
+        No approvals, no battles
+        CM can edit settings freely
+    end note
+
+    note right of started
+        Battle updates accepted
+        Approvals flow through routing
+        Phases can be activated
+    end note
+
+    note right of ended
+        No new battle updates
+        Existing approvals still in flight
+        All data still tenant-scoped
+    end note
+
+    note right of archived
+        Read-only across all teams
+        Instance Admin can hard-delete
+        Audit log retained +1 year
+    end note</code></pre>
+<p><strong>Transitions are one-way except
+<code>archived</code>.</strong> Re-activating an archived campaign is
+not supported in v1 (a CM who wants to “restart” creates a new
+campaign). <code>archived → [*]</code> represents instance-level
+hard-delete after the retention window (not a UI action). | start_date |
+date | When battles can begin being filed |</p>
 <p><strong>Output</strong>: campaign record, unique 8-char invite code,
 tenant-scoped shareable URL.</p>
 <h3 id="member-management">4.2 Member Management</h3>
@@ -1075,6 +1113,46 @@ that the CM and Team Leader are <em>trusted actors in their scope</em>
 players. Auto-approve-with-pipeline preserves the audit trail without
 forcing trusted actors to wait for themselves. Scope-bounded authority
 prevents unilateral abuse outside their scope.</p>
+<p><strong>CM-as-player approval flow (v3.23 sequence
+diagram):</strong></p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor CM as CM (Sarah)&lt;br/&gt;(also a player)
+    participant UI as Frontend
+    participant API as Hapi
+    participant RQ as BullMQ
+    participant DB as Postgres
+    participant EM as Event Bus
+
+    CM-&gt;&gt;UI: Upload new roster JSON
+    UI-&gt;&gt;API: POST /rosters/:id/drafts (file)
+    API-&gt;&gt;RQ: enqueue parse-job
+    API--&gt;&gt;UI: 202 Accepted, draftId
+    RQ-&gt;&gt;RQ: parse → diff → rule-check
+    RQ-&gt;&gt;DB: insert RosterDraft (status=pending_review)
+    RQ-&gt;&gt;EM: emit roster.app_parse_succeeded
+    EM-&gt;&gt;DB: insert Notification for CM
+    DB--&gt;&gt;UI: WebSocket notification (toast)
+    CM-&gt;&gt;UI: Click &quot;Submit for approval&quot;
+    UI-&gt;&gt;API: POST /approval-requests
+    API-&gt;&gt;DB: insert ApprovalRequest&lt;br/&gt;(submittedByUserId=CM,&lt;br/&gt;approvalSource=null)
+    API-&gt;&gt;DB: routing decision&lt;br/&gt;(see PRD-5 §3.2)
+    alt Routine kind (e.g., post_battle_update for self)
+        API-&gt;&gt;DB: auto-approve&lt;br/&gt;approvalSource=&#39;self_approved&#39;
+        API-&gt;&gt;DB: write HistoryEntry + Delta[]
+        API-&gt;&gt;EM: emit approval.approved
+        EM-&gt;&gt;DB: insert Notification (loud, for own record)
+    else High-impact kind (e.g., mass_reban)
+        API-&gt;&gt;DB: stay pending&lt;br/&gt;approvalSource=&#39;co_cm_required_unavailable&#39;
+        API-&gt;&gt;EM: emit approval.requested
+        EM-&gt;&gt;DB: insert Notification for OTHER CMs&lt;br/&gt;(none exist in this example)
+    end
+    API--&gt;&gt;UI: 201 with ApprovalRequest</code></pre>
+<p><strong>Key invariants preserved by the flow:</strong> - Every kind
+still produces an <code>ApprovalRequest</code> row — the pipeline runs
+uniformly. - <code>approvalSource</code> is the only field that varies
+by who submitted. - Events fire regardless of auto-approve, so future
+Discord/inbox hooks work without special-casing.</p>
 <hr />
 <h2 id="b.-campaign-teams-not-40k-factions-a-distinct-concept">5b.
 Campaign Teams (not 40K Factions — a distinct concept)</h2>

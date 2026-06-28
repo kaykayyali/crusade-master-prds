@@ -321,6 +321,28 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 
 ### 3.2 Routing Per Kind (v3.11)
 
+**Routing decision flow (v3.23):**
+
+```mermaid
+flowchart TD
+    Start([ApprovalRequest created]) --> Q1{Who submitted?}
+    Q1 -- "Team Leader<br/>(acting on self)" --> Auto1[Auto-approve<br/>approvalSource: self_approved<br/>Skip pipeline steps still emit events]
+    Q1 -- "Primary CM<br/>(as player)" --> Q2{High-impact kind?<br/>mass_reban, point_cap_change,<br/>roster_manual_edit,<br/>requisition_rp_override,<br/>campaign_announcement, team_switch}
+    Q2 -- "Yes" --> Q3{Is there another<br/>CM or TL<br/>allowed for this kind?}
+    Q3 -- "Yes" --> Route2[Route to other approver<br/>approvalSource: pending]
+    Q3 -- "No" --> Stay[Stay pending<br/>approvalSource: co_cm_required_unavailable]
+    Q2 -- "No, routine kind" --> Auto2[Auto-approve<br/>approvalSource: self_approved]
+    Q1 -- "Player<br/>(not TL)" --> Q4{What team is affected?<br/>From Roster.teamId or<br/>CampaignMember.teamId}
+    Q4 -- "Team A" --> Q5{Is there an active TL<br/>for Team A AND<br/>kind is TL-enabled?}
+    Q5 -- "Yes" --> Q6{Multiple TLs on Team A?}
+    Q6 -- "Yes, mode=any" --> Route3a[Route to TL pool<br/>Any TL can approve]
+    Q6 -- "Yes, mode=all" --> Route3b[Route to all TLs<br/>All must approve]
+    Q6 -- "No, single TL" --> Route3c[Route to that TL]
+    Q5 -- "No" --> Q7{Route to Primary CM<br/>as fallback}
+```
+
+**Per-kind routing table:**
+
 Per-kind routing now reflects the **Crusade Team Leader** model: team leaders can approve actions affecting their team for kinds the primary CM has enabled. The primary CM can always approve anything (their authority is global). Co-approval (two distinct approvers) is reserved for high-impact cross-team / destructive kinds.
 
 **Per-kind routing table:**
@@ -394,6 +416,93 @@ When the submitter is the campaign's primary CM (CM-as-player), every kind **aut
 This guarantees future event hooks (team view pages, Discord integrations, narrative analytics, the audit trail itself) all work uniformly. The team view page example from PRD-1 §5 — Mike's deltas to Helsreach Defenders show up in the team's rollup because the events fired, not because the system special-cased Mike.
 
 **Why this matters:** if the system special-cased CM-as-player to bypass the pipeline (e.g., directly mutating `RosterApproved` without an `ApprovalRequest`), every downstream consumer would have to special-case CM-as-player too. That's a permanent tax on every future feature. By keeping the pipeline uniform and varying only the `approvalSource`, the system stays clean.
+
+**Auto-approval decision class diagram (v3.23):**
+
+```mermaid
+classDiagram
+    class ApprovalRequest {
+        +kind: ApprovalKind
+        +submittedByUserId: UserId
+        +payload: ApprovalPayload
+        +status: pending|approved|rejected
+        +approvalSource: ApprovalSource
+        +reviewerUserId: UserId?
+    }
+
+    class RoutingEngine {
+        +decide(req) RoutingDecision
+        +route(req, decision) void
+    }
+
+    class RoutingDecision {
+        +autoApprove: bool
+        +targetApprovers: UserId[]
+        +approvalSource: ApprovalSource
+        +reason: string
+    }
+
+    class ApprovalSource {
+        <<enumeration>>
+        cm_review
+        auto_approve_routine
+        self_approved
+        co_cm_required_unavailable
+    }
+
+    class RulesEngine {
+        +run(req) RuleCheck[]
+    }
+
+    class HistoryWriter {
+        +write(req) HistoryEntry[]
+    }
+
+    class EventBus {
+        +emit(event) void
+    }
+
+    ApprovalRequest --> RoutingEngine : "submitted to"
+    RoutingEngine --> RoutingDecision : "produces"
+    RoutingDecision --> ApprovalSource : "tags with"
+    RulesEngine --> ApprovalRequest : "annotates with ruleCheckIds"
+    HistoryWriter --> ApprovalRequest : "writes on approval"
+    EventBus <-- ApprovalRequest : "lifecycle events"
+    EventBus <-- RulesEngine : "rule_check.run"
+    EventBus <-- HistoryWriter : "history.written"
+```
+
+**Per-kind request flow (sequence diagram):**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Frontend
+    participant API as Hapi<br/>(POST /approval-requests)
+    participant R as RoutingEngine
+    participant Rules as RulesEngine
+    participant DB as Postgres
+    participant Bus as EventBus
+
+    User->>UI: Fill form (e.g., faction switch)
+    UI->>API: POST { kind, payload, contextHash }
+    API->>R: decide(req)
+    Note over R: Look up Campaign.teamLeaderAuthority[kind]<br/>Look up submitter role<br/>Apply CM-self-edit prevention
+    R-->>API: RoutingDecision
+    API->>Rules: run(req)
+    Rules-->>API: RuleCheck[] (pass/warn/fail)
+    alt decision.autoApprove == true
+        API->>DB: insert ApprovalRequest (status=approved,<br/>approvalSource=decision.approvalSource)
+        API->>DB: write HistoryEntry[]
+        API->>Bus: emit approval.approved
+    else
+        API->>DB: insert ApprovalRequest (status=pending,<br/>approvalSource=pending)
+        API->>Bus: emit approval.requested
+        Bus->>DB: insert Notification for targetApprovers
+    end
+    API-->>UI: 201 { id, status, decision }
+```
 
 ---
 

@@ -20,7 +20,42 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.22 (current) — Round 2 audit fixes
+### v3.23 (current) — Mermaid diagrams for relationships, inheritance, and flows
+
+Per user request: "mermaid diagrams for complicated arrangements, inheritance and association would be great." Added 6 new mermaid diagrams:
+
+**1. PRD-0 §4a — Entity-Relationship Diagram (mermaid `erDiagram`)**
+The full data model as an ERD showing 35+ entities and their relationships. Highlights:
+- Vertical stacking groups entities by subdomain (Tenancy → Campaign core → Roster/Battles → Approvals/Events/History)
+- `Campaign` as the hub — almost every entity references it
+- `Event`, `HistoryEntry`, `Notification` as the cross-cutting "bus" of the system
+- `Faction` is global (no tenant FK)
+- Inherited tenancy via `Campaign.tenantId` for tables without explicit `tenantId` column
+
+**2. PRD-0 §4b — Tenancy & RLS Multi-Tenancy (flowchart)**
+Three RLS contexts: user request (own tenant), team-scoped (own tenant + own team), system job (all tenants with audit). Shows how Postgres session vars + RLS policies enforce isolation.
+
+**3. PRD-1 §4.1 — Campaign lifecycle state machine (mermaid `stateDiagram-v2`)**
+States: `created → started → ended → archived` (one-way except `archived`). Includes notes on what each state permits.
+
+**4. PRD-1 §5 — CM-as-player approval flow (mermaid `sequenceDiagram`)**
+End-to-end: upload → parse → diff → rule-check → submit → auto-approve-or-pending → history + events + notifications. Shows the "auto-approve but pipeline runs" invariant.
+
+**5. PRD-2 §3.1 — OAuth + magic-link sign-in (mermaid `sequenceDiagram`)**
+Two parallel paths (Discord OAuth + magic-link) showing identity linking, User creation, and tenant routing.
+
+**6. PRD-3 §2 — Roster state machine (mermaid `stateDiagram-v2`)**
+States: `parsing → pending_review → pending_approval → approved | rejected | failed`. Replaces the previous ASCII art (kept as legacy reference).
+
+**7. PRD-5 §3.2 — Routing decision flowchart**
+Shows the routing logic: who submitted? High-impact? Team Leader enabled? Multi-TL mode? Decisions branch down to auto-approve / route to TL pool / route to CM / stay pending.
+
+**8. PRD-5 §3.3 — Auto-approval class diagram + per-kind request flow (sequence)**
+Class diagram shows `ApprovalRequest`, `RoutingEngine`, `RoutingDecision`, `ApprovalSource` enum, `RulesEngine`, `HistoryWriter`, `EventBus` and their relationships. Sequence diagram shows the request lifecycle through these collaborators.
+
+**Why these and not more:** focused on the diagrams that materially clarify inheritance (state machines, class diagrams) and association (ERD, sequence diagrams with multi-actor flows). Plain prose flows don't need diagrams.
+
+### v3.22 — Round 2 audit fixes
 
 Per user: "fix them as you find them, rather than depending on memory." Round 2 audit caught and fixed:
 

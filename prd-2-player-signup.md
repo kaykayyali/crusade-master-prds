@@ -131,6 +131,56 @@ Standard pattern for OAuth + magic-link hybrid auth (Linear, Notion):
 
 **Tenant assignment**: every new account is tied to one tenant. If a player needs to be in multiple tenants, they sign up separately in each — the email can be the same; the `User` rows are per-tenant. The invite link carries the tenant slug, so the user is automatically routed to the right tenant.
 
+**OAuth + magic-link sign-in sequence (v3.23):**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant FE as Frontend<br/>(Vue)
+    participant API as Hapi
+    participant Discord
+    participant DB as Postgres
+    participant Mail as SMTP
+
+    alt Discord OAuth path
+        User->>FE: Click "Sign in with Discord"
+        FE->>API: GET /auth/discord/start?invite=<token>
+        API->>Discord: 302 redirect to OAuth URL
+        User->>Discord: Approves (identify + email)
+        Discord->>API: GET /auth/discord/callback?code=...
+        API->>Discord: POST /oauth2/token (exchange code)
+        Discord-->>API: access_token
+        API->>Discord: GET /users/@me
+        Discord-->>API: { id, username, email, avatar }
+        API->>DB: lookup User by tenantId + email
+        alt User exists
+            API->>DB: insert Identity (provider=discord)
+        else User new
+            API->>DB: insert User + Identity (provider=discord)<br/>+ Identity (provider=email)
+        end
+        API->>API: create session, set cookie
+        API-->>FE: 302 redirect to /campaigns/<invite-code>
+    else Magic-link path
+        User->>FE: Enter email
+        FE->>API: POST /auth/email/start { email }
+        API->>DB: insert MagicLink { token, expiresAt }
+        API->>Mail: send email with link /auth/email/callback?token=...
+        Mail->>User: email with magic link
+        User->>FE: Click magic link
+        FE->>API: GET /auth/email/callback?token=...
+        API->>DB: lookup MagicLink, mark consumed
+        API->>DB: lookup User by tenantId + email
+        alt User exists
+            API->>API: create session, set cookie
+        else User new (first sign-in via magic-link)
+            API->>DB: insert User + Identity (provider=email)
+            API->>API: create session, set cookie
+        end
+        API-->>FE: 302 redirect to /campaigns/<invite-code>
+    end
+```
+
 ### 3.2 Join via Invite
 
 - Single text field: "Paste invite code or link"

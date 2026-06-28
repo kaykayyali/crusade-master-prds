@@ -169,6 +169,45 @@ The CM creates the campaign's teams. For Armageddon, the system pre-fills the 4 
 **Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'created' → 'started'` (per PRD-0 §4 v3.18 enum: `created` → `started` → `ended` → `archived`). **Hard gate:** if any team still has no team leader (the pending invites haven't been accepted), the system blocks Start with: "Team X has no team leader. Either assign one or wait for invites to be accepted."
 
 **Pre-campaign state (`Campaign.status: 'created'`):** the campaign exists but is not yet active. Players can join via invite but cannot file approvals or play in battles. The CM can still edit settings. The state transitions to `started` when the CM clicks Start (and the team-leader gate passes).
+
+**Campaign lifecycle state machine (v3.23):**
+
+```mermaid
+stateDiagram-v2
+    [*] --> created : CM finishes wizard
+    created --> started : CM clicks Start (gates pass)
+    created --> archived : CM aborts (e.g., abandoned setup)
+    started --> ended : CM clicks End Campaign
+    started --> archived : CM force-archives
+    ended --> archived : CM clicks Archive
+    archived --> [*] : instance retention window expires
+
+    note right of created
+        Players can join via invite
+        No approvals, no battles
+        CM can edit settings freely
+    end note
+
+    note right of started
+        Battle updates accepted
+        Approvals flow through routing
+        Phases can be activated
+    end note
+
+    note right of ended
+        No new battle updates
+        Existing approvals still in flight
+        All data still tenant-scoped
+    end note
+
+    note right of archived
+        Read-only across all teams
+        Instance Admin can hard-delete
+        Audit log retained +1 year
+    end note
+```
+
+**Transitions are one-way except `archived`.** Re-activating an archived campaign is not supported in v1 (a CM who wants to "restart" creates a new campaign). `archived → [*]` represents instance-level hard-delete after the retention window (not a UI action).
 | start_date | date | When battles can begin being filed |
 
 **Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
@@ -451,6 +490,49 @@ A CM is allowed to be a player in their own campaign. **A Crusade Team Leader is
   - The team leader is **not** auto-approved for OTHER players' requests on their team — they explicitly approve those, with the audit trail recording `approvalSource: 'cm_review'` and `reviewerUserId: teamLeader`.
 
 **Conflict-of-interest rationale:** the principle is that the CM and Team Leader are *trusted actors in their scope* (campaign-wide for CM; team-scoped for Team Leader), not untrusted players. Auto-approve-with-pipeline preserves the audit trail without forcing trusted actors to wait for themselves. Scope-bounded authority prevents unilateral abuse outside their scope.
+
+**CM-as-player approval flow (v3.23 sequence diagram):**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor CM as CM (Sarah)<br/>(also a player)
+    participant UI as Frontend
+    participant API as Hapi
+    participant RQ as BullMQ
+    participant DB as Postgres
+    participant EM as Event Bus
+
+    CM->>UI: Upload new roster JSON
+    UI->>API: POST /rosters/:id/drafts (file)
+    API->>RQ: enqueue parse-job
+    API-->>UI: 202 Accepted, draftId
+    RQ->>RQ: parse → diff → rule-check
+    RQ->>DB: insert RosterDraft (status=pending_review)
+    RQ->>EM: emit roster.app_parse_succeeded
+    EM->>DB: insert Notification for CM
+    DB-->>UI: WebSocket notification (toast)
+    CM->>UI: Click "Submit for approval"
+    UI->>API: POST /approval-requests
+    API->>DB: insert ApprovalRequest<br/>(submittedByUserId=CM,<br/>approvalSource=null)
+    API->>DB: routing decision<br/>(see PRD-5 §3.2)
+    alt Routine kind (e.g., post_battle_update for self)
+        API->>DB: auto-approve<br/>approvalSource='self_approved'
+        API->>DB: write HistoryEntry + Delta[]
+        API->>EM: emit approval.approved
+        EM->>DB: insert Notification (loud, for own record)
+    else High-impact kind (e.g., mass_reban)
+        API->>DB: stay pending<br/>approvalSource='co_cm_required_unavailable'
+        API->>EM: emit approval.requested
+        EM->>DB: insert Notification for OTHER CMs<br/>(none exist in this example)
+    end
+    API-->>UI: 201 with ApprovalRequest
+```
+
+**Key invariants preserved by the flow:**
+- Every kind still produces an `ApprovalRequest` row — the pipeline runs uniformly.
+- `approvalSource` is the only field that varies by who submitted.
+- Events fire regardless of auto-approve, so future Discord/inbox hooks work without special-casing.
 
 ---
 

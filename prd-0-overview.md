@@ -385,6 +385,120 @@ Notification {
 
 **Identifiers**: UUIDv7.
 
+### 4a. Entity-Relationship Diagram (v3.23)
+
+The core entities and their relationships. Cardinality: `||` (one-and-only-one), `o|` (zero-or-one), `}o` (zero-or-many), `}|` (one-or-many). Arrows show foreign-key relationships; the "many" side typically has the FK column.
+
+```mermaid
+erDiagram
+    Tenant ||--o{ User : "has"
+    User ||--o{ Identity : "links"
+    User ||--o{ CampaignMember : "joins"
+    User ||--o{ TeamLeader : "may lead"
+    User ||--o{ Notification : "receives"
+    User ||--o{ AuditLog : "actor of"
+
+    Tenant ||--o{ Campaign : "hosts"
+    Tenant ||--o{ Faction : "global (no FK)"
+
+    Campaign ||--|| Tenant : "scoped to"
+    Campaign ||--|| User : "primary CM"
+    Campaign ||--o{ CampaignPhase : "narrative periods"
+    Campaign ||--o{ CampaignTeam : "teams (mandatory)"
+    Campaign ||--o{ CampaignMember : "members"
+    Campaign ||--o{ CampaignInvite : "open invites"
+    Campaign ||--o{ Battle : "battles"
+    Campaign ||--o{ ApprovalRequest : "approvals"
+    Campaign ||--o{ Event : "events"
+    Campaign ||--o{ HistoryEntry : "history"
+    Campaign ||--o{ RuleDefinition : "CM-defined rules"
+
+    CampaignPhase }o--|| Campaign : "belongs to"
+    CampaignTeam }o--|| Campaign : "belongs to"
+    CampaignTeam ||--o{ Faction : "expectedFactionIds (M:N)"
+
+    TeamLeader }o--|| CampaignTeam : "leads"
+    TeamLeader }o--|| User : "is a user"
+
+    CampaignMember }o--|| Campaign : "in"
+    CampaignMember }o--|| User : "is a user"
+    CampaignMember }o--|| CampaignTeam : "on team"
+    CampaignMember }o--|| Faction : "plays 40K faction"
+
+    Roster ||--|| CampaignMember : "owned by"
+    Roster ||--|| Faction : "plays"
+    Roster ||--o{ RosterDraft : "drafts (history)"
+    Roster ||--o{ RosterApproved : "approved snapshots"
+    Roster ||--|| RosterApproved : "currently approved"
+    RosterApprovalHistory }o--|| Roster : "chronological"
+
+    RosterDraft ||--o{ RuleCheck : "ran rules"
+    RosterDraft ||--o{ Delta : "diff vs last approved"
+    RosterDraft ||--o{ ApprovalRequest : "may trigger"
+
+    Battle ||--|| Campaign : "in"
+    Battle ||--o{ BattleUpdate : "updates (post-battle)"
+    Battle ||--o{ Event : "lifecycle events"
+    BattleUpdate ||--o{ ApprovalRequest : "may trigger"
+    BattleUpdate ||--o{ RuleCheck : "ran rules"
+
+    ApprovalRequest ||--o{ RuleCheck : "evaluated by"
+    ApprovalRequest ||--o{ HistoryEntry : "produces on approve"
+    ApprovalRequest }o--o{ User : "submitted by / reviewed by"
+    ApprovalRequest ||--o{ Event : "lifecycle events"
+
+    HistoryEntry ||--o{ HistoryEntryIndex : "secondary indexes"
+    HistoryEntry ||--o{ Delta : "field-level changes"
+    HistoryEntry ||--o{ Event : "source event"
+    HistoryEntry }o--o| ApprovalRequest : "tombstoned by (rollback)"
+
+    Event ||--o{ Delta : "field-level changes"
+    Event ||--o{ Notification : "fanout"
+    Event }o--o| JobRecord : "produced by (async pipeline)"
+
+    CrusadeSupplement ||--o{ Campaign : "template for"
+    CrusadeSupplement ||--|| Faction : "covers faction"
+
+    RuleDefinition }o--|| Tenant : "scope"
+    RuleDefinition }o--o| Campaign : "may be per-crusade"
+    RuleDefinition }o--o| User : "authored by"
+```
+
+**Reading the diagram:**
+- Vertical stacking groups entities by subdomain (Tenancy → Campaign core → Roster/Battles → Approvals/Events/History)
+- The Campaign row is the hub — almost every entity references it
+- Cross-cutting entities (Event, HistoryEntry, Notification) connect to many things; they're the "bus" of the system
+- Faction is global (no tenant FK); seeded from Wahapedia
+- `Tenant` only appears in Tenancy, Campaign, and RuleDefinition; per-campaign entities inherit tenancy via `Campaign.tenantId` for RLS
+
+---
+
+### 4b. Tenancy & RLS Multi-Tenancy (v3.23)
+
+Every domain table has `tenantId UUID NOT NULL` with row-level security policies. The RLS policies chain through `Campaign.tenantId` so that even tables without an explicit `tenantId` column (e.g., `Battle`, `ApprovalRequest`) inherit tenancy via their FK to `Campaign`.
+
+```mermaid
+flowchart LR
+    A[App request<br/>with JWT/session] --> B[Hapi: extract userId, tenantId]
+    B --> C{Set Postgres<br/>session vars<br/>app.user_id,<br/>app.tenant_id}
+    C --> D[Query]
+    D --> E{Postgres RLS<br/>evaluates policy}
+    E -- allowed --> F[Return rows]
+    E -- denied --> G[Empty result]
+    E -- policy error --> H[500]
+
+    I[Service layer<br/>intentionally bypass RLS<br/>for system jobs] -.->|SET LOCAL row_security = OFF| D
+    J[Audit log writer<br/>background worker] -.-> I
+```
+
+**Three RLS contexts:**
+
+| Context | Sees | Use case |
+|---|---|---|
+| **User request** | Own tenant only | Default for all API routes |
+| **Team-scoped** | Own tenant + own team | Player on a team querying team data; enforced via additional RLS predicate checking `app.team_ids` GUC against `CampaignMember.teamId` |
+| **System job** | All tenants (with audit) | BullMQ workers parsing rosters; bypasses RLS via `SET LOCAL row_security = OFF` and writes to AuditLog |
+
 ---
 
 ## 3b. Glossary of Roles

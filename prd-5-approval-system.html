@@ -690,6 +690,23 @@ point)</h4>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="routing-per-kind-v3.11">3.2 Routing Per Kind (v3.11)</h3>
+<p><strong>Routing decision flow (v3.23):</strong></p>
+<pre class="mermaid"><code>flowchart TD
+    Start([ApprovalRequest created]) --&gt; Q1{Who submitted?}
+    Q1 -- &quot;Team Leader&lt;br/&gt;(acting on self)&quot; --&gt; Auto1[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;Skip pipeline steps still emit events]
+    Q1 -- &quot;Primary CM&lt;br/&gt;(as player)&quot; --&gt; Q2{High-impact kind?&lt;br/&gt;mass_reban, point_cap_change,&lt;br/&gt;roster_manual_edit,&lt;br/&gt;requisition_rp_override,&lt;br/&gt;campaign_announcement, team_switch}
+    Q2 -- &quot;Yes&quot; --&gt; Q3{Is there another&lt;br/&gt;CM or TL&lt;br/&gt;allowed for this kind?}
+    Q3 -- &quot;Yes&quot; --&gt; Route2[Route to other approver&lt;br/&gt;approvalSource: pending]
+    Q3 -- &quot;No&quot; --&gt; Stay[Stay pending&lt;br/&gt;approvalSource: co_cm_required_unavailable]
+    Q2 -- &quot;No, routine kind&quot; --&gt; Auto2[Auto-approve&lt;br/&gt;approvalSource: self_approved]
+    Q1 -- &quot;Player&lt;br/&gt;(not TL)&quot; --&gt; Q4{What team is affected?&lt;br/&gt;From Roster.teamId or&lt;br/&gt;CampaignMember.teamId}
+    Q4 -- &quot;Team A&quot; --&gt; Q5{Is there an active TL&lt;br/&gt;for Team A AND&lt;br/&gt;kind is TL-enabled?}
+    Q5 -- &quot;Yes&quot; --&gt; Q6{Multiple TLs on Team A?}
+    Q6 -- &quot;Yes, mode=any&quot; --&gt; Route3a[Route to TL pool&lt;br/&gt;Any TL can approve]
+    Q6 -- &quot;Yes, mode=all&quot; --&gt; Route3b[Route to all TLs&lt;br/&gt;All must approve]
+    Q6 -- &quot;No, single TL&quot; --&gt; Route3c[Route to that TL]
+    Q5 -- &quot;No&quot; --&gt; Q7{Route to Primary CM&lt;br/&gt;as fallback}</code></pre>
+<p><strong>Per-kind routing table:</strong></p>
 <p>Per-kind routing now reflects the <strong>Crusade Team
 Leader</strong> model: team leaders can approve actions affecting their
 team for kinds the primary CM has enabled. The primary CM can always
@@ -924,6 +941,85 @@ every downstream consumer would have to special-case CM-as-player too.
 That’s a permanent tax on every future feature. By keeping the pipeline
 uniform and varying only the <code>approvalSource</code>, the system
 stays clean.</p>
+<p><strong>Auto-approval decision class diagram (v3.23):</strong></p>
+<pre class="mermaid"><code>classDiagram
+    class ApprovalRequest {
+        +kind: ApprovalKind
+        +submittedByUserId: UserId
+        +payload: ApprovalPayload
+        +status: pending|approved|rejected
+        +approvalSource: ApprovalSource
+        +reviewerUserId: UserId?
+    }
+
+    class RoutingEngine {
+        +decide(req) RoutingDecision
+        +route(req, decision) void
+    }
+
+    class RoutingDecision {
+        +autoApprove: bool
+        +targetApprovers: UserId[]
+        +approvalSource: ApprovalSource
+        +reason: string
+    }
+
+    class ApprovalSource {
+        &lt;&lt;enumeration&gt;&gt;
+        cm_review
+        auto_approve_routine
+        self_approved
+        co_cm_required_unavailable
+    }
+
+    class RulesEngine {
+        +run(req) RuleCheck[]
+    }
+
+    class HistoryWriter {
+        +write(req) HistoryEntry[]
+    }
+
+    class EventBus {
+        +emit(event) void
+    }
+
+    ApprovalRequest --&gt; RoutingEngine : &quot;submitted to&quot;
+    RoutingEngine --&gt; RoutingDecision : &quot;produces&quot;
+    RoutingDecision --&gt; ApprovalSource : &quot;tags with&quot;
+    RulesEngine --&gt; ApprovalRequest : &quot;annotates with ruleCheckIds&quot;
+    HistoryWriter --&gt; ApprovalRequest : &quot;writes on approval&quot;
+    EventBus &lt;-- ApprovalRequest : &quot;lifecycle events&quot;
+    EventBus &lt;-- RulesEngine : &quot;rule_check.run&quot;
+    EventBus &lt;-- HistoryWriter : &quot;history.written&quot;</code></pre>
+<p><strong>Per-kind request flow (sequence diagram):</strong></p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor User
+    participant UI as Frontend
+    participant API as Hapi&lt;br/&gt;(POST /approval-requests)
+    participant R as RoutingEngine
+    participant Rules as RulesEngine
+    participant DB as Postgres
+    participant Bus as EventBus
+
+    User-&gt;&gt;UI: Fill form (e.g., faction switch)
+    UI-&gt;&gt;API: POST { kind, payload, contextHash }
+    API-&gt;&gt;R: decide(req)
+    Note over R: Look up Campaign.teamLeaderAuthority[kind]&lt;br/&gt;Look up submitter role&lt;br/&gt;Apply CM-self-edit prevention
+    R--&gt;&gt;API: RoutingDecision
+    API-&gt;&gt;Rules: run(req)
+    Rules--&gt;&gt;API: RuleCheck[] (pass/warn/fail)
+    alt decision.autoApprove == true
+        API-&gt;&gt;DB: insert ApprovalRequest (status=approved,&lt;br/&gt;approvalSource=decision.approvalSource)
+        API-&gt;&gt;DB: write HistoryEntry[]
+        API-&gt;&gt;Bus: emit approval.approved
+    else
+        API-&gt;&gt;DB: insert ApprovalRequest (status=pending,&lt;br/&gt;approvalSource=pending)
+        API-&gt;&gt;Bus: emit approval.requested
+        Bus-&gt;&gt;DB: insert Notification for targetApprovers
+    end
+    API--&gt;&gt;UI: 201 { id, status, decision }</code></pre>
 <hr />
 <h2 id="roster-approval-specifics">4. Roster Approval Specifics</h2>
 <p>The most-used approval. Special handling:</p>
