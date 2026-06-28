@@ -454,11 +454,41 @@ player’s notification.</p>
 <hr />
 <h2 id="cm-as-player">5. CM-as-Player</h2>
 <p>A CM is allowed to be a player in their own campaign: - “Playing in
-your own campaign” badge shown next to their name - Own roster approvals
-must be approved by a co-CM (or auto-approve with audit if no co-CM) -
-Own battle filings subject to the same submission gating</p>
-<p>Default behavior; CM cannot opt out (conflicts of interest require a
-co-CM, not a setting).</p>
+your own campaign” badge shown next to their name - <strong>All
+CM-as-player’s deltas auto-approve, but still go through the full
+pipeline.</strong> PRD-0 §4b’s approval-gating principle still applies —
+the system creates the <code>ApprovalRequest</code>, runs rule checks,
+persists the diff, fires events, and emits notifications. The only thing
+skipped is the wait for a human approver. - This is a deliberate
+architectural choice: future event hooks (team view pages, Discord
+integrations, narrative analytics) depend on every delta firing the same
+events. Bypassing the pipeline would silently break every downstream
+consumer. - <strong>Concrete example:</strong> Mike is CM and a player
+on Helsreach Defenders. He updates his Cadian Shock Troops list. The
+system: 1. Creates <code>RosterDraft</code> and runs the BullMQ parse
+pipeline (PRD-3) 2. Runs rule checks including
+<code>team-narrative-alignment</code> (Cadians fit Helsreach — pass) 3.
+Creates
+<code>ApprovalRequest { kind: &#39;roster_approval&#39;, submittedByUserId: mike }</code>
+4. Auto-approves with <code>approvalSource: &#39;self_approved&#39;</code>
+(PRD-5 §3 schema) 5. Creates <code>RosterApproved</code>, emits
+<code>roster.approved</code> event 6. The team’s future view page can
+now show Helsreach Defenders’ aggregate progress, including Mike’s
+deltas - <strong>High-impact kinds with mandatory co-CM
+approval</strong> (<code>roster_manual_edit</code>,
+<code>requisition_rp_override</code>, <code>mass_reban</code>,
+<code>point_cap_change</code>): if Mike is the only CM, these still fall
+back to self-approve with
+<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code>, audit-logged.
+If a co-CM exists, the request routes to them (Mike cannot self-approve
+high-impact kinds even as a player). - Own battle filings, requisition
+purchases, team switches — all auto-approve but go through the
+pipeline.</p>
+<p><strong>Conflict-of-interest rationale:</strong> the principle is
+that the CM is a <em>trusted actor in their own campaign</em>, not an
+untrusted player. Auto-approve-with-pipeline preserves the audit trail
+without forcing Mike to wait for himself. Co-CM gating for high-impact
+kinds prevents unilateral abuse.</p>
 <hr />
 <h2 id="b.-campaign-teams-not-40k-factions-a-distinct-concept">5b.
 Campaign Teams (not 40K Factions — a distinct concept)</h2>
@@ -936,8 +966,12 @@ provisioning, Postgres RLS policies, BullMQ workers</li>
 <li><strong>Instance Admin lost access</strong>: env-var path stores
 admin email; recovery requires re-running the bootstrap block, which is
 idempotent and resets the admin user.</li>
-<li><strong>CM is also a player, no co-CM</strong>: own approvals
-auto-apply with audit log entry <code>self_approved: true</code>.</li>
+<li><strong>CM is also a player, no co-CM</strong>: own deltas
+auto-approve via <code>approvalSource: &#39;self_approved&#39;</code> (per PRD-5
+§3.3) and the <strong>full pipeline still runs</strong> —
+ApprovalRequest created, rule checks fire, events emit, audit trail
+recorded. Future team view pages and event hooks work without
+special-casing the CM-as-player.</li>
 <li><strong>All players leave a campaign</strong>: dormant; auto-archive
 after 90 days.</li>
 <li><strong>Two CMs edit settings concurrently</strong>: last-write-wins

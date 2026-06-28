@@ -510,7 +510,17 @@ maps to one of the categories in §2.2; new categories extend this enum
 <span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                <span class="co">// drift detection</span></span>
 <span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>            <span class="co">// v3: rule checks attached at submission</span></span>
 <span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// gating context</span></span>
-<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>  <span class="co">// v3.7 — records HOW the request was approved. Required so future event</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>  <span class="co">// hooks (team view pages, Discord, narrative analytics) can filter or</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>  <span class="co">// count self-approved vs human-approved vs routine-auto-approved deltas.</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  approvalSource<span class="op">:</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// a CM reviewed and approved</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_review&#39;</span>                <span class="co">// a co-CM reviewed and approved</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;auto_approve_routine&#39;</span>        <span class="co">// campaign&#39;s auto-approve-routine-battle-updates setting fired</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span>               <span class="co">// CM-as-player submitted and self-approved (PRD-1 §5)</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_required_unavailable&#39;</span><span class="op">;</span> <span class="co">// kind requires co-CM but none existed; fell back to self with audit</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
 <p>Every <code>ApprovalKind</code> has a typed payload. The payload is
 the <em>contract</em> — the inbox UI and the application logic both
@@ -713,6 +723,66 @@ high-impact)</td>
 </tr>
 </tbody>
 </table>
+<h3 id="cm-as-player-auto-approval-prd-1-5">3.3 CM-as-Player
+Auto-Approval (PRD-1 §5)</h3>
+<p>When the submitter is the campaign’s only CM, every kind
+<strong>auto-approves but the pipeline still runs</strong>. The
+<code>approvalSource</code> field records which path fired:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Scenario</th>
+<th><code>approvalSource</code> value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CM (or co-CM) reviewed and approved manually</td>
+<td><code>cm_review</code> or <code>co_cm_review</code></td>
+</tr>
+<tr class="even">
+<td>Campaign’s <code>auto_approve_routine_battle_updates</code> fired
+(no anomalies)</td>
+<td><code>auto_approve_routine</code></td>
+</tr>
+<tr class="odd">
+<td>CM-as-player submitted, no co-CM exists, kind allows
+CM-as-actor</td>
+<td><code>self_approved</code></td>
+</tr>
+<tr class="even">
+<td>Kind requires co-CM but none exists (high-impact fallback)</td>
+<td><code>co_cm_required_unavailable</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architectural rule:</strong> auto-approval ≠ pipeline bypass.
+Every auto-approved request still: 1. Creates the
+<code>ApprovalRequest</code> row (with <code>approvalSource</code>
+populated) 2. Runs rule checks (including
+<code>team-narrative-alignment</code>, which gives the CM-as-player the
+same narrative-fit warn as any other player) 3. Creates the downstream
+state (<code>RosterApproved</code>, <code>BattleUpdate</code>,
+<code>CampaignMember</code> updates, etc.) 4. Emits the same events
+(<code>roster.approved</code>, <code>battle_update.filed</code>,
+<code>member.team_switched</code>, etc.) 5. Fires the same notifications
+(in-app toast + email + future Discord)</p>
+<p>This guarantees future event hooks (team view pages, Discord
+integrations, narrative analytics, the audit trail itself) all work
+uniformly. The team view page example from PRD-1 §5 — Mike’s deltas to
+Helsreach Defenders show up in the team’s rollup because the events
+fired, not because the system special-cased Mike.</p>
+<p><strong>Why this matters:</strong> if the system special-cased
+CM-as-player to bypass the pipeline (e.g., directly mutating
+<code>RosterApproved</code> without an <code>ApprovalRequest</code>),
+every downstream consumer would have to special-case CM-as-player too.
+That’s a permanent tax on every future feature. By keeping the pipeline
+uniform and varying only the <code>approvalSource</code>, the system
+stays clean.</p>
 <hr />
 <h2 id="roster-approval-specifics">4. Roster Approval Specifics</h2>
 <p>The most-used approval. Special handling:</p>
@@ -934,8 +1004,13 @@ request closed.</li>
 <li><strong>Approval is for a now-deleted entity</strong>: apply step
 fails transactionally; CM is shown an error and asked to reject.</li>
 <li><strong>CM is the submitter and no co-CM exists</strong>:
-self-approves with audit-log entry
-<code>self_approved: true</code>.</li>
+auto-approves via <code>approvalSource: &#39;self_approved&#39;</code> (or
+<code>&#39;co_cm_required_unavailable&#39;</code> for high-impact kinds). The
+pipeline still runs — <code>ApprovalRequest</code> is created, rule
+checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3,
+the architectural rule is “auto-approve ≠ pipeline bypass” so future
+event hooks (team view pages, Discord, narrative analytics) work
+uniformly.</li>
 <li><strong>Submitter suspended mid-approval</strong>: pending requests
 auto-rejected with reason “submitter suspended.”</li>
 <li><strong>Active RosterApproved changes during approval</strong>:

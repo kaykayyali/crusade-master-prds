@@ -20,7 +20,20 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.6 (current) — ApprovalKind enum as canonical contract
+### v3.7 (current) — CM-as-Player: auto-approve, never bypass the pipeline
+
+Per user: when the CM is also a player, their deltas should auto-approve (no waiting for themselves) but **always go through the full pipeline** so future event hooks work uniformly.
+
+Example given: CM on Helsreach Defenders updates their army list. The team view page (v1.x future feature) needs to show Helsreach's aggregate progress including the CM's deltas. That only works if the CM's approval fires the same events as everyone else's.
+
+- **PRD-1 §5 rewritten**: every CM-as-player delta auto-approves but goes through the pipeline. ApprovalRequest created, rule checks run (CM gets the same `team-narrative-alignment` warn as any player), RosterApproved created, events emit, notifications fire.
+- **PRD-5 §3 schema**: added `approvalSource` field with 5 values: `cm_review`, `co_cm_review`, `auto_approve_routine`, `self_approved`, `co_cm_required_unavailable`. Records HOW each request was approved — queryable later for filtering, counting, or special-casing downstream consumers if ever needed.
+- **PRD-5 §3.3 (new)**: explicit architectural rule — "auto-approve ≠ pipeline bypass." Every auto-approved request still creates the row, runs rule checks, mutates state, emits events, fires notifications.
+- **PRD-5 §3.2 routing table**: high-impact kinds (`roster_manual_edit`, `requisition_rp_override`, `mass_reban`, `point_cap_change`) still require co-CM when available. With no co-CM, they fall back to `co_cm_required_unavailable` with audit. CM cannot unilaterally approve high-impact kinds even when self-as-player.
+- **PRD-4 §7.1 (new)**: documents the team rollup data path for the v1.x team view page — `Event.targetId → RosterApproved.teamId → CampaignTeam`. v1 keeps schema normalized; v2 may denormalize for query speed.
+- **Edge cases updated** in PRD-1 §10 and PRD-5 §14 to reflect the new `approvalSource` semantics.
+
+### v3.6 — ApprovalKind enum as canonical contract
 
 Per user direction: expand the `ApprovalRequest.kind` enum to be the canonical contract for all narrative-affecting actions routed through the approval queue.
 

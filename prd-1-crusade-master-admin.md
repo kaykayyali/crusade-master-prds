@@ -169,10 +169,19 @@ CMs can edit any field on any record, with required reason text. Every override 
 
 A CM is allowed to be a player in their own campaign:
 - "Playing in your own campaign" badge shown next to their name
-- Own roster approvals must be approved by a co-CM (or auto-approve with audit if no co-CM)
-- Own battle filings subject to the same submission gating
+- **All CM-as-player's deltas auto-approve, but still go through the full pipeline.** PRD-0 §4b's approval-gating principle still applies — the system creates the `ApprovalRequest`, runs rule checks, persists the diff, fires events, and emits notifications. The only thing skipped is the wait for a human approver.
+- This is a deliberate architectural choice: future event hooks (team view pages, Discord integrations, narrative analytics) depend on every delta firing the same events. Bypassing the pipeline would silently break every downstream consumer.
+- **Concrete example:** Mike is CM and a player on Helsreach Defenders. He updates his Cadian Shock Troops list. The system:
+  1. Creates `RosterDraft` and runs the BullMQ parse pipeline (PRD-3)
+  2. Runs rule checks including `team-narrative-alignment` (Cadians fit Helsreach — pass)
+  3. Creates `ApprovalRequest { kind: 'roster_approval', submittedByUserId: mike }`
+  4. Auto-approves with `approvalSource: 'self_approved'` (PRD-5 §3 schema)
+  5. Creates `RosterApproved`, emits `roster.approved` event
+  6. The team's future view page can now show Helsreach Defenders' aggregate progress, including Mike's deltas
+- **High-impact kinds with mandatory co-CM approval** (`roster_manual_edit`, `requisition_rp_override`, `mass_reban`, `point_cap_change`): if Mike is the only CM, these still fall back to self-approve with `approvalSource: 'co_cm_required_unavailable'`, audit-logged. If a co-CM exists, the request routes to them (Mike cannot self-approve high-impact kinds even as a player).
+- Own battle filings, requisition purchases, team switches — all auto-approve but go through the pipeline.
 
-Default behavior; CM cannot opt out (conflicts of interest require a co-CM, not a setting).
+**Conflict-of-interest rationale:** the principle is that the CM is a *trusted actor in their own campaign*, not an untrusted player. Auto-approve-with-pipeline preserves the audit trail without forcing Mike to wait for himself. Co-CM gating for high-impact kinds prevents unilateral abuse.
 
 ---
 
@@ -434,7 +443,7 @@ Mike's success criteria for this app:
 ## 10. Edge Cases
 
 1. **Instance Admin lost access**: env-var path stores admin email; recovery requires re-running the bootstrap block, which is idempotent and resets the admin user.
-2. **CM is also a player, no co-CM**: own approvals auto-apply with audit log entry `self_approved: true`.
+2. **CM is also a player, no co-CM**: own deltas auto-approve via `approvalSource: 'self_approved'` (per PRD-5 §3.3) and the **full pipeline still runs** — ApprovalRequest created, rule checks fire, events emit, audit trail recorded. Future team view pages and event hooks work without special-casing the CM-as-player.
 3. **All players leave a campaign**: dormant; auto-archive after 90 days.
 4. **Two CMs edit settings concurrently**: last-write-wins with 5s debounce; second writer sees "someone else just edited" toast.
 5. **Tenant suspended mid-campaign**: all in-flight approvals auto-rejected with reason "tenant suspended"; campaigns frozen.

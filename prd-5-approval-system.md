@@ -124,6 +124,16 @@ interface ApprovalRequest {
   contextHash: string;                // drift detection
   ruleCheckIds: string[];            // v3: rule checks attached at submission
   activeRosterApprovedId: string | null; // gating context
+
+  // v3.7 — records HOW the request was approved. Required so future event
+  // hooks (team view pages, Discord, narrative analytics) can filter or
+  // count self-approved vs human-approved vs routine-auto-approved deltas.
+  approvalSource:
+    | 'cm_review'                   // a CM reviewed and approved
+    | 'co_cm_review'                // a co-CM reviewed and approved
+    | 'auto_approve_routine'        // campaign's auto-approve-routine-battle-updates setting fired
+    | 'self_approved'               // CM-as-player submitted and self-approved (PRD-1 §5)
+    | 'co_cm_required_unavailable'; // kind requires co-CM but none existed; fell back to self with audit
 }
 ```
 
@@ -290,6 +300,28 @@ Each kind has a default approver and (for high-impact kinds) a co-approval rule:
 | `point_cap_change` | Co-CM | **Mandatory** |
 | `custom` | Per `schemaRef` | Per `schemaRef` |
 
+### 3.3 CM-as-Player Auto-Approval (PRD-1 §5)
+
+When the submitter is the campaign's only CM, every kind **auto-approves but the pipeline still runs**. The `approvalSource` field records which path fired:
+
+| Scenario | `approvalSource` value |
+|---|---|
+| CM (or co-CM) reviewed and approved manually | `cm_review` or `co_cm_review` |
+| Campaign's `auto_approve_routine_battle_updates` fired (no anomalies) | `auto_approve_routine` |
+| CM-as-player submitted, no co-CM exists, kind allows CM-as-actor | `self_approved` |
+| Kind requires co-CM but none exists (high-impact fallback) | `co_cm_required_unavailable` |
+
+**Architectural rule:** auto-approval ≠ pipeline bypass. Every auto-approved request still:
+1. Creates the `ApprovalRequest` row (with `approvalSource` populated)
+2. Runs rule checks (including `team-narrative-alignment`, which gives the CM-as-player the same narrative-fit warn as any other player)
+3. Creates the downstream state (`RosterApproved`, `BattleUpdate`, `CampaignMember` updates, etc.)
+4. Emits the same events (`roster.approved`, `battle_update.filed`, `member.team_switched`, etc.)
+5. Fires the same notifications (in-app toast + email + future Discord)
+
+This guarantees future event hooks (team view pages, Discord integrations, narrative analytics, the audit trail itself) all work uniformly. The team view page example from PRD-1 §5 — Mike's deltas to Helsreach Defenders show up in the team's rollup because the events fired, not because the system special-cased Mike.
+
+**Why this matters:** if the system special-cased CM-as-player to bypass the pipeline (e.g., directly mutating `RosterApproved` without an `ApprovalRequest`), every downstream consumer would have to special-case CM-as-player too. That's a permanent tax on every future feature. By keeping the pipeline uniform and varying only the `approvalSource`, the system stays clean.
+
 ---
 
 ## 4. Roster Approval Specifics
@@ -451,7 +483,7 @@ flowchart TD
 1. **Two CMs approve the same request simultaneously**: optimistic locking via `contextHash`; second approver sees "already decided."
 2. **Submitter withdraws while a CM has it claimed**: request closed.
 3. **Approval is for a now-deleted entity**: apply step fails transactionally; CM is shown an error and asked to reject.
-4. **CM is the submitter and no co-CM exists**: self-approves with audit-log entry `self_approved: true`.
+4. **CM is the submitter and no co-CM exists**: auto-approves via `approvalSource: 'self_approved'` (or `'co_cm_required_unavailable'` for high-impact kinds). The pipeline still runs — `ApprovalRequest` is created, rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3, the architectural rule is "auto-approve ≠ pipeline bypass" so future event hooks (team view pages, Discord, narrative analytics) work uniformly.
 5. **Submitter suspended mid-approval**: pending requests auto-rejected with reason "submitter suspended."
 6. **Active RosterApproved changes during approval**: drift detected; CM chooses re-validate, force-apply, or reject.
 7. **Notification email bounces**: status queued for retry; if persistent, in-app notification only.

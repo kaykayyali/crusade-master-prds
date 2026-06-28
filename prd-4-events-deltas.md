@@ -235,6 +235,23 @@ Armageddon templates:
 
 For team-based campaigns (PRD-1 §5b), CMs can target events to a specific campaign team (e.g., "Helsreach Defenders gain +1 RP for holding the wall this week"). The filter expression supports `teamId` as a first-class axis alongside `factionId` — these are distinct dimensions and both are honored by the filter engine.
 
+### 7.1 Team Rollups via Events (Future Team View Pages)
+
+Every event has a `targetId` (e.g., a `RosterApproved`, `BattleUpdate`, `CampaignMember`). For team-based rollups, the join path is:
+
+```
+Event.targetId (e.g., RosterApproved.id)
+  → RosterApproved.teamId  (snapshotted at approval time per PRD-0)
+    → CampaignTeam.id (PRD-0 schema)
+      → rollup aggregates per team
+```
+
+This is the data path the v1.x **team view page** will use: a per-team dashboard showing aggregate progress, recent events, active rosters, RP totals, requisition spend. Because every delta (including CM-as-player deltas per PRD-5 §3.3) fires the same events, the rollup naturally includes CM-as-player's contributions without special-casing.
+
+**v1 design choice:** `Event` does NOT carry a denormalized `teamId` — rollups join through the target. v2 may denormalize for query speed if the join cost becomes a bottleneck, but v1 keeps the schema normalized to avoid drift bugs (e.g., a denormalized `teamId` going stale after a `team_switch`).
+
+**CM-as-player in team rollups:** Mike is on Helsreach Defenders. When he updates his Cadian Shock Troops list (auto-approved per PRD-1 §5), the `roster.approved` event fires with `targetId = RosterApproved.id`. The team view joins through to find `RosterApproved.teamId = helsreach`. Helsreach's rollup shows Mike's deltas. This works because PRD-5 §3.3 keeps the pipeline uniform — no special case for CM-as-player.
+
 ---
 
 ## 8. Public Narrative Log

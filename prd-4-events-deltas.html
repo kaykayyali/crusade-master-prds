@@ -442,6 +442,35 @@ holding the wall this week”). The filter expression supports
 <code>teamId</code> as a first-class axis alongside
 <code>factionId</code> — these are distinct dimensions and both are
 honored by the filter engine.</p>
+<h3 id="team-rollups-via-events-future-team-view-pages">7.1 Team Rollups
+via Events (Future Team View Pages)</h3>
+<p>Every event has a <code>targetId</code> (e.g., a
+<code>RosterApproved</code>, <code>BattleUpdate</code>,
+<code>CampaignMember</code>). For team-based rollups, the join path
+is:</p>
+<pre><code>Event.targetId (e.g., RosterApproved.id)
+  → RosterApproved.teamId  (snapshotted at approval time per PRD-0)
+    → CampaignTeam.id (PRD-0 schema)
+      → rollup aggregates per team</code></pre>
+<p>This is the data path the v1.x <strong>team view page</strong> will
+use: a per-team dashboard showing aggregate progress, recent events,
+active rosters, RP totals, requisition spend. Because every delta
+(including CM-as-player deltas per PRD-5 §3.3) fires the same events,
+the rollup naturally includes CM-as-player’s contributions without
+special-casing.</p>
+<p><strong>v1 design choice:</strong> <code>Event</code> does NOT carry
+a denormalized <code>teamId</code> — rollups join through the target. v2
+may denormalize for query speed if the join cost becomes a bottleneck,
+but v1 keeps the schema normalized to avoid drift bugs (e.g., a
+denormalized <code>teamId</code> going stale after a
+<code>team_switch</code>).</p>
+<p><strong>CM-as-player in team rollups:</strong> Mike is on Helsreach
+Defenders. When he updates his Cadian Shock Troops list (auto-approved
+per PRD-1 §5), the <code>roster.approved</code> event fires with
+<code>targetId = RosterApproved.id</code>. The team view joins through
+to find <code>RosterApproved.teamId = helsreach</code>. Helsreach’s
+rollup shows Mike’s deltas. This works because PRD-5 §3.3 keeps the
+pipeline uniform — no special case for CM-as-player.</p>
 <hr />
 <h2 id="public-narrative-log">8. Public Narrative Log</h2>
 <p>A scrubbed, readable narrative view of the campaign, derived from
