@@ -208,6 +208,10 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 {
   battleId: string,
   battleUpdateId: string,
+  // Per-player form data — one BattleUpdate per player per battle.
+  // A 1v1 game produces 2 BattleUpdates; a 4-player game produces 4.
+  // Each is its own ApprovalRequest, batchable in the CM inbox.
+  formData: object,                  // supplement-specific payload (PRD-4 §4.1, CrusadeSupplement.battleReportSchema)
   perUnitChanges: Array<{
     unitId: string,
     xpDelta: int,
@@ -220,6 +224,9 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
   agendasAchieved: string[],
   battleReport: string,              // markdown
   ruleCheckIds: string[],
+  // Auto-detected if this player's BattleUpdate conflicts with another
+  // player's for the same battle (e.g., both claim victory).
+  disputed: boolean,
 }
 ```
 
@@ -420,6 +427,29 @@ Notifications fire through a BullMQ `notification-job` to avoid blocking the app
 | `auto_approve_first_roster: bool` | First RosterApproved for a player is auto-approved; default off |
 | `require_battle_report: bool` | Battle updates must include a markdown report ≥ 200 chars; default on |
 | `lock_ooa_modifications: bool` | Players cannot manually edit OoA results |
+| `bulk_approve_max_batch_size: int` | Cap on how many approvals the CM can act on in one bulk action (default 50); prevents accidental mega-actions |
+
+### 9.1 Approval Batching Model
+
+Per PRD-4 §4.1, each player in a battle files their own `BattleUpdate`. The batching model is **per-ApprovalRequest**, not per-battle:
+
+- **1v1 battle** = 2 BattleUpdates = 2 ApprovalRequests (`post_battle_update` × 2)
+- **4-player free-for-all** = 4 BattleUpdates = 4 ApprovalRequests
+- Each `post_battle_update` approval carries the player's per-unit deltas for that battle only
+
+The CM inbox treats each ApprovalRequest as a row. Batching happens via:
+
+1. **Auto-approve** (`auto_approve_routine_battle_updates`): routine BattleUpdates (no OoA failures, no requisition, no disputes) auto-approve at submission time, never entering the inbox.
+2. **Bulk approve (inbox)**: CM selects N rows and clicks "Approve N selected" (PRD-1 §6b Flow 2). The bulk action refuses if any selected item is non-routine; non-routine items are skipped with a clear reason. Max batch size capped by `bulk_approve_max_batch_size`.
+3. **Battle-context grouping**: the inbox groups BattleUpdates from the same Battle under a "Battle 22" expandable row, so the CM sees them as one battle-context but approves them as separate requests. Disputed BattleUpdates (e.g., both players claim victory per `post_battle_update.disputed`) surface with a dispute flag.
+
+**Why per-player approvals, not per-battle:** the user observed that battle updates are sent in via supplement-specific forms, and each player fills their own form (sometimes on a single shared sheet, sometimes separately). Modeling as per-player approvals keeps:
+- The audit trail clean (who claimed what)
+- Dispute detection automatic (system detects conflicting results)
+- Bulk-approve ergonomic (a routine 1v1 battle's 2 approvals bulk-approve in one click; a routine 4-player game bulk-approves all 4 in one click)
+- Future flexibility (Nachmund's 4-player BattleRecord Sheets map naturally to 4 ApprovalRequests)
+
+**Batching does NOT collapse across kinds.** A CM cannot bulk-approve a mix of `post_battle_update` + `roster_approval` + `requisition_purchase` in one click — the inbox filters by kind, and the CM bulk-acts within one kind only.
 | `require_two_approvals: bool` | Battle updates that destroy units need two CM approvals |
 | `override_window_days: int` | Days within which an approval can be rolled back; default 7 |
 

@@ -20,7 +20,26 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.7 (current) — CM-as-Player: auto-approve, never bypass the pipeline
+### v3.8 (current) — Supplement-specific battle report forms + per-player batching
+
+Per user: battle updates come in via a form, and "some crusades have a specific form to fill." The user shared three reference PDFs (Armageddon Crusade Cards, Armageddon Blank Order of Battle, Nachmund Mission Record Sheet) — these map to three different surfaces in the app:
+
+| PDF | App surface | Form? |
+|---|---|---|
+| ArmageddonCrusadeCards.pdf | Per-unit tracking card (`CrusadeForceState[unit]` view) | Auto-generated, no form |
+| ArmageddonBlankOrderOfBattle.pdf | Roster snapshot (`RosterApproved` view) | Auto-generated, no form |
+| MissionRecordSheet.pdf (Nachmund) | Per-battle update form | **Supplement-specific JSON Schema** |
+
+The supplement-specific piece is the battle report form, not the other two. The other two are derived from existing data and need no per-supplement code.
+
+- **PRD-0 §4**: `CrusadeSupplement.battleReportSchema: JSONSchema | null` — per-book form definition. `null` falls back to the standard Crusade form.
+- **PRD-4 §4.1**: rewritten. Form is auto-generated from the JSON Schema. Different supplements have different schemas (Armageddon uses standard Crusade form; Nachmund has multi-player agendas + Crusade Blessings). The system default covers Armageddon v1 without bespoke UI.
+- **PRD-4 §4.1 disambiguation table**: maps each user-provided PDF to its corresponding app surface.
+- **PRD-5 §3.1 `post_battle_update` payload**: added `formData` (supplement-specific) and `disputed` (auto-flag if a player's BattleUpdate conflicts with another player's for the same battle).
+- **PRD-5 §9.1 (new)**: explicit batching model — **per-ApprovalRequest, not per-battle**. 1v1 = 2 approvals, 4-player FFA = 4 approvals. Batching happens via auto-approve (routines) + bulk-approve (inbox, capped at 50). Battle-context grouping in the inbox shows related BattleUpdates under one expandable row but keeps approvals separate.
+- **PRD-5 §9**: added `bulk_approve_max_batch_size: int` campaign setting to prevent accidental mega-actions.
+
+### v3.7 — CM-as-Player: auto-approve, never bypass the pipeline
 
 Per user: when the CM is also a player, their deltas should auto-approve (no waiting for themselves) but **always go through the full pipeline** so future event hooks work uniformly.
 

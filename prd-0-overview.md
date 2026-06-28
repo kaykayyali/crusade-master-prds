@@ -202,6 +202,22 @@ RuleCheck { id, draftId, runId, kind, status: 'pass' | 'warn' | 'fail', details 
 Event { id, tenantId, campaignId, kind, occurredAt, actorUserId, targetType, targetId, payload, delta, visibility, activeRosterApprovedId }
 Delta { id, eventId, entityType, entityId, field, beforeValue, afterValue, reason }
 
+// === Crusade supplements (per-book config) ===
+// Each released Crusade book is one row. v1 ships Armageddon.
+CrusadeSupplement {
+  id,                                  // e.g., 'armageddon', 'nachmund-gauntlet' (v1.x+)
+  name,
+  releasedAt,
+  // Per-supplement JSON Schema for the post-battle update form.
+  // The form UI auto-generates from this schema. Fields differ per book:
+  // Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);
+  // Nachmund has multi-player agendas and Crusade Blessings; etc.
+  // null = fall back to the system-default standard Crusade battle report form.
+  battleReportSchema: object | null,
+  // Per-supplement pre-filled content (e.g., Armageddon's Helsreach/Hades/Gorgutz/Skari teams)
+  seedData: object,
+}
+
 // === Approval ===
 ApprovalRequest { id, tenantId, campaignId, kind, submittedByUserId, payload, status, reviewerUserId, decidedAt, decisionReason, contextHash, ruleCheckIds, activeRosterApprovedId }
 

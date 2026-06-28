@@ -533,14 +533,30 @@ XLSX</li>
 <span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId }</span>
 <span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
 <span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
-<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade supplements (per-book config) ===</span></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co">// Each released Crusade book is one row. v1 ships Armageddon.</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement {</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span>                                  <span class="co">// e.g., &#39;armageddon&#39;, &#39;nachmund-gauntlet&#39; (v1.x+)</span></span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>  releasedAt<span class="op">,</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement JSON Schema for the post-battle update form.</span></span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The form UI auto-generates from this schema. Fields differ per book:</span></span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);</span></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Nachmund has multi-player agendas and Crusade Blessings; etc.</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>  <span class="co">// null = fall back to the system-default standard Crusade battle report form.</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement pre-filled content (e.g., Armageddon&#39;s Helsreach/Hades/Gorgutz/Skari teams)</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>  seedData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
 <p><strong>Identifiers</strong>: UUIDv7.</p>
 <hr />
 <h2 id="b.-design-principle-approval-gating-for-narrative-integrity">4b.

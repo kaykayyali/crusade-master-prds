@@ -580,19 +580,26 @@ consume it.</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  battleId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  battleUpdateId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="bu">Array</span><span class="op">&lt;</span>{</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    unitId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    xpDelta<span class="op">:</span> int<span class="op">,</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    honourGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    scarGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    rankChange<span class="op">:</span> { from<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> to<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    ooATest<span class="op">:</span> { roll<span class="op">:</span> int<span class="op">,</span> result<span class="op">:</span> <span class="st">&#39;passed&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span> effect<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  }<span class="op">&gt;,</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  agendasAttempted<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  agendasAchieved<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  battleReport<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>              <span class="co">// markdown</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-player form data — one BattleUpdate per player per battle.</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// A 1v1 game produces 2 BattleUpdates; a 4-player game produces 4.</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Each is its own ApprovalRequest, batchable in the CM inbox.</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  formData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span>                  <span class="co">// supplement-specific payload (PRD-4 §4.1, CrusadeSupplement.battleReportSchema)</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="bu">Array</span><span class="op">&lt;</span>{</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    unitId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    xpDelta<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    honourGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    scarGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    rankChange<span class="op">:</span> { from<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> to<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    ooATest<span class="op">:</span> { roll<span class="op">:</span> int<span class="op">,</span> result<span class="op">:</span> <span class="st">&#39;passed&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span> effect<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  }<span class="op">&gt;,</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  agendasAttempted<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  agendasAchieved<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  battleReport<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>              <span class="co">// markdown</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Auto-detected if this player&#39;s BattleUpdate conflicts with another</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// player&#39;s for the same battle (e.g., both claim victory).</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  disputed<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h4 id="rp_adjustment-crusade-points-cm-initiated"><code>rp_adjustment</code>
 (Crusade points — CM-initiated)</h4>
 <div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>{</span>
@@ -913,15 +920,60 @@ on</td>
 <td>Players cannot manually edit OoA results</td>
 </tr>
 <tr class="odd">
-<td><code>require_two_approvals: bool</code></td>
-<td>Battle updates that destroy units need two CM approvals</td>
-</tr>
-<tr class="even">
-<td><code>override_window_days: int</code></td>
-<td>Days within which an approval can be rolled back; default 7</td>
+<td><code>bulk_approve_max_batch_size: int</code></td>
+<td>Cap on how many approvals the CM can act on in one bulk action
+(default 50); prevents accidental mega-actions</td>
 </tr>
 </tbody>
 </table>
+<h3 id="approval-batching-model">9.1 Approval Batching Model</h3>
+<p>Per PRD-4 §4.1, each player in a battle files their own
+<code>BattleUpdate</code>. The batching model is
+<strong>per-ApprovalRequest</strong>, not per-battle:</p>
+<ul>
+<li><strong>1v1 battle</strong> = 2 BattleUpdates = 2 ApprovalRequests
+(<code>post_battle_update</code> × 2)</li>
+<li><strong>4-player free-for-all</strong> = 4 BattleUpdates = 4
+ApprovalRequests</li>
+<li>Each <code>post_battle_update</code> approval carries the player’s
+per-unit deltas for that battle only</li>
+</ul>
+<p>The CM inbox treats each ApprovalRequest as a row. Batching happens
+via:</p>
+<ol type="1">
+<li><strong>Auto-approve</strong>
+(<code>auto_approve_routine_battle_updates</code>): routine
+BattleUpdates (no OoA failures, no requisition, no disputes)
+auto-approve at submission time, never entering the inbox.</li>
+<li><strong>Bulk approve (inbox)</strong>: CM selects N rows and clicks
+“Approve N selected” (PRD-1 §6b Flow 2). The bulk action refuses if any
+selected item is non-routine; non-routine items are skipped with a clear
+reason. Max batch size capped by
+<code>bulk_approve_max_batch_size</code>.</li>
+<li><strong>Battle-context grouping</strong>: the inbox groups
+BattleUpdates from the same Battle under a “Battle 22” expandable row,
+so the CM sees them as one battle-context but approves them as separate
+requests. Disputed BattleUpdates (e.g., both players claim victory per
+<code>post_battle_update.disputed</code>) surface with a dispute
+flag.</li>
+</ol>
+<p><strong>Why per-player approvals, not per-battle:</strong> the user
+observed that battle updates are sent in via supplement-specific forms,
+and each player fills their own form (sometimes on a single shared
+sheet, sometimes separately). Modeling as per-player approvals keeps: -
+The audit trail clean (who claimed what) - Dispute detection automatic
+(system detects conflicting results) - Bulk-approve ergonomic (a routine
+1v1 battle’s 2 approvals bulk-approve in one click; a routine 4-player
+game bulk-approves all 4 in one click) - Future flexibility (Nachmund’s
+4-player BattleRecord Sheets map naturally to 4 ApprovalRequests)</p>
+<p><strong>Batching does NOT collapse across kinds.</strong> A CM cannot
+bulk-approve a mix of <code>post_battle_update</code> +
+<code>roster_approval</code> + <code>requisition_purchase</code> in one
+click — the inbox filters by kind, and the CM bulk-acts within one kind
+only. | <code>require_two_approvals: bool</code> | Battle updates that
+destroy units need two CM approvals | |
+<code>override_window_days: int</code> | Days within which an approval
+can be rolled back; default 7 |</p>
 <hr />
 <h2 id="user-flow-roster-approval">10. User Flow: Roster Approval</h2>
 <pre class="mermaid"><code>flowchart TD
