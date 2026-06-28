@@ -476,87 +476,98 @@ XLSX</li>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Campaign ===</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Teams are MANDATORY in v1: every campaign has at least one team. Free-for-all</span></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">// mode is out of scope.</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> tenantId<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> settings<span class="op">,</span> createdAt }</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>CampaignTeam {</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span> name<span class="op">,</span> description<span class="op">,</span> color<span class="op">,</span> narrativeLogFilter<span class="op">,</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Narrative intent: which 40K factions fit this team&#39;s story. NOT enforced</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">// by the app — the rule engine surfaces a soft warn, and the CM has final</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// approval on every roster. Books (e.g., Armageddon) ship with these pre-filled.</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  expectedFactionIds<span class="op">:</span> <span class="dt">string</span>[] <span class="op">|</span> <span class="dt">null</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>CampaignMember { id<span class="op">,</span> campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId<span class="op">,</span> teamId<span class="op">:</span> CampaignTeam[<span class="st">&#39;id&#39;</span>] }</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (state machine) ===</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>Roster {</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  teamId<span class="op">,</span>                                  <span class="co">// snapshotted from CampaignMember at creation;</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>                                          <span class="co">// re-associating to a new team requires CM action</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  currentDraftId<span class="op">,</span> currentApprovedId</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>Campaign {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> settings<span class="op">,</span> createdAt<span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-campaign pinned JSON Schema for the post-battle update form.</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set at campaign creation: copied from CrusadeSupplement.battleReportSchema</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="co">// at that moment. Future updates to the supplement&#39;s schema do NOT affect</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// in-flight campaigns — the form is locked for the campaign&#39;s lifetime.</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// CM-customizable in principle (homebrew forms); v1 has no UI to author</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// them, but the field exists so a v1.x schema editor can write here.</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>CampaignTeam {</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span> name<span class="op">,</span> description<span class="op">,</span> color<span class="op">,</span> narrativeLogFilter<span class="op">,</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Narrative intent: which 40K factions fit this team&#39;s story. NOT enforced</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// by the app — the rule engine surfaces a soft warn, and the CM has final</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">// approval on every roster. Books (e.g., Armageddon) ship with these pre-filled.</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  expectedFactionIds<span class="op">:</span> <span class="dt">string</span>[] <span class="op">|</span> <span class="dt">null</span></span>
 <span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>RosterDraft {</span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> rosterId<span class="op">,</span></span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  sourceJsonBlobId<span class="op">,</span>                  <span class="co">// MinIO key</span></span>
-<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  sourceParserVersion<span class="op">,</span>               <span class="co">// e.g. &#39;bs-roster-parser@1.0.0&#39;</span></span>
-<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  parserOutputJson<span class="op">,</span>                  <span class="co">// the RosterSummary.to_dict() snapshot</span></span>
-<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  appParseOutputJson<span class="op">,</span>                <span class="co">// app-side extraction (Order of Battle, requisitions, honours)</span></span>
-<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;parsing&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_review&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_approval&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span></span>
-<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
-<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  parseError<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>RosterApproved {</span>
-<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> rosterId<span class="op">,</span> sourceDraftId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId<span class="op">,</span></span>
-<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  snapshot<span class="op">,</span> pointLimit<span class="op">,</span></span>
-<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Snapshotted at approval time so the historical record keeps the team/faction</span></span>
-<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>  <span class="co">// alignment even if the player later switches teams or factions.</span></span>
-<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  factionId<span class="op">,</span> teamId<span class="op">,</span></span>
-<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">?</span></span>
-<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>RosterApprovalHistory { rosterId<span class="op">,</span> approvedId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId }  <span class="co">// chron. list</span></span>
-<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade state (lives on RosterApproved or on app-extracted draft data) ===</span></span>
-<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>CrusadeForceState { supplementId<span class="op">,</span> supplyLimit<span class="op">?,</span> logisticsPoints<span class="op">?,</span> battleTally<span class="op">,</span> victories<span class="op">,</span> requisitions<span class="op">,</span> alignment<span class="op">?,</span> <span class="op">...</span> }</span>
-<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
-<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>Battle {</span>
-<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span></span>
-<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>  playerAId<span class="op">,</span> playerBId<span class="op">,</span></span>
-<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>  scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId<span class="op">,</span></span>
-<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>  approvedRosterIdA<span class="op">,</span> approvedRosterIdB  <span class="co">// pinned at battle time</span></span>
-<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status }</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>CampaignMember { id<span class="op">,</span> campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId<span class="op">,</span> teamId<span class="op">:</span> CampaignTeam[<span class="st">&#39;id&#39;</span>] }</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (state machine) ===</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>Roster {</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  teamId<span class="op">,</span>                                  <span class="co">// snapshotted from CampaignMember at creation;</span></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>                                          <span class="co">// re-associating to a new team requires CM action</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  currentDraftId<span class="op">,</span> currentApprovedId</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>RosterDraft {</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> rosterId<span class="op">,</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>  sourceJsonBlobId<span class="op">,</span>                  <span class="co">// MinIO key</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  sourceParserVersion<span class="op">,</span>               <span class="co">// e.g. &#39;bs-roster-parser@1.0.0&#39;</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  parserOutputJson<span class="op">,</span>                  <span class="co">// the RosterSummary.to_dict() snapshot</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>  appParseOutputJson<span class="op">,</span>                <span class="co">// app-side extraction (Order of Battle, requisitions, honours)</span></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;parsing&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_review&#39;</span> <span class="op">|</span> <span class="st">&#39;pending_approval&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span></span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a>  parseError<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>RosterApproved {</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> rosterId<span class="op">,</span> sourceDraftId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId<span class="op">,</span></span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true" tabindex="-1"></a>  snapshot<span class="op">,</span> pointLimit<span class="op">,</span></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Snapshotted at approval time so the historical record keeps the team/faction</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// alignment even if the player later switches teams or factions.</span></span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true" tabindex="-1"></a>  factionId<span class="op">,</span> teamId<span class="op">,</span></span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">?</span></span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true" tabindex="-1"></a>RosterApprovalHistory { rosterId<span class="op">,</span> approvedId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId }  <span class="co">// chron. list</span></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade state (lives on RosterApproved or on app-extracted draft data) ===</span></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>CrusadeForceState { supplementId<span class="op">,</span> supplyLimit<span class="op">?,</span> logisticsPoints<span class="op">?,</span> battleTally<span class="op">,</span> victories<span class="op">,</span> requisitions<span class="op">,</span> alignment<span class="op">?,</span> <span class="op">...</span> }</span>
 <span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="co">// === Rule engine ===</span></span>
-<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>RuleDefinition { id<span class="op">,</span> tenantId<span class="op">,</span> scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span> authorUserId<span class="op">?,</span> campaignId<span class="op">?,</span> ruleKey<span class="op">,</span> config<span class="op">,</span> enabled<span class="op">,</span> severity }</span>
-<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> draftId<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details }</span>
-<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (unified timeline) ===</span></span>
-<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId }</span>
-<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
-<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade supplements (per-book config) ===</span></span>
-<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co">// Each released Crusade book is one row. v1 ships Armageddon.</span></span>
-<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement {</span>
-<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span>                                  <span class="co">// e.g., &#39;armageddon&#39;, &#39;nachmund-gauntlet&#39; (v1.x+)</span></span>
-<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span></span>
-<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a>  releasedAt<span class="op">,</span></span>
-<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement JSON Schema for the post-battle update form.</span></span>
-<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The form UI auto-generates from this schema. Fields differ per book:</span></span>
-<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);</span></span>
-<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Nachmund has multi-player agendas and Crusade Blessings; etc.</span></span>
-<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a>  <span class="co">// null = fall back to the system-default standard Crusade battle report form.</span></span>
-<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement pre-filled content (e.g., Armageddon&#39;s Helsreach/Hades/Gorgutz/Skari teams)</span></span>
-<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>  seedData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span></span>
-<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
-<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
-<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
-<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
-<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true" tabindex="-1"></a>Battle {</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> campaignId<span class="op">,</span></span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true" tabindex="-1"></a>  playerAId<span class="op">,</span> playerBId<span class="op">,</span></span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true" tabindex="-1"></a>  scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId<span class="op">,</span></span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true" tabindex="-1"></a>  approvedRosterIdA<span class="op">,</span> approvedRosterIdB  <span class="co">// pinned at battle time</span></span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status }</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true" tabindex="-1"></a><span class="co">// === Rule engine ===</span></span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true" tabindex="-1"></a>RuleDefinition { id<span class="op">,</span> tenantId<span class="op">,</span> scope<span class="op">:</span> <span class="st">&#39;builtin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span><span class="op">,</span> authorUserId<span class="op">?,</span> campaignId<span class="op">?,</span> ruleKey<span class="op">,</span> config<span class="op">,</span> enabled<span class="op">,</span> severity }</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> draftId<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details }</span>
+<span id="cb3-70"><a href="#cb3-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-71"><a href="#cb3-71" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (unified timeline) ===</span></span>
+<span id="cb3-72"><a href="#cb3-72" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-73"><a href="#cb3-73" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb3-74"><a href="#cb3-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-75"><a href="#cb3-75" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade supplements (per-book config) ===</span></span>
+<span id="cb3-76"><a href="#cb3-76" aria-hidden="true" tabindex="-1"></a><span class="co">// Each released Crusade book is one row. v1 ships Armageddon.</span></span>
+<span id="cb3-77"><a href="#cb3-77" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement {</span>
+<span id="cb3-78"><a href="#cb3-78" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span>                                  <span class="co">// e.g., &#39;armageddon&#39;, &#39;nachmund-gauntlet&#39; (v1.x+)</span></span>
+<span id="cb3-79"><a href="#cb3-79" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span></span>
+<span id="cb3-80"><a href="#cb3-80" aria-hidden="true" tabindex="-1"></a>  releasedAt<span class="op">,</span></span>
+<span id="cb3-81"><a href="#cb3-81" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement default JSON Schema for the post-battle update form.</span></span>
+<span id="cb3-82"><a href="#cb3-82" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The form UI auto-generates from this schema. Fields differ per book:</span></span>
+<span id="cb3-83"><a href="#cb3-83" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);</span></span>
+<span id="cb3-84"><a href="#cb3-84" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Nachmund has multi-player agendas and Crusade Blessings; etc.</span></span>
+<span id="cb3-85"><a href="#cb3-85" aria-hidden="true" tabindex="-1"></a>  <span class="co">// null = fall back to the system-default standard Crusade battle report form.</span></span>
+<span id="cb3-86"><a href="#cb3-86" aria-hidden="true" tabindex="-1"></a>  <span class="co">// This is the supplement&#39;s CURRENT default; campaigns pin their own copy</span></span>
+<span id="cb3-87"><a href="#cb3-87" aria-hidden="true" tabindex="-1"></a>  <span class="co">// via Campaign.battleReportSchema below.</span></span>
+<span id="cb3-88"><a href="#cb3-88" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb3-89"><a href="#cb3-89" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement pre-filled content (e.g., Armageddon&#39;s Helsreach/Hades/Gorgutz/Skari teams)</span></span>
+<span id="cb3-90"><a href="#cb3-90" aria-hidden="true" tabindex="-1"></a>  seedData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span></span>
+<span id="cb3-91"><a href="#cb3-91" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-92"><a href="#cb3-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-93"><a href="#cb3-93" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
+<span id="cb3-94"><a href="#cb3-94" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId }</span>
+<span id="cb3-95"><a href="#cb3-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-96"><a href="#cb3-96" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
+<span id="cb3-97"><a href="#cb3-97" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
+<span id="cb3-98"><a href="#cb3-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-99"><a href="#cb3-99" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb3-100"><a href="#cb3-100" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
 <p><strong>Identifiers</strong>: UUIDv7.</p>
 <hr />
 <h2 id="b.-design-principle-approval-gating-for-narrative-integrity">4b.
@@ -632,6 +643,59 @@ Player UI preferences (theme, language, notification settings) -
 Player’s own drafts (private until submitted; once submitted, they enter
 the approval queue) - Per-unit cosmetics that don’t change game state
 (paint color, custom name drafts)</p>
+<h3 id="b.2-architectural-principle-new-recruit-is-the-source-of-truth-for-unitroster-state">4b.2
+Architectural Principle: New Recruit is the Source of Truth for
+Unit/Roster State</h3>
+<blockquote>
+<p><strong>Unit and roster data — XP, traits, battle honours, battle
+scars, relics, wargear, all of it — lives in New Recruit. This app reads
+from NR (via the parser pipeline), displays the parsed data beautifully,
+and provides NO surface to mutate it.</strong></p>
+</blockquote>
+<p><strong>Why:</strong> mutating unit data in this app would mean our
+code knows the rules of those systems — which characters can take which
+relics, which honours are valid for which unit types, the legal wargear
+per datasheet, etc. That couples us to Games Workshop’s rules in a way
+that creates a permanent anti-pattern: every time GW updates a codex,
+we’d be playing catch-up. New Recruit is already the canonical tool for
+this; we lean on it.</p>
+<p><strong>What this means concretely:</strong></p>
+<ul>
+<li>The player edits in NR, exports JSON, uploads here. Our parser reads
+the new state and displays it.</li>
+<li>The roster pipeline (PRD-3) extracts unit data from the JSON via
+<code>bs-roster-parser</code> + the app-side-parser; this is
+<strong>read-only display data</strong>, never written back to NR.</li>
+<li>The rule engine (PRD-3 §6.4) enforces
+<strong>campaign-level</strong> rules only (point caps, faction locks,
+unit caps by catalog name, team narrative alignment). It does NOT
+enforce unit-level rules like “this character can’t take that
+relic.”</li>
+<li>The post-battle update form (PRD-4 §4.1) collects
+<strong>campaign-level</strong> data only (mission, result, agendas,
+narrative battle report). Per-unit XP/honour/scar/relic changes happen
+in NR; our app records the new roster version that resulted from the
+battle.</li>
+<li>Per-unit timeline views (PRD-2 §6 Flow 4) show events derived from
+NR re-imports — “this unit went from 5 XP to 8 XP because you
+re-imported on YYYY-MM-DD with the post-battle roster.”</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol type="1">
+<li>Player plays a battle (in person)</li>
+<li>Player updates their NR list with the battle’s effects (XP, honours,
+scars, etc.)</li>
+<li>Player exports NR JSON, uploads to this app</li>
+<li>App parses, shows the new unit state (read-only display)</li>
+<li>Player files a post-battle update in this app (campaign-level:
+mission, agendas, narrative)</li>
+<li>CM approves the battle report (and/or the new roster)</li>
+<li>Campaign-level events fire (agenda scoring, RP adjustment, narrative
+log entry); unit state is unchanged in our app because it was already
+updated via the re-import</li>
+</ol>
+<p>This keeps the system clean: NR owns unit data, our app owns campaign
+data, neither tries to do the other’s job.</p>
 <hr />
 <h2 id="subsystem-prds">5. Subsystem PRDs</h2>
 <table>

@@ -145,7 +145,16 @@ Roles = 'instance_admin' | 'cm' | 'player' | 'spectator'   // user can hold mult
 // === Campaign ===
 // Teams are MANDATORY in v1: every campaign has at least one team. Free-for-all
 // mode is out of scope.
-Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt }
+Campaign {
+  id, tenantId, name, supplementId, cmUserId, status, settings, createdAt,
+  // Per-campaign pinned JSON Schema for the post-battle update form.
+  // Set at campaign creation: copied from CrusadeSupplement.battleReportSchema
+  // at that moment. Future updates to the supplement's schema do NOT affect
+  // in-flight campaigns — the form is locked for the campaign's lifetime.
+  // CM-customizable in principle (homebrew forms); v1 has no UI to author
+  // them, but the field exists so a v1.x schema editor can write here.
+  battleReportSchema: object | null,
+}
 CampaignTeam {
   id, campaignId, name, description, color, narrativeLogFilter,
   // Narrative intent: which 40K factions fit this team's story. NOT enforced
@@ -208,11 +217,13 @@ CrusadeSupplement {
   id,                                  // e.g., 'armageddon', 'nachmund-gauntlet' (v1.x+)
   name,
   releasedAt,
-  // Per-supplement JSON Schema for the post-battle update form.
+  // Per-supplement default JSON Schema for the post-battle update form.
   // The form UI auto-generates from this schema. Fields differ per book:
   // Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);
   // Nachmund has multi-player agendas and Crusade Blessings; etc.
   // null = fall back to the system-default standard Crusade battle report form.
+  // This is the supplement's CURRENT default; campaigns pin their own copy
+  // via Campaign.battleReportSchema below.
   battleReportSchema: object | null,
   // Per-supplement pre-filled content (e.g., Armageddon's Helsreach/Hades/Gorgutz/Skari teams)
   seedData: object,
@@ -254,6 +265,32 @@ The principle is **open-ended**: any future operation that touches shared campai
 - Player UI preferences (theme, language, notification settings)
 - Player's own drafts (private until submitted; once submitted, they enter the approval queue)
 - Per-unit cosmetics that don't change game state (paint color, custom name drafts)
+
+### 4b.2 Architectural Principle: New Recruit is the Source of Truth for Unit/Roster State
+
+> **Unit and roster data — XP, traits, battle honours, battle scars, relics, wargear, all of it — lives in New Recruit. This app reads from NR (via the parser pipeline), displays the parsed data beautifully, and provides NO surface to mutate it.**
+
+**Why:** mutating unit data in this app would mean our code knows the rules of those systems — which characters can take which relics, which honours are valid for which unit types, the legal wargear per datasheet, etc. That couples us to Games Workshop's rules in a way that creates a permanent anti-pattern: every time GW updates a codex, we'd be playing catch-up. New Recruit is already the canonical tool for this; we lean on it.
+
+**What this means concretely:**
+
+- The player edits in NR, exports JSON, uploads here. Our parser reads the new state and displays it.
+- The roster pipeline (PRD-3) extracts unit data from the JSON via `bs-roster-parser` + the app-side-parser; this is **read-only display data**, never written back to NR.
+- The rule engine (PRD-3 §6.4) enforces **campaign-level** rules only (point caps, faction locks, unit caps by catalog name, team narrative alignment). It does NOT enforce unit-level rules like "this character can't take that relic."
+- The post-battle update form (PRD-4 §4.1) collects **campaign-level** data only (mission, result, agendas, narrative battle report). Per-unit XP/honour/scar/relic changes happen in NR; our app records the new roster version that resulted from the battle.
+- Per-unit timeline views (PRD-2 §6 Flow 4) show events derived from NR re-imports — "this unit went from 5 XP to 8 XP because you re-imported on YYYY-MM-DD with the post-battle roster."
+
+**Workflow:**
+
+1. Player plays a battle (in person)
+2. Player updates their NR list with the battle's effects (XP, honours, scars, etc.)
+3. Player exports NR JSON, uploads to this app
+4. App parses, shows the new unit state (read-only display)
+5. Player files a post-battle update in this app (campaign-level: mission, agendas, narrative)
+6. CM approves the battle report (and/or the new roster)
+7. Campaign-level events fire (agenda scoring, RP adjustment, narrative log entry); unit state is unchanged in our app because it was already updated via the re-import
+
+This keeps the system clean: NR owns unit data, our app owns campaign data, neither tries to do the other's job.
 
 ---
 

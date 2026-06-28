@@ -143,48 +143,51 @@ flowchart TD
     N --> P[Both players' active Roster unchanged; events live in timeline]
 ```
 
-### 4.1 Battle Update Form — Supplement-Specific
+### 4.1 Battle Update Form — Supplement-Specific, Campaign-Level Only
 
 Each player in a battle files **their own** `BattleUpdate`. A 1v1 battle = 2 BattleUpdates (one per player); a 4-player free-for-all = 4 BattleUpdates. Each becomes its own `ApprovalRequest { kind: 'post_battle_update' }` (PRD-5 §3.2). The CM bulk-approves routine ones via the inbox; disputes (e.g., both players claim victory) surface as a `disputed` flag on both.
 
-**Form schema is per `CrusadeSupplement`:**
+**Form is campaign-level only (per PRD-0 §4b.2):**
 
-`CrusadeSupplement.battleReportSchema: JSONSchema | null` (PRD-0 §4). The form UI auto-generates from this schema. Different Crusade books define different forms:
+Per the architectural principle that **unit/roster data lives in NR**, this app's battle update form collects only **campaign-level** data. Per-unit XP gains, honour assignments, scar acquisitions, relic pickups, OoA test rolls — all of that happens in New Recruit. The player updates their NR list after the battle, exports JSON, and uploads it. The diff between the pre-battle and post-battle NR rosters is how the app represents unit changes from a battle; this is **read-only display data**, not a form field.
 
-| Supplement | Form structure (per `battleReportSchema`) |
-|---|---|
-| **Armageddon (v1)** | Standard Crusade form: agendas (1-3 from supplement list), per-unit XP/honour/scar, OoA tests, free-text battle report. Derived from the universal Crusade rules. |
-| **Nachmund Gauntlet (v1.x)** | Multi-player agendas (up to 4 players), Crusade Blessings, per-unit XP. The Nachmund Mission Record Sheet the user linked has columns for up to 4 players, each with AGENDA / UNIT(S) / TALLY / CRUSADE BLESSINGS. |
-| **Other (v2+)** | Each book's unique form, hand-encoded or auto-derived from a published PDF. |
+What this app's form DOES collect:
+- **Opponent** (must be a valid `CampaignMember`)
+- **Mission** (free text or pick from a campaign-specific list)
+- **Result** (win / loss / draw)
+- **Agendas attempted** (checklist from the active supplement's agenda list)
+- **Agendas achieved** (subset)
+- **Free-text battle report** (markdown; min chars per `Campaign.require_battle_report_chars`)
+- **Source roster reference** (`sourceRosterApprovedId` — the NR roster the player used for this battle)
+- **Reference to the new roster** (if the player re-imported mid-flow, the new `RosterDraft` id; this is what shows the post-battle unit state)
 
-**System default:** if `CrusadeSupplement.battleReportSchema` is null, the form falls back to the **standard Crusade battle report**:
+What this app's form does NOT collect (per PRD-0 §4b.2):
+- Per-unit XP, honours, scars, relics, wargear changes — those happen in NR
+- OoA test results — those are in NR (the player rolls the D6, marks the result)
+- Unit roster mutations of any kind
 
-- Opponent (must be a valid `CampaignMember` from the same campaign)
-- Mission played (free text or pick from a campaign-specific list)
-- Result (win / loss / draw)
-- Agendas attempted (checklist from active supplement's agenda list, derived from Wahapedia CSV cache)
-- Agendas achieved (subset)
-- Per-unit: XP gained (default 3 per Crusade rules)
-- Per-unit: OoA test result (if any units were destroyed; auto-suggested when the form detects a unit's models went below 50%)
-- Per-unit: honours / scars (dropdown from the active supplement's catalogue)
-- Requisitions purchased (link to the requisition shop)
-- Free-text battle report (markdown; min chars per `Campaign.require_battle_report_chars`)
+**Form schema is per `Campaign` (pinned at creation):**
+
+`Campaign.battleReportSchema: JSONSchema | null` is **set at campaign creation** by copying `CrusadeSupplement.battleReportSchema` at that moment. Once pinned, the schema does not change for the campaign's lifetime — even if the underlying supplement later updates its schema. This guarantees a campaign's form is stable. Custom schemas per campaign are possible in principle (CM homebrew) but v1 has no UI to author them; v1.x may add a schema editor.
+
+**v1 ships defaults per supplement:**
+- **Armageddon (v1)**: standard Crusade form — opponent, mission, result, agendas attempted/achieved, free-text battle report, sourceRosterApprovedId.
+- **Nachmund Gauntlet (v1.x)**: multi-player form — same fields plus per-player Crusade Blessings.
+- The system default covers Armageddon v1 without bespoke UI.
 
 **Form UX behavior:**
-- The form is auto-generated from the JSON Schema at runtime. No hand-coded UI per supplement.
+- The form is auto-generated from the pinned `Campaign.battleReportSchema` at runtime.
 - Validation rules from the schema (e.g., "exactly 1 result", "1-3 agendas attempted") fire on submit.
 - Required fields surface inline before submit.
-- Players see a preview of the resulting delta ("Sarah's Cadian Castellan: +3 XP, +1 honour (Slayer of Monsters)") before submitting.
-
-**Why supplement-specific:** the user pointed out that "some crusades have a specific form to fill" — Nachmund has a different form than Armageddon, and per-book Crusade decks may add their own. The JSON-Schema-driven form makes adding a new supplement a data operation, not a code change. The system default covers Armageddon (v1) without bespoke UI.
+- Players see a preview of the resulting campaign-level delta ("Sarah's Helsreach Defenders: agenda 'Extermination Targets' achieved, +1 RP") before submitting. Per-unit deltas are NOT in the form; they show up as a side-by-side roster diff (read-only display) sourced from the linked roster versions.
 
 **Disambiguation: 3 different per-Crusade PDFs:**
 
 | PDF the user linked | What it represents in the app |
 |---|---|
-| `ArmageddonCrusadeCards.pdf` | Per-unit tracking card — derived from `CrusadeForceState[unit]`. UI: per-unit timeline view (PRD-2 §6 Flow 4). Auto-generated, no form to fill. |
-| `ArmageddonBlankOrderOfBattle.pdf` | Roster-level snapshot — derived from `RosterApproved`. UI: printable roster view (auto-generated). No form to fill. |
-| `MissionRecordSheet.pdf` (Nachmund) | Per-battle form — the supplement-specific piece. UI: post-battle update form. JSON Schema-driven. |
+| `ArmageddonCrusadeCards.pdf` | Per-unit tracking card — derived from NR roster's unit state. UI: per-unit timeline view (PRD-2 §6 Flow 4). Auto-generated, **read-only display**. No form to fill. |
+| `ArmageddonBlankOrderOfBattle.pdf` | Roster-level snapshot — derived from `RosterApproved`. UI: printable roster view (auto-generated, read-only). No form to fill. |
+| `MissionRecordSheet.pdf` (Nachmund) | Per-battle form — the supplement-specific piece. UI: post-battle update form. JSON Schema-driven, campaign-level only. |
 
 ### 4.2 Per-Unit Change Entry
 

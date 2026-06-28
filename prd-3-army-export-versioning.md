@@ -77,6 +77,8 @@ The parser does **not** currently extract:
 
 These are parsed by a **TypeScript pass** over the raw JSON (in the worker, after the Python parser returns). This pass is a separate module (`app-side-parser.ts`) and is testable independently of the Python subprocess.
 
+**Read-only display contract (per PRD-0 §4b.2):** every field the parser extracts — units, costs, models, weapons, requisitions, honours, scars, rank, XP, custom names — is **read-only display data** in this app. The app never writes unit data back to NR and never offers an in-app surface to mutate it. Players edit unit data in NR, re-export, re-upload; the diff between two RosterApproved snapshots is how the app represents "what happened to your units between battles."
+
 ### 3.3 The contract
 
 **Input** (worker → Python subprocess):
@@ -182,6 +184,10 @@ Implementation: walk the same `roster.forces[0].selections` tree that the Python
 ---
 
 ## 6. The Rule Engine (CONFIGURABLE)
+
+**Scope of rule engine — campaign-level only (per PRD-0 §4b.2):**
+
+The rule engine enforces **campaign-level rules** — point caps, faction locks, unit caps by catalog name, wargear restrictions applied across the whole army, unit whitelist/blacklist, team narrative alignment. It does NOT enforce unit-level rules like "this character can't take that relic" or "this honour isn't on the unit's crusade card" — those are Games Workshop's rules and live in New Recruit. This app never tries to be a rules adjudicator for unit data.
 
 ### 6.1 Architecture
 

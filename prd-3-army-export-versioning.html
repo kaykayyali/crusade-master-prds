@@ -307,6 +307,14 @@ NR-specific fields may not be)</p>
 JSON (in the worker, after the Python parser returns). This pass is a
 separate module (<code>app-side-parser.ts</code>) and is testable
 independently of the Python subprocess.</p>
+<p><strong>Read-only display contract (per PRD-0 §4b.2):</strong> every
+field the parser extracts — units, costs, models, weapons, requisitions,
+honours, scars, rank, XP, custom names — is <strong>read-only display
+data</strong> in this app. The app never writes unit data back to NR and
+never offers an in-app surface to mutate it. Players edit unit data in
+NR, re-export, re-upload; the diff between two RosterApproved snapshots
+is how the app represents “what happened to your units between
+battles.”</p>
 <h3 id="the-contract">3.3 The contract</h3>
 <p><strong>Input</strong> (worker → Python subprocess): - Stdin: the raw
 roster JSON string - Or argv: <code>--file &lt;path&gt;</code> for large
@@ -453,6 +461,16 @@ relatively shallow walk; no fancy recursion needed.</p>
 <hr />
 <h2 id="the-rule-engine-configurable">6. The Rule Engine
 (CONFIGURABLE)</h2>
+<p><strong>Scope of rule engine — campaign-level only (per PRD-0
+§4b.2):</strong></p>
+<p>The rule engine enforces <strong>campaign-level rules</strong> —
+point caps, faction locks, unit caps by catalog name, wargear
+restrictions applied across the whole army, unit whitelist/blacklist,
+team narrative alignment. It does NOT enforce unit-level rules like
+“this character can’t take that relic” or “this honour isn’t on the
+unit’s crusade card” — those are Games Workshop’s rules and live in New
+Recruit. This app never tries to be a rules adjudicator for unit
+data.</p>
 <h3 id="architecture">6.1 Architecture</h3>
 <p>A rule is a TypeScript module implementing this interface:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RuleDefinition {</span>

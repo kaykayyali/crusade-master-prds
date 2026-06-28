@@ -195,31 +195,33 @@ Sarah's success criteria for this app:
 
 ### Flow 2: Filing a post-battle update
 
-**Trigger:** Sarah just played a 2000-pt game against Mike's Tyranids and won. She's at home, tired, but wants to file the update before she forgets the details.
+**Trigger:** Sarah just played a 2000-pt game against Mike's Tyranids and won. She's at home, tired. She already updated her NR list with the battle's effects (XP, honours, scars, etc.) and re-exported the JSON; the post-battle roster is now visible in her army view. She wants to file the campaign-level update.
 
-**Why this matters:** This is the most data-entry-heavy moment. Sarah has to remember what happened, translate it to the app's schema, and submit. If the form is annoying, she puts it off until tomorrow — and forgets.
+**Why this matters:** This is the moment where the campaign's narrative moves forward. The form is intentionally lighter than per-unit data entry because, per PRD-0 §4b.2, **unit data lives in NR** — Sarah already did the per-unit work in NR. The form here is for the campaign-level record: what happened, who won, what agendas were achieved.
 
 **UI requirements:**
 
 - **The "File Battle Update" button is on the campaign dashboard, prominent, never more than 2 clicks from the campaign home.**
+- **Form is auto-generated from `Campaign.battleReportSchema`** (PRD-4 §4.1) and is **campaign-level only**. Per-unit XP/honour/scar/relic fields are deliberately absent.
 - **Form is pre-filled with what the system can infer:**
   - Opponent: a member-list dropdown filtered to her campaign, sorted by "recently played" (Mike is at the top)
   - Date: today
   - Result: a single "I won" / "I lost" / "Draw" toggle
   - Mission: text input, with autocomplete from prior missions this campaign
-- **Per-unit changes default to the universal Crusade rules:**
-  - All units gain 3 XP (pre-checked)
-  - OoA test section appears only if at least one unit has <50% models remaining
+  - Source roster: defaulted to Sarah's currently approved roster. A dropdown lets her pick a different one if she used an older roster for this battle.
 - **Agendas section is explicit:** Armageddon agendas (e.g., "Extermination Targets" for Astra Militarum) appear in a checklist. Sarah ticks which she attempted, then ticks which she achieved. The system doesn't compute the agenda outcome — that's the CM's verification job.
 - **Battle report is a markdown textarea** with a "min 200 chars" hint if the campaign's `require_battle_report` is on. Sarah types 3-4 sentences; the form shows a live char count.
+- **Side panel: read-only roster diff.** The form shows the diff between `sourceRosterApprovedId` and Sarah's most recently uploaded post-battle roster (if any). This is the visual proof of what happened to her units in this battle — but it's **read-only display**, sourced from NR. Sarah can't edit per-unit fields here; she goes to NR if she needs to fix something.
 - **"Save as draft" and "Submit" are both available.** If Sarah runs out of time, she saves and comes back.
-- **On submit, the form transitions to a "Pending Mike's review" card** with the timestamp, the deltas that will be applied, and a "view what will change" expander.
+- **On submit, the form transitions to a "Pending Mike's review" card** with the timestamp, the campaign-level deltas that will be applied, and a "view what will change" expander showing agenda outcomes and roster diff.
 
-**Critical moment:** The OoA test. If a unit was destroyed, Sarah needs to record the OoA test (D6 roll) and the result (failed → XP loss or honour-scar swap). The form should auto-suggest "this unit was destroyed; OoA test required." If Sarah forgets, the form highlights it in red on submit and refuses to send. (Optional v1.x: the OoA test could be a D6 roller built into the form, so Sarah doesn't have to find a physical die. v1 has a manual D6 input field.)
+**Critical moment:** The "did Sarah actually re-import her NR list with the post-battle roster?" question. The form's side panel shows a warning if the source roster is older than the player's most recent upload: "Your post-battle roster hasn't been imported yet. The unit diff shown is based on your last approved roster. Re-import your NR list to see the post-battle state." This nudges Sarah to upload first, then file the report — getting the order right matters for the audit trail.
 
 **Edge case:** Sarah wins, files the update, then realizes she made a mistake. The update is "pending." Sarah clicks "withdraw" and starts over. Mike never sees the broken version.
 
 **Edge case:** Sarah and Mike disagree on the result. Mike files his own update saying he won. The system flags `BattleUpdate.disputed`; both updates are in the inbox with the other's as context. Mike (as CM) adjudicates.
+
+**Edge case:** Sarah files a battle update referencing a roster that's been superseded. The system warns: "Your referenced roster is no longer your active roster (you uploaded a newer version 2 days ago). Update the reference, or proceed with the original?" Sarah can either pick the newer roster or confirm the older one — explicit user choice.
 
 ### Flow 3: Buying a requisition
 
@@ -251,15 +253,17 @@ Sarah's success criteria for this app:
 **UI requirements:**
 
 - **Per-unit timeline view** on the roster page. Click a unit, see its event history.
-- **Each event is a 1-line narrative card** with an icon (XP gain, rank promotion, honour gained, OoA test, requisition added) and a date.
+- **Each event is a 1-line narrative card** with an icon (XP gain, rank promotion, honour gained, OoA test, requisition added) and a date. Most events are sourced from NR roster diffs — "this unit went from 5 XP to 8 XP because you re-imported on YYYY-MM-DD" — with the linked battle report inline. Per PRD-0 §4b.2, the timeline shows NR state changes as read-only display; it doesn't try to record per-unit changes that aren't in NR.
 - **Filter by event kind.** "Show me all my OoA tests" or "Show me every rank promotion."
 - **Battle reports are expandable in-line** so Sarah can re-read what happened in the battle that caused this event.
 - **Compare to active vs. archived timelines.** If a unit was destroyed and Sarah bought a replacement, the destroyed unit's timeline is preserved separately; the new unit starts fresh.
 - **Export as markdown.** Sarah can paste her army's story into a Discord channel or a print-out for the table.
 
-**Critical moment:** The very first time Sarah opens a unit's timeline and sees "Battle-ready → Battle-hardened on 2026-08-15 (Battle vs. Mike's Tyranids, +3 XP). Battle Scar 'Lost in the Fog' gained 2026-08-22 (OoA test failed in Battle 22, honour-scar swap)." That's the moment she tells her friends about the app.
+**Critical moment:** The very first time Sarah opens a unit's timeline and sees "Battle-ready → Battle-hardened on 2026-08-15 (Battle vs. Mike's Tyranids, +3 XP). Battle Scar 'Lost in the Fog' gained 2026-08-22 (OoA test failed in Battle 22, honour-scar swap)." That's the moment she tells her friends about the app. The "Lost in the Fog" entry is shown because Sarah's NR list says the unit has that scar — the timeline is reading NR state, not app-side data.
 
 **Edge case:** A unit from a NR list that was rejected and re-imported has two timelines. The current unit is the latest; the previous one is in the audit log. Sarah can drill in but the UI surfaces "this is the second version of this unit; the first was rejected on YYYY-MM-DD."
+
+**Edge case:** A unit was destroyed in NR (player removed it from the list) but never re-imported into the app. The app still shows the unit's last-known state. The timeline surfaces: "this unit was last seen in your YYYY-MM-DD NR import; you haven't re-imported since." Sarah can either re-import the latest NR (which won't have the unit) or upload a roster with the unit back in (a `requisition_purchase` was probably involved).
 
 ---
 

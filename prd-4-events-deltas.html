@@ -368,8 +368,8 @@ the Timeline.</p>
     M --&gt;|Yes| N[Apply events with activeRosterApprovedId set]
     M --&gt;|No| O[Rejected, submitter can edit + resubmit]
     N --&gt; P[Both players&#39; active Roster unchanged; events live in timeline]</code></pre>
-<h3 id="battle-update-form-supplement-specific">4.1 Battle Update Form —
-Supplement-Specific</h3>
+<h3 id="battle-update-form-supplement-specific-campaign-level-only">4.1
+Battle Update Form — Supplement-Specific, Campaign-Level Only</h3>
 <p>Each player in a battle files <strong>their own</strong>
 <code>BattleUpdate</code>. A 1v1 battle = 2 BattleUpdates (one per
 player); a 4-player free-for-all = 4 BattleUpdates. Each becomes its own
@@ -377,78 +377,57 @@ player); a 4-player free-for-all = 4 BattleUpdates. Each becomes its own
 §3.2). The CM bulk-approves routine ones via the inbox; disputes (e.g.,
 both players claim victory) surface as a <code>disputed</code> flag on
 both.</p>
-<p><strong>Form schema is per
-<code>CrusadeSupplement</code>:</strong></p>
-<p><code>CrusadeSupplement.battleReportSchema: JSONSchema | null</code>
-(PRD-0 §4). The form UI auto-generates from this schema. Different
-Crusade books define different forms:</p>
-<table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Supplement</th>
-<th>Form structure (per <code>battleReportSchema</code>)</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><strong>Armageddon (v1)</strong></td>
-<td>Standard Crusade form: agendas (1-3 from supplement list), per-unit
-XP/honour/scar, OoA tests, free-text battle report. Derived from the
-universal Crusade rules.</td>
-</tr>
-<tr class="even">
-<td><strong>Nachmund Gauntlet (v1.x)</strong></td>
-<td>Multi-player agendas (up to 4 players), Crusade Blessings, per-unit
-XP. The Nachmund Mission Record Sheet the user linked has columns for up
-to 4 players, each with AGENDA / UNIT(S) / TALLY / CRUSADE
-BLESSINGS.</td>
-</tr>
-<tr class="odd">
-<td><strong>Other (v2+)</strong></td>
-<td>Each book’s unique form, hand-encoded or auto-derived from a
-published PDF.</td>
-</tr>
-</tbody>
-</table>
-<p><strong>System default:</strong> if
-<code>CrusadeSupplement.battleReportSchema</code> is null, the form
-falls back to the <strong>standard Crusade battle report</strong>:</p>
-<ul>
-<li>Opponent (must be a valid <code>CampaignMember</code> from the same
-campaign)</li>
-<li>Mission played (free text or pick from a campaign-specific
-list)</li>
-<li>Result (win / loss / draw)</li>
-<li>Agendas attempted (checklist from active supplement’s agenda list,
-derived from Wahapedia CSV cache)</li>
-<li>Agendas achieved (subset)</li>
-<li>Per-unit: XP gained (default 3 per Crusade rules)</li>
-<li>Per-unit: OoA test result (if any units were destroyed;
-auto-suggested when the form detects a unit’s models went below
-50%)</li>
-<li>Per-unit: honours / scars (dropdown from the active supplement’s
-catalogue)</li>
-<li>Requisitions purchased (link to the requisition shop)</li>
-<li>Free-text battle report (markdown; min chars per
-<code>Campaign.require_battle_report_chars</code>)</li>
-</ul>
+<p><strong>Form is campaign-level only (per PRD-0 §4b.2):</strong></p>
+<p>Per the architectural principle that <strong>unit/roster data lives
+in NR</strong>, this app’s battle update form collects only
+<strong>campaign-level</strong> data. Per-unit XP gains, honour
+assignments, scar acquisitions, relic pickups, OoA test rolls — all of
+that happens in New Recruit. The player updates their NR list after the
+battle, exports JSON, and uploads it. The diff between the pre-battle
+and post-battle NR rosters is how the app represents unit changes from a
+battle; this is <strong>read-only display data</strong>, not a form
+field.</p>
+<p>What this app’s form DOES collect: - <strong>Opponent</strong> (must
+be a valid <code>CampaignMember</code>) - <strong>Mission</strong> (free
+text or pick from a campaign-specific list) - <strong>Result</strong>
+(win / loss / draw) - <strong>Agendas attempted</strong> (checklist from
+the active supplement’s agenda list) - <strong>Agendas achieved</strong>
+(subset) - <strong>Free-text battle report</strong> (markdown; min chars
+per <code>Campaign.require_battle_report_chars</code>) - <strong>Source
+roster reference</strong> (<code>sourceRosterApprovedId</code> — the NR
+roster the player used for this battle) - <strong>Reference to the new
+roster</strong> (if the player re-imported mid-flow, the new
+<code>RosterDraft</code> id; this is what shows the post-battle unit
+state)</p>
+<p>What this app’s form does NOT collect (per PRD-0 §4b.2): - Per-unit
+XP, honours, scars, relics, wargear changes — those happen in NR - OoA
+test results — those are in NR (the player rolls the D6, marks the
+result) - Unit roster mutations of any kind</p>
+<p><strong>Form schema is per <code>Campaign</code> (pinned at
+creation):</strong></p>
+<p><code>Campaign.battleReportSchema: JSONSchema | null</code> is
+<strong>set at campaign creation</strong> by copying
+<code>CrusadeSupplement.battleReportSchema</code> at that moment. Once
+pinned, the schema does not change for the campaign’s lifetime — even if
+the underlying supplement later updates its schema. This guarantees a
+campaign’s form is stable. Custom schemas per campaign are possible in
+principle (CM homebrew) but v1 has no UI to author them; v1.x may add a
+schema editor.</p>
+<p><strong>v1 ships defaults per supplement:</strong> -
+<strong>Armageddon (v1)</strong>: standard Crusade form — opponent,
+mission, result, agendas attempted/achieved, free-text battle report,
+sourceRosterApprovedId. - <strong>Nachmund Gauntlet (v1.x)</strong>:
+multi-player form — same fields plus per-player Crusade Blessings. - The
+system default covers Armageddon v1 without bespoke UI.</p>
 <p><strong>Form UX behavior:</strong> - The form is auto-generated from
-the JSON Schema at runtime. No hand-coded UI per supplement. -
+the pinned <code>Campaign.battleReportSchema</code> at runtime. -
 Validation rules from the schema (e.g., “exactly 1 result”, “1-3 agendas
 attempted”) fire on submit. - Required fields surface inline before
-submit. - Players see a preview of the resulting delta (“Sarah’s Cadian
-Castellan: +3 XP, +1 honour (Slayer of Monsters)”) before
-submitting.</p>
-<p><strong>Why supplement-specific:</strong> the user pointed out that
-“some crusades have a specific form to fill” — Nachmund has a different
-form than Armageddon, and per-book Crusade decks may add their own. The
-JSON-Schema-driven form makes adding a new supplement a data operation,
-not a code change. The system default covers Armageddon (v1) without
-bespoke UI.</p>
+submit. - Players see a preview of the resulting campaign-level delta
+(“Sarah’s Helsreach Defenders: agenda ‘Extermination Targets’ achieved,
++1 RP”) before submitting. Per-unit deltas are NOT in the form; they
+show up as a side-by-side roster diff (read-only display) sourced from
+the linked roster versions.</p>
 <p><strong>Disambiguation: 3 different per-Crusade PDFs:</strong></p>
 <table>
 <colgroup>
@@ -464,19 +443,20 @@ bespoke UI.</p>
 <tbody>
 <tr class="odd">
 <td><code>ArmageddonCrusadeCards.pdf</code></td>
-<td>Per-unit tracking card — derived from
-<code>CrusadeForceState[unit]</code>. UI: per-unit timeline view (PRD-2
-§6 Flow 4). Auto-generated, no form to fill.</td>
+<td>Per-unit tracking card — derived from NR roster’s unit state. UI:
+per-unit timeline view (PRD-2 §6 Flow 4). Auto-generated,
+<strong>read-only display</strong>. No form to fill.</td>
 </tr>
 <tr class="even">
 <td><code>ArmageddonBlankOrderOfBattle.pdf</code></td>
 <td>Roster-level snapshot — derived from <code>RosterApproved</code>.
-UI: printable roster view (auto-generated). No form to fill.</td>
+UI: printable roster view (auto-generated, read-only). No form to
+fill.</td>
 </tr>
 <tr class="odd">
 <td><code>MissionRecordSheet.pdf</code> (Nachmund)</td>
 <td>Per-battle form — the supplement-specific piece. UI: post-battle
-update form. JSON Schema-driven.</td>
+update form. JSON Schema-driven, campaign-level only.</td>
 </tr>
 </tbody>
 </table>

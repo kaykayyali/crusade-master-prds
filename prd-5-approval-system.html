@@ -583,23 +583,29 @@ consume it.</p>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-player form data — one BattleUpdate per player per battle.</span></span>
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// A 1v1 game produces 2 BattleUpdates; a 4-player game produces 4.</span></span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Each is its own ApprovalRequest, batchable in the CM inbox.</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  formData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span>                  <span class="co">// supplement-specific payload (PRD-4 §4.1, CrusadeSupplement.battleReportSchema)</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="bu">Array</span><span class="op">&lt;</span>{</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    unitId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    xpDelta<span class="op">:</span> int<span class="op">,</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    honourGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    scarGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    rankChange<span class="op">:</span> { from<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> to<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    ooATest<span class="op">:</span> { roll<span class="op">:</span> int<span class="op">,</span> result<span class="op">:</span> <span class="st">&#39;passed&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span> effect<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  }<span class="op">&gt;,</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  agendasAttempted<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  agendasAchieved<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  battleReport<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>              <span class="co">// markdown</span></span>
-<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
-<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Auto-detected if this player&#39;s BattleUpdate conflicts with another</span></span>
-<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// player&#39;s for the same battle (e.g., both claim victory).</span></span>
-<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  disputed<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
-<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per PRD-0 §4b.2 + PRD-4 §4.1, form is campaign-level only:</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// opponent, mission, result, agendas attempted/achieved, narrative.</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-unit XP/honour/scar/relic changes live in NR (PRD-3 §3) — not here.</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  formData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span>                  <span class="co">// supplement-specific payload from Campaign.battleReportSchema</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  agendasAttempted<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  agendasAchieved<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  battleReport<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>              <span class="co">// markdown</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Reference to the NR roster the player used for this battle.</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The diff between this and the next roster import is how the app</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// represents per-unit changes from the battle (read-only display,</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// not a form field).</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  sourceRosterApprovedId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Optional: if the player re-imported their NR list mid-flow (post-battle),</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="co">// this references the resulting RosterDraft. The CM sees the diff inline.</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>  postBattleRosterDraftId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Auto-detected if this player&#39;s BattleUpdate conflicts with another</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="co">// player&#39;s for the same battle (e.g., both claim victory).</span></span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>  disputed<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h4 id="rp_adjustment-crusade-points-cm-initiated"><code>rp_adjustment</code>
 (Crusade points — CM-initiated)</h4>
 <div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>{</span>

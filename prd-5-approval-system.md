@@ -211,18 +211,24 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
   // Per-player form data — one BattleUpdate per player per battle.
   // A 1v1 game produces 2 BattleUpdates; a 4-player game produces 4.
   // Each is its own ApprovalRequest, batchable in the CM inbox.
-  formData: object,                  // supplement-specific payload (PRD-4 §4.1, CrusadeSupplement.battleReportSchema)
-  perUnitChanges: Array<{
-    unitId: string,
-    xpDelta: int,
-    honourGained: string | null,
-    scarGained: string | null,
-    rankChange: { from: string, to: string } | null,
-    ooATest: { roll: int, result: 'passed' | 'failed', effect: string } | null,
-  }>,
+  // Per PRD-0 §4b.2 + PRD-4 §4.1, form is campaign-level only:
+  // opponent, mission, result, agendas attempted/achieved, narrative.
+  // Per-unit XP/honour/scar/relic changes live in NR (PRD-3 §3) — not here.
+  formData: object,                  // supplement-specific payload from Campaign.battleReportSchema
   agendasAttempted: string[],
   agendasAchieved: string[],
   battleReport: string,              // markdown
+
+  // Reference to the NR roster the player used for this battle.
+  // The diff between this and the next roster import is how the app
+  // represents per-unit changes from the battle (read-only display,
+  // not a form field).
+  sourceRosterApprovedId: string,
+
+  // Optional: if the player re-imported their NR list mid-flow (post-battle),
+  // this references the resulting RosterDraft. The CM sees the diff inline.
+  postBattleRosterDraftId: string | null,
+
   ruleCheckIds: string[],
   // Auto-detected if this player's BattleUpdate conflicts with another
   // player's for the same battle (e.g., both claim victory).

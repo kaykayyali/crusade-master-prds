@@ -20,7 +20,34 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.8 (current) — Supplement-specific battle report forms + per-player batching
+### v3.9 (current) — NR-as-source-of-truth + form schema pinning
+
+Three architectural clarifications:
+
+**1. New Recruit is the source of truth for unit/roster state.**
+Per user: "Unit and roster data, including XP, traits, battle scars, relics. All of those details live in New Recruit. We make a best effort to parse out the json payload, and show it in an aesthetic fashion, but we dont provide any way to mutate that data. Doing so means our code needs to know the rules of those systems, and creates an anti pattern with the decision to couple with new recruit."
+
+- **PRD-0 §4b.2 (new)**: architectural principle codified. Unit/roster data is NR's domain. Our app parses, displays, but never mutates and never offers an in-app edit surface.
+- **PRD-3 §3**: read-only display contract on the parser pipeline. Every extracted field is display data, never written back.
+- **PRD-3 §6**: rule engine scope narrowed to **campaign-level rules only** — no unit-level rules (relic legality, datasheet constraints, etc.). All built-in rule types are campaign-level (already were; this makes the boundary explicit).
+- **PRD-4 §4.1**: battle update form is **campaign-level only**. Removed per-unit XP/honour/scar/OoA fields. Form collects: opponent, mission, result, agendas attempted/achieved, narrative report, `sourceRosterApprovedId`, optional `postBattleRosterDraftId`.
+- **PRD-5 §3.1 `post_battle_update`**: removed `perUnitChanges` array. Added `sourceRosterApprovedId` + `postBattleRosterDraftId`. Unit changes are visible via the roster diff (read-only) but not approved per-unit.
+- **PRD-2 §6 Flow 2**: player flow rewritten. Form is lighter than before because per-unit work happens in NR. New critical moment: "did Sarah re-import her post-battle NR list before filing?" (order matters for the audit trail).
+- **PRD-2 §6 Flow 4 (timeline)**: events on the per-unit timeline are mostly sourced from NR roster diffs (read-only display), with linked battle reports inline.
+
+**2. Battle report schemas: defaults per supplement, configurable in principle, tooling out of scope.**
+Per user: "The battle report schema should have defaults set for each supplement. Ultimately tho, it needs to be configurable, because CM's often want to homebrew things. But we dont need to flesh out that system too much now, as its very open ended."
+
+- **PRD-0 §4**: `CrusadeSupplement.battleReportSchema` is the supplement's default. v1 ships Armageddon's standard Crusade form.
+- **PRD-4 §4.1**: explicit note that CM-custom schemas are possible in principle (data model supports) but v1 has no UI to author them. v1.x may add a schema editor.
+
+**3. Form versions pinned to campaign.**
+Per user: "Form versions should be pinned to the campaign. Once it starts, it's locked. Always provide basic defaults per supplement. Future may require custom versioning and some kind of tool to make them. Out of scope."
+
+- **PRD-0 §4**: `Campaign.battleReportSchema` is **copied from `CrusadeSupplement.battleReportSchema` at campaign creation**. Once pinned, future updates to the supplement's schema do NOT affect in-flight campaigns. The form is locked for the campaign's lifetime.
+- **PRD-4 §4.1**: explicit pinning rules. Always-fallback-to-supplement-default noted for safety.
+
+### v3.8 — Supplement-specific battle report forms + per-player batching
 
 Per user: battle updates come in via a form, and "some crusades have a specific form to fill." The user shared three reference PDFs (Armageddon Crusade Cards, Armageddon Blank Order of Battle, Nachmund Mission Record Sheet) — these map to three different surfaces in the app:
 
