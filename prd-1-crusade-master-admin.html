@@ -152,6 +152,69 @@
     div.column{display: inline-block; vertical-align: top; width: 50%;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
 </head>
@@ -159,40 +222,120 @@
 <header id="title-block-header">
 <h1 class="title">prd-1-crusade-master-admin</h1>
 </header>
-<h1 id="prd-1-crusade-master-administration">PRD-1: Crusade Master
-Administration</h1>
+<h1 id="prd-1-instance-admin-crusade-master-administration-v2">PRD-1:
+Instance Admin &amp; Crusade Master Administration (v2)</h1>
 <blockquote>
-<p>Crusader Master dashboard, campaign lifecycle, member management, and
-CM-only operations.</p>
+<p>Instance administration (Docker-first-run, tenant provisioning,
+global settings) plus the CM-facing campaign lifecycle and member
+management.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
-<p>Enable a Crusade Master to run one or more campaigns end-to-end
-without depending on a third-party service. The CM is the campaign’s
-owner; they configure it, invite players, monitor progress, generate
-narrative events, and approve post-battle updates.</p>
-<p><strong>Success metric</strong>: A CM can launch a fully-configured
-campaign with 8 players in under 15 minutes.</p>
+<p>Enable a single Instance Admin to bootstrap a self-hosted Docker
+instance and provision tenants. Within each tenant, enable a Crusade
+Master to run one or more campaigns end-to-end without depending on a
+third-party service.</p>
+<p><strong>Success metrics:</strong> - A new Docker instance can be
+bootstrapped in &lt; 5 minutes - A new tenant can be created in &lt; 2
+minutes - A CM can launch a fully-configured campaign with 8 players in
+&lt; 15 minutes</p>
 <hr />
 <h2 id="user-stories">2. User Stories</h2>
+<h3 id="instance-admin">Instance Admin</h3>
 <ul>
-<li><strong>As a CM</strong>, I can create a new campaign, choose the
-supplement (Armageddon for MVP), and configure house rules (point cap,
-max games/week, OoA test variant).</li>
-<li><strong>As a CM</strong>, I can generate an invite code/link that
-lets players join without me manually adding them.</li>
-<li><strong>As a CM</strong>, I can see all rosters in my campaign at a
-glance, with rank distribution, total RP, and outstanding approval
-requests.</li>
-<li><strong>As a CM</strong>, I can pause, archive, or end a
-campaign.</li>
-<li><strong>As a CM</strong>, I can override any data the system holds
-(with audit trail).</li>
-<li><strong>As a CM</strong>, I can run multiple campaigns.</li>
+<li>I can bootstrap the instance via env-var config or a first-run
+wizard.</li>
+<li>I can create / disable / delete tenants.</li>
+<li>I can see system-wide metrics (tenants, campaigns, storage, error
+rates).</li>
+<li>I can moderate abuse (suspend a tenant, suspend a user
+globally).</li>
+</ul>
+<h3 id="crusade-master">Crusade Master</h3>
+<ul>
+<li>I can create a new campaign within my tenant, choose Armageddon,
+configure house rules.</li>
+<li>I can generate an invite code/link scoped to my tenant.</li>
+<li>I can see all rosters in my campaign at a glance, with the approval
+queue highlighted.</li>
+<li>I can pause, archive, or end a campaign.</li>
+<li>I can override any data the system holds, with audit trail.</li>
+<li>I can be a player in my own campaign.</li>
 </ul>
 <hr />
-<h2 id="feature-modules">3. Feature Modules</h2>
-<h3 id="campaign-creation">3.1 Campaign Creation</h3>
+<h2 id="instance-administration-new-in-v2">3. Instance Administration
+(NEW in v2)</h2>
+<h3 id="first-run-bootstrap">3.1 First-Run Bootstrap</h3>
+<p>Two paths, configurable at deploy time:</p>
+<p><strong>Path A: Env-var bootstrap</strong> (recommended for
+production):</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">ADMIN_EMAIL</span><span class="op">=</span>admin@example.com</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">ADMIN_DISPLAY_NAME</span><span class="op">=</span><span class="st">&quot;Jane Admin&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_HOST</span><span class="op">=</span>smtp.example.com</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_PORT</span><span class="op">=</span>587</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_USER</span><span class="op">=</span>...</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_PASS</span><span class="op">=</span>...</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">PUBLIC_BASE_URL</span><span class="op">=</span>https://crusade.example.com</span></code></pre></div>
+<p>On first boot, the app creates: - One Tenant with
+<code>slug = &#39;default&#39;</code> - One User with
+<code>role = &#39;instance_admin&#39;</code> and
+<code>tenantId = &#39;default&#39;</code> - Magic-link login flow with the
+configured SMTP</p>
+<p><strong>Path B: First-run wizard</strong> (recommended for local
+dev): - Server starts with no admin user - First visitor to the URL is
+offered a setup form: email, display name, tenant name - After submit,
+the setup form is permanently removed</p>
+<h3 id="tenant-management">3.2 Tenant Management</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>name</td>
+<td>string</td>
+<td>3-60 chars</td>
+</tr>
+<tr class="even">
+<td>slug</td>
+<td>string</td>
+<td>URL-safe, unique within instance</td>
+</tr>
+<tr class="odd">
+<td>settings</td>
+<td>jsonb</td>
+<td>tenant-level config (see below)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tenant settings:</strong> -
+<code>allow_cross_tenant_spectators: bool</code> (default false) -
+<code>default_supplement: string</code> (default
+<code>&#39;armageddon&#39;</code>) - <code>max_campaigns_per_cm: int</code>
+(default 10) - <code>max_members_per_campaign: int</code> (default
+32)</p>
+<h3 id="instance-wide-metrics">3.3 Instance-Wide Metrics</h3>
+<p>The instance admin sees: - Active tenants (last-30-day activity) -
+Total campaigns / total rosters / total approved rosters / total pending
+approvals - Storage: Postgres size, MinIO bucket size - Error rate from
+FastAPI logs - Background job health (Wahapedia refresh, NR import
+queue)</p>
+<h3 id="moderation">3.4 Moderation</h3>
+<ul>
+<li>Suspend a tenant: blocks all logins for users in that tenant; data
+retained</li>
+<li>Hard-delete a tenant: 30-day grace period, then cascade (campaigns,
+rosters, events)</li>
+<li>Suspend a user globally: blocks login across all tenants; data
+retained</li>
+</ul>
+<hr />
+<h2 id="cm-administration">4. CM Administration</h2>
+<h3 id="campaign-creation">4.1 Campaign Creation</h3>
 <table style="width:100%;">
 <colgroup>
 <col style="width: 35%" />
@@ -210,13 +353,12 @@ campaign.</li>
 <tr class="odd">
 <td>name</td>
 <td>string</td>
-<td>3-60 chars, required</td>
+<td>3-60 chars</td>
 </tr>
 <tr class="even">
 <td>supplement</td>
 <td>enum</td>
-<td><code>armageddon</code> for MVP; <code>nachmund</code>,
-<code>pariah</code>, <code>tyrannic</code> for future</td>
+<td><code>armageddon</code> for MVP (other 4 deferred)</td>
 </tr>
 <tr class="odd">
 <td>point_cap</td>
@@ -231,138 +373,120 @@ campaign.</li>
 <tr class="odd">
 <td>ooa_test_variant</td>
 <td>enum</td>
-<td><code>standard</code> (D6) or <code>lenient</code> (D6, 1-2
-fail)</td>
+<td><code>standard</code> (D6 ≤ 3 fails) or <code>lenient</code> (D6 ≤ 2
+fails)</td>
 </tr>
 <tr class="even">
-<td>allow_mixed_supplements</td>
+<td>require_approved_roster_for_battles</td>
 <td>bool</td>
-<td>Default false</td>
+<td>Default <strong>true</strong> (hard gate, per user direction)</td>
 </tr>
 <tr class="odd">
+<td>allow_manual_roster_edits</td>
+<td>bool</td>
+<td>Default false (JSON import is the canonical path)</td>
+</tr>
+<tr class="even">
 <td>custom_house_rules</td>
 <td>markdown</td>
 <td>Free text, rendered on campaign page</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>start_date</td>
 <td>date</td>
 <td>When battles can begin being filed</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Output</strong>: campaign record, unique join code (8-char
-alphanumeric), shareable URL.</p>
-<h3 id="member-management">3.2 Member Management</h3>
+<p><strong>Output</strong>: campaign record, unique 8-char invite code,
+tenant-scoped shareable URL.</p>
+<h3 id="member-management">4.2 Member Management</h3>
 <ul>
-<li>CM sees a member list:
-<code>displayName, faction, joinedAt, status, lastActivityAt</code></li>
+<li>CM sees:
+<code>displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (draft/pending/approved)</code></li>
 <li>CM can: invite (via email or link), remove, suspend, promote to
 co-CM</li>
-<li>Players can self-serve removal (leave campaign)</li>
+<li>Players can self-serve removal</li>
 <li>Co-CMs have all CM rights except: deleting the campaign,
-transferring ownership</li>
+transferring ownership, changing the supplement</li>
 </ul>
-<h3 id="dashboard">3.3 Dashboard</h3>
-<p>The CM dashboard surfaces: 1. <strong>Pending approvals
-count</strong> (clickable → PRD-5 inbox) 2. <strong>Active
-campaigns</strong> (cards, with quick stats: # players, # battles, #
-pending updates) 3. <strong>Leaderboard preview</strong> (top 3 forces
-by RP, by battles played) 4. <strong>Recent activity feed</strong> (last
-10 events across the CM’s campaigns) 5. <strong>Narrative log</strong>
-(auto-aggregated from approved battles, see PRD-4) 6. <strong>Errata
-alert</strong> (banner when Wahapedia data refresh affected rules the
-campaign uses)</p>
-<h3 id="campaign-settings">3.4 Campaign Settings</h3>
-<p>Editable post-creation: point cap, max games/week, OoA variant, house
-rules, supplement (with confirmation if changes affect active
-units).</p>
-<p>Deletable: CM can archive (soft delete) or hard-delete. Hard-delete
-is logged and requires typed confirmation of campaign name.</p>
-<h3 id="override-tool">3.5 Override Tool</h3>
+<h3 id="dashboard">4.3 Dashboard</h3>
+<p>CM dashboard surfaces: 1. <strong>Pending approvals count</strong>
+(clickable → PRD-5 inbox) 2. <strong>Active campaigns</strong> (cards: #
+players, # battles, # pending updates, # pending roster approvals) 3.
+<strong>Recent activity feed</strong> (last 20 events across CM’s
+campaigns) 4. <strong>Roster health overview</strong> — for each player:
+“last approved roster date”, “draft pending review”, “no roster yet” 5.
+<strong>Narrative log preview</strong> (auto-aggregated from approved
+battle events) 6. <strong>Errata alert</strong> — banner when Wahapedia
+refresh affected units in this campaign</p>
+<h3 id="campaign-settings">4.4 Campaign Settings</h3>
+<p>Editable: point cap, max games/week, OoA variant, house rules.</p>
+<p><strong>Supplement changes are locked</strong> for MVP. Switching
+supplements mid-campaign would invalidate active approved rosters; not
+supported in v1. If a CM wants to retire a campaign and start a new one
+with a different supplement, they archive + create new.</p>
+<p>Deletable: archive (soft delete) or hard-delete. Hard-delete requires
+typed confirmation of campaign name and is logged to instance audit.</p>
+<h3 id="override-tool">4.5 Override Tool</h3>
 <p>CMs can edit any field on any record, with required reason text.
 Every override writes to the audit log and shows in the affected
 player’s notification.</p>
-<p>Examples: - Force-set a unit’s rank after a manual re-roll - Manually
-grant a Battle Honour from a non-standard source - Reverse an erroneous
-approval</p>
 <hr />
-<h2 id="user-flow">4. User Flow</h2>
-<h3 id="happy-path-create-campaign">4.1 Happy Path: Create Campaign</h3>
+<h2 id="cm-as-player">5. CM-as-Player</h2>
+<p>A CM is allowed to be a player in their own campaign. When they
+do:</p>
+<ul>
+<li>A “playing in your own campaign” badge is shown next to their name
+in all member lists</li>
+<li>Their own roster approvals must be approved by a co-CM (if one
+exists) or auto-approved with audit-log entry (if no co-CM)</li>
+<li>Their own battle filings are subject to the same submission gating
+as everyone else</li>
+</ul>
+<p>This is the default behavior; the CM cannot opt out (avoiding
+conflicts of interest requires a co-CM, not a setting).</p>
+<hr />
+<h2 id="user-flow-first-run-first-campaign">6. User Flow: First-Run →
+First Campaign</h2>
 <pre class="mermaid"><code>flowchart TD
-    A[CM lands on /dashboard] --&gt; B{Has campaign?}
-    B --&gt;|No| C[Click &#39;New Campaign&#39;]
-    B --&gt;|Yes| D[Open existing]
-    C --&gt; E[Fill form: name, supplement, point cap]
-    E --&gt; F[Submit]
-    F --&gt; G[System creates campaign + join code]
-    G --&gt; H[CM shares join code/URL with players]
-    H --&gt; I[Players join (see PRD-2)]
-    I --&gt; J[CM dashboard shows member count growing]</code></pre>
-<h3 id="branch-mid-campaign-supplement-switch">4.2 Branch: Mid-Campaign
-Supplement Switch</h3>
-<p>If a CM switches supplement (e.g., to add Nachmund rules later), the
-system runs a migration step: - Existing units’ honours/scars are
-preserved - New supplement-specific fields default to safe values - CM
-sees a migration report before confirming</p>
+    A[Docker container starts] --&gt; B{Env vars set?}
+    B --&gt;|Yes| C[Bootstrap instance + tenant + admin from env]
+    B --&gt;|No| D[First-run wizard]
+    D --&gt; E[Admin fills: email, name, tenant]
+    C --&gt; F[Admin receives magic link]
+    E --&gt; F
+    F --&gt; G[Admin lands in instance dashboard]
+    G --&gt; H[Admin creates tenant or uses default]
+    H --&gt; I[Admin promotes first CM or acts as CM]
+    I --&gt; J[CM creates campaign, picks Armageddon]
+    J --&gt; K[CM invites players via code/email]
+    K --&gt; L[Players join, import rosters, see approval flow]</code></pre>
 <hr />
-<h2 id="cm-only-operations-cross-reference">5. CM-Only Operations
-(cross-reference)</h2>
-<table>
-<thead>
-<tr class="header">
-<th>Operation</th>
-<th>Where defined</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Generate narrative event</td>
-<td>PRD-4</td>
-</tr>
-<tr class="even">
-<td>Approve post-battle update</td>
-<td>PRD-5</td>
-</tr>
-<tr class="odd">
-<td>Adjust leaderboard scoring</td>
-<td>PRD-1 (this doc)</td>
-</tr>
-<tr class="even">
-<td>Edit campaign settings</td>
-<td>PRD-1</td>
-</tr>
-<tr class="odd">
-<td>Override any record</td>
-<td>PRD-1</td>
-</tr>
-<tr class="even">
-<td>Export campaign as PDF</td>
-<td>PRD-1 (feature)</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="out-of-scope-this-prd">6. Out of Scope (this PRD)</h2>
+<h2 id="out-of-scope-prd-1">7. Out of Scope (PRD-1)</h2>
 <ul>
-<li>Player-side roster editing (PRD-3)</li>
-<li>Approval workflow logic (PRD-5)</li>
-<li>Event generation rules (PRD-4)</li>
+<li>Cross-tenant campaign discovery</li>
+<li>Public campaign marketplace</li>
+<li>CM analytics dashboards beyond v2 metrics</li>
+<li>Multi-supplement campaign migration</li>
 </ul>
 <hr />
-<h2 id="dependencies">7. Dependencies</h2>
+<h2 id="dependencies">8. Dependencies</h2>
 <ul>
-<li><strong>PRD-0</strong> for shared data model (<code>Campaign</code>,
-<code>CampaignMember</code>, <code>User</code>,
-<code>CrusadeSupplement</code>)</li>
-<li><strong>PRD-5</strong> for the approval inbox link</li>
-<li><strong>PRD-4</strong> for the event generation trigger and
-narrative log</li>
-<li><strong>Auth service</strong> (PRD-0, infra-level) for CM role
+<li><strong>PRD-0</strong>: <code>Tenant</code>, <code>User</code>,
+<code>Campaign</code>, <code>CampaignMember</code>,
+<code>CrusadeSupplement</code></li>
+<li><strong>PRD-5</strong>: approval inbox link</li>
+<li><strong>PRD-3</strong>: roster approval status surfaces in CM
+dashboard</li>
+<li><strong>PRD-4</strong>: event feed surfaces in CM dashboard</li>
+<li><strong>Auth infra</strong>: magic-link email delivery (SMTP), role
 gating</li>
+<li><strong>Infra</strong>: Docker Compose file, MinIO bucket
+provisioning, Postgres RLS policies</li>
 </ul>
 <hr />
-<h2 id="success-metrics">8. Success Metrics</h2>
+<h2 id="success-metrics">9. Success Metrics</h2>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -376,12 +500,20 @@ gating</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Time from “create” click to “campaign live”</td>
+<td>Instance bootstrap time</td>
+<td>&lt; 5 min (env-var path)</td>
+</tr>
+<tr class="even">
+<td>Tenant creation time</td>
 <td>&lt; 2 min</td>
+</tr>
+<tr class="odd">
+<td>Campaign creation time (with 8 invites sent)</td>
+<td>&lt; 15 min</td>
 </tr>
 <tr class="even">
 <td>Campaigns per active CM</td>
-<td>&gt; 1 (multi-campaign supported)</td>
+<td>&gt; 1</td>
 </tr>
 <tr class="odd">
 <td>CM override usage rate</td>
@@ -390,19 +522,26 @@ gating</li>
 </tbody>
 </table>
 <hr />
-<h2 id="edge-cases">9. Edge Cases</h2>
+<h2 id="edge-cases">10. Edge Cases</h2>
 <ol type="1">
-<li><strong>CM account deleted</strong>: campaign ownership must
-transfer or campaign is archived. UI for ownership transfer is a
-single-page “Transfer ownership” wizard.</li>
-<li><strong>CM is also a player in own campaign</strong>: allowed by
-default, with a clear “playing in your own campaign” warning to other
-members.</li>
-<li><strong>All players leave</strong>: campaign goes into “dormant”
-state; auto-archive after 90 days.</li>
+<li><strong>Instance Admin deleted / lost access</strong>: the env-var
+path stores admin email but no password. Recovery requires re-running
+the bootstrap env-var block, which is idempotent and resets the admin
+user.</li>
+<li><strong>CM is also a player, no co-CM</strong>: own roster / battle
+approvals auto-apply with an audit-log entry marked
+<code>self_approved: true</code>.</li>
+<li><strong>All players leave a campaign</strong>: campaign goes
+dormant; auto-archive after 90 days.</li>
 <li><strong>Two CMs edit settings concurrently</strong>: last-write-wins
-with a 5-second debounce; second writer sees a “someone else just
-edited” toast.</li>
+with 5s debounce; second writer sees “someone else just edited”
+toast.</li>
+<li><strong>Tenant suspended mid-campaign</strong>: all in-flight
+approvals auto-rejected with reason “tenant suspended”; campaigns
+frozen.</li>
+<li><strong>CMs running campaigns across two tenants</strong> (e.g.,
+moves between jobs): CM must be re-invited to the new tenant; campaigns
+don’t migrate.</li>
 </ol>
 </body>
 </html>

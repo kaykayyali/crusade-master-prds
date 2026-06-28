@@ -1,148 +1,214 @@
-# PRD-1: Crusade Master Administration
+# PRD-1: Instance Admin & Crusade Master Administration (v2)
 
-> Crusader Master dashboard, campaign lifecycle, member management, and CM-only operations.
+> Instance administration (Docker-first-run, tenant provisioning, global settings) plus the CM-facing campaign lifecycle and member management.
 
 ---
 
 ## 1. Goals
 
-Enable a Crusade Master to run one or more campaigns end-to-end without depending on a third-party service. The CM is the campaign's owner; they configure it, invite players, monitor progress, generate narrative events, and approve post-battle updates.
+Enable a single Instance Admin to bootstrap a self-hosted Docker instance and provision tenants. Within each tenant, enable a Crusade Master to run one or more campaigns end-to-end without depending on a third-party service.
 
-**Success metric**: A CM can launch a fully-configured campaign with 8 players in under 15 minutes.
+**Success metrics:**
+- A new Docker instance can be bootstrapped in < 5 minutes
+- A new tenant can be created in < 2 minutes
+- A CM can launch a fully-configured campaign with 8 players in < 15 minutes
 
 ---
 
 ## 2. User Stories
 
-- **As a CM**, I can create a new campaign, choose the supplement (Armageddon for MVP), and configure house rules (point cap, max games/week, OoA test variant).
-- **As a CM**, I can generate an invite code/link that lets players join without me manually adding them.
-- **As a CM**, I can see all rosters in my campaign at a glance, with rank distribution, total RP, and outstanding approval requests.
-- **As a CM**, I can pause, archive, or end a campaign.
-- **As a CM**, I can override any data the system holds (with audit trail).
-- **As a CM**, I can run multiple campaigns.
+### Instance Admin
+- I can bootstrap the instance via env-var config or a first-run wizard.
+- I can create / disable / delete tenants.
+- I can see system-wide metrics (tenants, campaigns, storage, error rates).
+- I can moderate abuse (suspend a tenant, suspend a user globally).
+
+### Crusade Master
+- I can create a new campaign within my tenant, choose Armageddon, configure house rules.
+- I can generate an invite code/link scoped to my tenant.
+- I can see all rosters in my campaign at a glance, with the approval queue highlighted.
+- I can pause, archive, or end a campaign.
+- I can override any data the system holds, with audit trail.
+- I can be a player in my own campaign.
 
 ---
 
-## 3. Feature Modules
+## 3. Instance Administration (NEW in v2)
 
-### 3.1 Campaign Creation
+### 3.1 First-Run Bootstrap
+
+Two paths, configurable at deploy time:
+
+**Path A: Env-var bootstrap** (recommended for production):
+```bash
+ADMIN_EMAIL=admin@example.com
+ADMIN_DISPLAY_NAME="Jane Admin"
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+PUBLIC_BASE_URL=https://crusade.example.com
+```
+
+On first boot, the app creates:
+- One Tenant with `slug = 'default'`
+- One User with `role = 'instance_admin'` and `tenantId = 'default'`
+- Magic-link login flow with the configured SMTP
+
+**Path B: First-run wizard** (recommended for local dev):
+- Server starts with no admin user
+- First visitor to the URL is offered a setup form: email, display name, tenant name
+- After submit, the setup form is permanently removed
+
+### 3.2 Tenant Management
 
 | Field | Type | Notes |
 |-------|------|-------|
-| name | string | 3-60 chars, required |
-| supplement | enum | `armageddon` for MVP; `nachmund`, `pariah`, `tyrannic` for future |
+| name | string | 3-60 chars |
+| slug | string | URL-safe, unique within instance |
+| settings | jsonb | tenant-level config (see below) |
+
+**Tenant settings:**
+- `allow_cross_tenant_spectators: bool` (default false)
+- `default_supplement: string` (default `'armageddon'`)
+- `max_campaigns_per_cm: int` (default 10)
+- `max_members_per_campaign: int` (default 32)
+
+### 3.3 Instance-Wide Metrics
+
+The instance admin sees:
+- Active tenants (last-30-day activity)
+- Total campaigns / total rosters / total approved rosters / total pending approvals
+- Storage: Postgres size, MinIO bucket size
+- Error rate from FastAPI logs
+- Background job health (Wahapedia refresh, NR import queue)
+
+### 3.4 Moderation
+
+- Suspend a tenant: blocks all logins for users in that tenant; data retained
+- Hard-delete a tenant: 30-day grace period, then cascade (campaigns, rosters, events)
+- Suspend a user globally: blocks login across all tenants; data retained
+
+---
+
+## 4. CM Administration
+
+### 4.1 Campaign Creation
+
+| Field | Type | Notes |
+|-------|------|-------|
+| name | string | 3-60 chars |
+| supplement | enum | `armageddon` for MVP (other 4 deferred) |
 | point_cap | int | Default 2000, range 500–3000 |
 | max_games_per_player_per_week | int | Default 2 |
-| ooa_test_variant | enum | `standard` (D6) or `lenient` (D6, 1-2 fail) |
-| allow_mixed_supplements | bool | Default false |
+| ooa_test_variant | enum | `standard` (D6 ≤ 3 fails) or `lenient` (D6 ≤ 2 fails) |
+| require_approved_roster_for_battles | bool | Default **true** (hard gate, per user direction) |
+| allow_manual_roster_edits | bool | Default false (JSON import is the canonical path) |
 | custom_house_rules | markdown | Free text, rendered on campaign page |
 | start_date | date | When battles can begin being filed |
 
-**Output**: campaign record, unique join code (8-char alphanumeric), shareable URL.
+**Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
 
-### 3.2 Member Management
+### 4.2 Member Management
 
-- CM sees a member list: `displayName, faction, joinedAt, status, lastActivityAt`
+- CM sees: `displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (draft/pending/approved)`
 - CM can: invite (via email or link), remove, suspend, promote to co-CM
-- Players can self-serve removal (leave campaign)
-- Co-CMs have all CM rights except: deleting the campaign, transferring ownership
+- Players can self-serve removal
+- Co-CMs have all CM rights except: deleting the campaign, transferring ownership, changing the supplement
 
-### 3.3 Dashboard
+### 4.3 Dashboard
 
-The CM dashboard surfaces:
+CM dashboard surfaces:
 1. **Pending approvals count** (clickable → PRD-5 inbox)
-2. **Active campaigns** (cards, with quick stats: # players, # battles, # pending updates)
-3. **Leaderboard preview** (top 3 forces by RP, by battles played)
-4. **Recent activity feed** (last 10 events across the CM's campaigns)
-5. **Narrative log** (auto-aggregated from approved battles, see PRD-4)
-6. **Errata alert** (banner when Wahapedia data refresh affected rules the campaign uses)
+2. **Active campaigns** (cards: # players, # battles, # pending updates, # pending roster approvals)
+3. **Recent activity feed** (last 20 events across CM's campaigns)
+4. **Roster health overview** — for each player: "last approved roster date", "draft pending review", "no roster yet"
+5. **Narrative log preview** (auto-aggregated from approved battle events)
+6. **Errata alert** — banner when Wahapedia refresh affected units in this campaign
 
-### 3.4 Campaign Settings
+### 4.4 Campaign Settings
 
-Editable post-creation: point cap, max games/week, OoA variant, house rules, supplement (with confirmation if changes affect active units).
+Editable: point cap, max games/week, OoA variant, house rules.
 
-Deletable: CM can archive (soft delete) or hard-delete. Hard-delete is logged and requires typed confirmation of campaign name.
+**Supplement changes are locked** for MVP. Switching supplements mid-campaign would invalidate active approved rosters; not supported in v1. If a CM wants to retire a campaign and start a new one with a different supplement, they archive + create new.
 
-### 3.5 Override Tool
+Deletable: archive (soft delete) or hard-delete. Hard-delete requires typed confirmation of campaign name and is logged to instance audit.
+
+### 4.5 Override Tool
 
 CMs can edit any field on any record, with required reason text. Every override writes to the audit log and shows in the affected player's notification.
 
-Examples:
-- Force-set a unit's rank after a manual re-roll
-- Manually grant a Battle Honour from a non-standard source
-- Reverse an erroneous approval
+---
+
+## 5. CM-as-Player
+
+A CM is allowed to be a player in their own campaign. When they do:
+
+- A "playing in your own campaign" badge is shown next to their name in all member lists
+- Their own roster approvals must be approved by a co-CM (if one exists) or auto-approved with audit-log entry (if no co-CM)
+- Their own battle filings are subject to the same submission gating as everyone else
+
+This is the default behavior; the CM cannot opt out (avoiding conflicts of interest requires a co-CM, not a setting).
 
 ---
 
-## 4. User Flow
-
-### 4.1 Happy Path: Create Campaign
+## 6. User Flow: First-Run → First Campaign
 
 ```mermaid
 flowchart TD
-    A[CM lands on /dashboard] --> B{Has campaign?}
-    B -->|No| C[Click 'New Campaign']
-    B -->|Yes| D[Open existing]
-    C --> E[Fill form: name, supplement, point cap]
-    E --> F[Submit]
-    F --> G[System creates campaign + join code]
-    G --> H[CM shares join code/URL with players]
-    H --> I[Players join (see PRD-2)]
-    I --> J[CM dashboard shows member count growing]
+    A[Docker container starts] --> B{Env vars set?}
+    B -->|Yes| C[Bootstrap instance + tenant + admin from env]
+    B -->|No| D[First-run wizard]
+    D --> E[Admin fills: email, name, tenant]
+    C --> F[Admin receives magic link]
+    E --> F
+    F --> G[Admin lands in instance dashboard]
+    G --> H[Admin creates tenant or uses default]
+    H --> I[Admin promotes first CM or acts as CM]
+    I --> J[CM creates campaign, picks Armageddon]
+    J --> K[CM invites players via code/email]
+    K --> L[Players join, import rosters, see approval flow]
 ```
 
-### 4.2 Branch: Mid-Campaign Supplement Switch
+---
 
-If a CM switches supplement (e.g., to add Nachmund rules later), the system runs a migration step:
-- Existing units' honours/scars are preserved
-- New supplement-specific fields default to safe values
-- CM sees a migration report before confirming
+## 7. Out of Scope (PRD-1)
+
+- Cross-tenant campaign discovery
+- Public campaign marketplace
+- CM analytics dashboards beyond v2 metrics
+- Multi-supplement campaign migration
 
 ---
 
-## 5. CM-Only Operations (cross-reference)
+## 8. Dependencies
 
-| Operation | Where defined |
-|-----------|---------------|
-| Generate narrative event | PRD-4 |
-| Approve post-battle update | PRD-5 |
-| Adjust leaderboard scoring | PRD-1 (this doc) |
-| Edit campaign settings | PRD-1 |
-| Override any record | PRD-1 |
-| Export campaign as PDF | PRD-1 (feature) |
+- **PRD-0**: `Tenant`, `User`, `Campaign`, `CampaignMember`, `CrusadeSupplement`
+- **PRD-5**: approval inbox link
+- **PRD-3**: roster approval status surfaces in CM dashboard
+- **PRD-4**: event feed surfaces in CM dashboard
+- **Auth infra**: magic-link email delivery (SMTP), role gating
+- **Infra**: Docker Compose file, MinIO bucket provisioning, Postgres RLS policies
 
 ---
 
-## 6. Out of Scope (this PRD)
-
-- Player-side roster editing (PRD-3)
-- Approval workflow logic (PRD-5)
-- Event generation rules (PRD-4)
-
----
-
-## 7. Dependencies
-
-- **PRD-0** for shared data model (`Campaign`, `CampaignMember`, `User`, `CrusadeSupplement`)
-- **PRD-5** for the approval inbox link
-- **PRD-4** for the event generation trigger and narrative log
-- **Auth service** (PRD-0, infra-level) for CM role gating
-
----
-
-## 8. Success Metrics
+## 9. Success Metrics
 
 | Metric | Target |
 |--------|--------|
-| Time from "create" click to "campaign live" | < 2 min |
-| Campaigns per active CM | > 1 (multi-campaign supported) |
+| Instance bootstrap time | < 5 min (env-var path) |
+| Tenant creation time | < 2 min |
+| Campaign creation time (with 8 invites sent) | < 15 min |
+| Campaigns per active CM | > 1 |
 | CM override usage rate | < 5% of unit changes (otherwise approval flow is broken) |
 
 ---
 
-## 9. Edge Cases
+## 10. Edge Cases
 
-1. **CM account deleted**: campaign ownership must transfer or campaign is archived. UI for ownership transfer is a single-page "Transfer ownership" wizard.
-2. **CM is also a player in own campaign**: allowed by default, with a clear "playing in your own campaign" warning to other members.
-3. **All players leave**: campaign goes into "dormant" state; auto-archive after 90 days.
-4. **Two CMs edit settings concurrently**: last-write-wins with a 5-second debounce; second writer sees a "someone else just edited" toast.
+1. **Instance Admin deleted / lost access**: the env-var path stores admin email but no password. Recovery requires re-running the bootstrap env-var block, which is idempotent and resets the admin user.
+2. **CM is also a player, no co-CM**: own roster / battle approvals auto-apply with an audit-log entry marked `self_approved: true`.
+3. **All players leave a campaign**: campaign goes dormant; auto-archive after 90 days.
+4. **Two CMs edit settings concurrently**: last-write-wins with 5s debounce; second writer sees "someone else just edited" toast.
+5. **Tenant suspended mid-campaign**: all in-flight approvals auto-rejected with reason "tenant suspended"; campaigns frozen.
+6. **CMs running campaigns across two tenants** (e.g., moves between jobs): CM must be re-invited to the new tenant; campaigns don't migrate.

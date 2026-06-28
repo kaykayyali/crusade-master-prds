@@ -159,126 +159,153 @@
 <header id="title-block-header">
 <h1 class="title">prd-2-player-signup</h1>
 </header>
-<h1 id="prd-2-player-sign-up">PRD-2: Player Sign-Up</h1>
+<h1 id="prd-2-player-sign-up-v2">PRD-2: Player Sign-Up (v2)</h1>
 <blockquote>
-<p>Player onboarding flow: account creation, joining a campaign via
-invite, choosing a faction, and first-time onboarding.</p>
+<p>Player onboarding within a tenant: account creation, invite-code
+join, faction choice. Tightly scoped to the MVP.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
-<p>Get a player from “I have an invite code” to “I see my empty Crusade
-roster” in under 5 minutes, with no required manual data entry beyond
-faction choice.</p>
+<p>Get a player from “I have an invite code” to “I’m a member of the
+campaign with no roster yet” in under 5 minutes, with no required manual
+data entry beyond email and display name.</p>
 <p><strong>Success metric</strong>: Median time from invite acceptance
-to first roster import attempt &lt; 5 minutes.</p>
+to first draft roster import attempt &lt; 5 minutes.</p>
 <hr />
 <h2 id="user-stories">2. User Stories</h2>
 <ul>
 <li><strong>As a new player</strong>, I can sign up with just an email
-address (magic-link auth) — no password to remember.</li>
+address (magic-link auth).</li>
 <li><strong>As a player with an invite code</strong>, I can enter it and
-immediately land inside the campaign.</li>
-<li><strong>As a player</strong>, I can pick my faction (with searchable
-picker across all 26 Wahapedia factions).</li>
+land inside the campaign.</li>
+<li><strong>As a player</strong>, I can pick my faction from a
+searchable list of all 26 Wahapedia factions.</li>
+<li><strong>As a returning player</strong>, I can join additional
+campaigns in the same tenant via new invite codes.</li>
 <li><strong>As a player</strong>, I get a guided first-tour explaining
-Crusade card mechanics, post-battle update flow, and requisitions.</li>
+the import → approval → play flow.</li>
 </ul>
 <hr />
 <h2 id="feature-modules">3. Feature Modules</h2>
 <h3 id="account-creation">3.1 Account Creation</h3>
 <ul>
-<li>Email + magic link (no password; CM invitation email is the
-bootstrap)</li>
-<li>Display name (unique within a campaign, globally unique for CM)</li>
-<li>Optional avatar upload</li>
-<li>Timezone (auto-detected, editable; used for battle scheduling)</li>
+<li>Email + magic link (no password; per tenant SMTP)</li>
+<li>Display name (unique within the campaign, with collision
+suffixes)</li>
+<li>Optional avatar upload (stored in MinIO)</li>
+<li>Timezone (auto-detected, editable)</li>
 <li>Locale (en for MVP)</li>
 </ul>
+<p><strong>Tenant assignment</strong>: every new account is tied to one
+tenant. If a player needs to be in multiple tenants (rare), they sign up
+separately in each — the email can be the same; the <code>User</code>
+rows are per-tenant.</p>
 <h3 id="join-via-invite">3.2 Join via Invite</h3>
 <ul>
 <li>Single text field: “Paste invite code or link”</li>
-<li>Validation against <code>Campaign.joinCode</code></li>
-<li>If valid: account auto-binds to campaign with
-<code>CampaignMember</code> role <code>player</code></li>
-<li>If invalid: clear error (“Code not found or expired” vs “Already
-used”)</li>
+<li>Validation:
+<ul>
+<li>Code exists</li>
+<li>Code belongs to a campaign in the same tenant the user is signed up
+in (no cross-tenant joins)</li>
+<li>Code not expired</li>
+<li>Code not used beyond its max-uses (CM-configurable; default 1)</li>
+</ul></li>
+<li>If valid: account binds to campaign as
+<code>CampaignMember.role = &#39;player&#39;</code></li>
+<li>If invalid: clear error (“Code not found”, “Code expired”, “Code
+already used”, “Wrong tenant”)</li>
 </ul>
 <h3 id="faction-picker">3.3 Faction Picker</h3>
 <p>Searchable dropdown of all 26 Wahapedia factions. Each option shows:
-- Faction logo (from Wahapedia or local) - One-line description - Linked
-supplement (auto-selected if campaign supplement has faction-specific
-content)</p>
-<p>After selection, the system creates a placeholder <code>Roster</code>
-with no units. Player then imports their first army (PRD-3).</p>
+- Faction logo (from Wahapedia) - One-line description - Linked
+Armageddon-specific content flag (if any)</p>
+<p>After selection: - Create <code>CampaignMember.factionId</code> -
+Create an empty <code>Roster</code> (no draft, no approved) - Player is
+redirected to “Import your first roster” CTA</p>
 <h3 id="first-time-onboarding">3.4 First-Time Onboarding</h3>
-<p>Modal flow shown only on first login:</p>
+<p>Modal flow shown on first login to a campaign:</p>
 <ol type="1">
-<li><strong>“Welcome”</strong>: 1-line pitch + “Got it” button</li>
-<li><strong>“Crusade basics”</strong>: 3-step explainer with visuals
-(rank ladder, OoA test, requisitions)</li>
-<li><strong>“Import your army”</strong>: direct link to PRD-3
+<li><strong>“Welcome”</strong> — 1-line pitch + “Got it”</li>
+<li><strong>“The flow”</strong> — import → diff → CM approval → approved
+→ play; 3-step explainer</li>
+<li><strong>“Roster gating”</strong> — “you can’t file battle results
+until your roster is CM-approved; submit early”</li>
+<li><strong>“Import your roster”</strong> — direct link to PRD-3
 importer</li>
-<li><strong>“You’re set”</strong>: dashboard with empty roster</li>
+<li><strong>“You’re set”</strong> — dashboard with empty roster</li>
 </ol>
-<p>The tour can be re-invoked from settings at any time.</p>
 <hr />
 <h2 id="user-flow">4. User Flow</h2>
 <pre class="mermaid"><code>flowchart TD
-    A[Player receives invite link] --&gt; B{Click link}
-    B --&gt; C[Lands on /join?code=XYZ]
-    C --&gt; D{Has account?}
-    D --&gt;|No| E[Sign up: email + display name]
-    D --&gt;|Yes| F[Sign in via magic link]
-    E --&gt; G[Email magic link sent]
-    F --&gt; G
-    G --&gt; H[Click link in email]
-    H --&gt; I[Authenticated, on /join page]
-    I --&gt; J[Pick faction]
-    J --&gt; K[Confirm join]
-    K --&gt; L[Redirected to /campaigns/{id} dashboard]
-    L --&gt; M{First time?}
-    M --&gt;|Yes| N[Onboarding tour]
-    M --&gt;|No| O[Standard dashboard]
-    N --&gt; P[Import army CTA]
-    P --&gt; Q[Hand off to PRD-3]</code></pre>
+    A[Player receives invite link] --&gt; B[Lands on /join?code=XYZ]
+    B --&gt; C{Has account in this tenant?}
+    C --&gt;|No| D[Sign up: email + display name + tenant]
+    C --&gt;|Yes| E[Sign in via magic link]
+    D --&gt; F[Email magic link sent]
+    E --&gt; F
+    F --&gt; G[Click link in email]
+    G --&gt; H[Authenticated, back on /join]
+    H --&gt; I{Invite valid?}
+    I --&gt;|No| J[Show error]
+    I --&gt;|Yes| K[Pick faction]
+    K --&gt; L[Create Roster shell]
+    L --&gt; M[Redirected to /campaigns/{id}]
+    M --&gt; N{First time in this campaign?}
+    N --&gt;|Yes| O[Onboarding tour]
+    N --&gt;|No| P[Standard dashboard]
+    O --&gt; Q[Import roster CTA → PRD-3]</code></pre>
 <h3 id="branch-returning-player-new-campaign">4.1 Branch: Returning
 Player, New Campaign</h3>
-<p>Player signs in, opens dashboard, sees existing campaign(s) + a “Join
-another campaign” button. Same flow as above from <code>J</code> (pick
-faction).</p>
-<h3 id="branch-invite-code-expired">4.2 Branch: Invite Code Expired</h3>
-<p>CM controls expiry (default 14 days). Expired codes show a clear
-message with a “Request new invite from your CM” button (sends in-app
-notification to CM).</p>
+<p>Player signs in, opens dashboard, sees existing campaigns + “Join
+another campaign” button. Same flow as above from <code>I</code>.</p>
+<h3 id="branch-cross-tenant-player">4.2 Branch: Cross-Tenant Player</h3>
+<p>If a player is already in tenant A and gets an invite to tenant B,
+they must sign up separately. The UI explains this and offers a “create
+a new account in this tenant” link.</p>
+<h3 id="branch-invite-code-edge-cases">4.3 Branch: Invite Code Edge
+Cases</h3>
+<ul>
+<li><strong>Expired</strong>: CM controls expiry (default 14 days).
+Expired codes show clear message with “Request new invite from your CM”
+button (sends in-app notification to CM).</li>
+<li><strong>Used (max-uses reached)</strong>: “This invite has been
+fully used. Ask your CM for a new one.”</li>
+<li><strong>Wrong tenant</strong>: “This invite is for a different
+campaign group. If you don’t have an account in that group, you’ll need
+to be invited there separately.”</li>
+</ul>
 <hr />
 <h2 id="faction-picker-notes">5. Faction Picker Notes</h2>
-<p>The 26 Wahapedia factions are not equally Crusade-friendly in the
-Armageddon supplement. The picker should:</p>
 <ul>
-<li><strong>Highlight</strong> factions with strong Armageddon content
-(per Wahapedia faction page)</li>
-<li><strong>Allow</strong> picking any faction; if a faction has no
-Armageddon-specific content, show a soft warning (“Limited Armageddon
-content — you’ll use mostly universal Crusade rules”)</li>
-<li><strong>Not restrict</strong> player choice; some CMs run “anything
-goes” campaigns</li>
+<li>26 Wahapedia factions are the canonical list.</li>
+<li>The picker <strong>does not</strong> filter to Armageddon-suitable
+factions (player choice is respected; the CM’s house rules determine
+what’s actually legal).</li>
+<li>Soft highlight: factions with documented Armageddon content get a
+small badge.</li>
+<li>Legends / Forge World units are not in the picker (faction choice
+only); they’re added during NR import.</li>
 </ul>
 <hr />
 <h2 id="out-of-scope">6. Out of Scope</h2>
 <ul>
-<li>Multi-campaign cross-roster management (future)</li>
-<li>Player-to-player messaging (not part of MVP)</li>
-<li>Spectator sign-up (spectators can view via public campaign URL, no
-auth)</li>
+<li>Cross-tenant single sign-on</li>
+<li>Player-to-player direct messaging</li>
+<li>Spectator sign-up (spectators are public-link-based, no auth)</li>
+<li>OAuth login (env-var OIDC config possible but out of MVP)</li>
 </ul>
 <hr />
 <h2 id="dependencies">7. Dependencies</h2>
 <ul>
-<li><strong>PRD-0</strong>: <code>User</code>, <code>Campaign</code>,
-<code>CampaignMember</code> types</li>
+<li><strong>PRD-0</strong>: <code>User</code>, <code>Tenant</code>,
+<code>Campaign</code>, <code>CampaignMember</code>,
+<code>Roster</code></li>
 <li><strong>PRD-1</strong>: CM-side invite generation</li>
-<li><strong>Auth infra</strong> (PRD-0): magic-link email delivery</li>
 <li><strong>PRD-3</strong>: army import handoff</li>
+<li><strong>Auth infra</strong>: SMTP, magic-link delivery</li>
+<li><strong>Wahapedia data</strong> (PRD-0 infra): faction list,
+descriptions</li>
 </ul>
 <hr />
 <h2 id="success-metrics">8. Success Metrics</h2>
@@ -291,7 +318,7 @@ auth)</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Invite-to-onboarded time</td>
+<td>Invite-to-roster-imported time</td>
 <td>&lt; 5 min median</td>
 </tr>
 <tr class="even">
@@ -303,7 +330,7 @@ auth)</li>
 <td>&gt; 80%</td>
 </tr>
 <tr class="even">
-<td>Magic-link delivery success rate</td>
+<td>Magic-link delivery success</td>
 <td>&gt; 99% (incl. retry on bounce)</td>
 </tr>
 </tbody>
@@ -311,18 +338,21 @@ auth)</li>
 <hr />
 <h2 id="edge-cases">9. Edge Cases</h2>
 <ol type="1">
-<li><strong>Two players pick the same display name in same
-campaign</strong>: append <code>#2</code>, <code>#3</code>, etc. (e.g.,
-<code>Jake#2</code>). Show a non-blocking warning.</li>
+<li><strong>Two players pick same display name in same
+campaign</strong>: append <code>#2</code>, <code>#3</code> etc.
+Non-blocking warning.</li>
 <li><strong>Player joins, then CM removes them</strong>: player loses
-access but their roster data is retained for 30 days in case of dispute,
-then hard-deleted.</li>
+access; roster data retained for 30 days for dispute, then
+hard-deleted.</li>
 <li><strong>Player wants to switch faction mid-campaign</strong>:
-requires CM approval (per PRD-5), creates a new roster version while
-keeping the old one as a snapshot.</li>
-<li><strong>Player’s email bounces</strong>: account marked
+requires CM approval (per PRD-5), creates a new Roster while keeping the
+old one as a snapshot.</li>
+<li><strong>Email bounces</strong>: account marked
 <code>email_unverified</code>; cannot file battle updates until
-resolved. Banner on dashboard explains.</li>
+resolved. Banner on dashboard.</li>
+<li><strong>Player tries to join with code from a tenant they have no
+account in</strong>: error with a “create an account in this tenant”
+link, which restarts the flow at <code>D</code>.</li>
 </ol>
 </body>
 </html>

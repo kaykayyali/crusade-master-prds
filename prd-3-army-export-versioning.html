@@ -152,69 +152,6 @@
     div.column{display: inline-block; vertical-align: top; width: 50%;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
 </head>
@@ -222,136 +159,228 @@
 <header id="title-block-header">
 <h1 class="title">prd-3-army-export-versioning</h1>
 </header>
-<h1 id="prd-3-army-export-versioning">PRD-3: Army Export &amp;
-Versioning</h1>
+<h1 id="prd-3-roster-import-approval-rule-compliance-v2">PRD-3: Roster
+Import, Approval, &amp; Rule Compliance (v2)</h1>
 <blockquote>
-<p>Import New Recruit JSON exports, version rosters over time,
-cross-reference with Wahapedia datasheets, and track changes between
-game sessions.</p>
+<p>The roster state machine, the diff surfaced to the player before
+approval, and the automated rule-compliance engine. The central piece of
+v2.</p>
 </blockquote>
 <hr />
 <h2 id="goals">1. Goals</h2>
-<p>Let a player import their army list from New Recruit and have it
-instantly become a versioned, queryable Crusade roster. Every import
-creates a new immutable <code>RosterVersion</code>; the active version
-is what gets used in battles.</p>
-<p><strong>Success metric</strong>: 90% of NR exports import without
-manual fixup. The remaining 10% get a clear, actionable error or
-partial-import state.</p>
+<p>Let a player import their NR-shaped JSON, see exactly what changed
+vs. the last approved roster, and submit it for CM approval. The system
+runs a rule-compliance check on every import and surfaces violations to
+both the player and the CM.</p>
+<p><strong>Success metric</strong>: 90% of NR-shaped JSON imports parse
+and produce a draft without manual fixup. 85% of submitted drafts pass
+CM approval on first review (the rest are caught by either the player or
+the CM as rule violations).</p>
 <hr />
-<h2 id="user-stories">2. User Stories</h2>
-<ul>
-<li><strong>As a player</strong>, I can paste a New Recruit JSON export
-URL (e.g. <code>newrecruit.eu/app/list/PYK7z</code>) and the system
-fetches and parses it.</li>
-<li><strong>As a player</strong>, I can also upload the JSON file
-directly.</li>
-<li><strong>As a player</strong>, I see a side-by-side diff of my new
-roster vs. the active version, highlighting which units were added,
-removed, or had wargear changes.</li>
-<li><strong>As a player</strong>, I can name my roster versions
-(“Pre-Nachmund update”, “After losses at Vigilus”).</li>
-<li><strong>As a CM</strong>, I can see the full version history of a
-player’s roster.</li>
-<li><strong>As a player</strong>, I can manually edit my roster
-(add/remove units, swap wargear) for cases where I haven’t used NR.</li>
-</ul>
+<h2 id="the-roster-state-machine-key-concept">2. The Roster State
+Machine (KEY CONCEPT)</h2>
+<pre><code>                        ┌──────────────────────┐
+                        │   (no Roster yet)    │
+                        └──────────┬───────────┘
+                                   │ player uploads JSON
+                                   ▼
+                        ┌──────────────────────┐
+                        │  RosterDraft         │
+                        │  status:             │
+                        │   &#39;pending_review&#39;   │   player sees diff
+                        └──────────┬───────────┘
+                          ack by   │
+                          player   │   player submits for approval
+                                   ▼
+                        ┌──────────────────────┐
+                        │  RosterDraft         │
+                        │  status:             │
+                        │   &#39;pending_approval&#39; │   CM reviews
+                        └──────────┬───────────┘
+                          approved │
+                          by CM    │   rejected
+                                   ▼                  ▼
+                        ┌──────────────────────┐  ┌─────────────────────┐
+                        │  RosterApproved      │  │  RosterDraft         │
+                        │  (immutable)         │  │  status:             │
+                        │  becomes &quot;active&quot;    │  │   &#39;rejected&#39;         │
+                        └──────────┬───────────┘  │  with CM feedback    │
+                                   │              └─────────────────────┘
+                                   │
+                                   │  player uploads NEW JSON
+                                   ▼
+                        ┌──────────────────────┐
+                        │  RosterDraft (v2)    │   diff is vs. RosterApproved v1
+                        │  status:             │
+                        │   &#39;pending_review&#39;   │
+                        └──────────┘</code></pre>
+<p><strong>Hard rule</strong>: a player can only file a battle update,
+requisition, or any other event (PRD-4) if the most recent state of
+their Roster is <code>RosterApproved</code>. The “active” Roster at any
+timestamp is the most recent RosterApproved up to that timestamp.</p>
 <hr />
-<h2 id="new-recruit-import-pipeline">3. New Recruit Import Pipeline</h2>
+<h2 id="import-pipeline">3. Import Pipeline</h2>
 <pre class="mermaid"><code>flowchart LR
-    A[Player pastes NR URL or uploads JSON] --&gt; B[System fetches + validates JSON]
-    B --&gt; C{Valid BS schema?}
-    C --&gt;|No| D[Show parse error with line number]
-    C --&gt;|Yes| E[Walk selections tree]
-    E --&gt; F[Match each unit entry to Wahapedia Datasheets.csv]
-    F --&gt; G{Match found?}
-    G --&gt;|No| H[Flag for manual review]
-    G --&gt;|Yes| I[Hydrate Unit records with wahapedia_id]
-    I --&gt; J[Compute diff vs. active RosterVersion]
-    J --&gt; K{Player accepts?}
-    K --&gt;|No| L[Discard]
-    K --&gt;|Yes| M[Create new RosterVersion immutable snapshot]
-    M --&gt; N[Mark as active version]</code></pre>
+    A[Player uploads .json file] --&gt; B[Blob stored in MinIO]
+    B --&gt; C[Background job parses]
+    C --&gt; D{Valid NR schema?}
+    D --&gt;|No| E[Show parse error with line + reason]
+    D --&gt;|Yes| F[Walk selections tree]
+    F --&gt; G[Match units to Wahapedia Datasheets.csv]
+    G --&gt; H{Match found?}
+    H --&gt;|No| I[Flag unit for manual review]
+    H --&gt;|Yes| J[Hydrate Unit records with wahapedia_id]
+    J --&gt; K[Compute diff vs. last RosterApproved]
+    K --&gt; L{RosterApproved exists?}
+    L --&gt;|No| M[All units flagged &#39;additions&#39;]
+    L --&gt;|Yes| N[Categorize each unit: added, removed, wargear-changed, unchanged]
+    N --&gt; O[Run rule-compliance check, see §4]
+    O --&gt; P[Create RosterDraft with status &#39;pending_review&#39;]
+    P --&gt; Q[Notify player: &#39;review your diff&#39;]</code></pre>
 <h3 id="json-validation">3.1 JSON Validation</h3>
-<p>Accept the BattleScribe XML-as-JSON schema. Validation rules:</p>
+<p>Standard New Recruit / BattleScribe JSON schema. Validation
+rules:</p>
 <ul>
 <li>Root must have <code>roster</code> key</li>
-<li><code>roster.forces[0].selections</code> must be present</li>
-<li>Each unit must have a unique <code>id</code> (BS entry id)</li>
-<li>Costs must be present and non-negative</li>
+<li><code>roster.forces[0].selections</code> present</li>
+<li>Each unit has a unique <code>id</code> (BattleScribe entry id)</li>
+<li>Costs present and non-negative</li>
 <li>Nested entries (<code>Order of Battle</code>, faction upgrades)
-parsed but kept separate from the unit list</li>
+parsed into <code>CrusadeForceState</code> (separate from unit
+list)</li>
 </ul>
+<p>Validation errors include line numbers and human-readable reasons.
+Parse errors are fatal (no draft created).</p>
 <h3 id="wahapedia-cross-reference">3.2 Wahapedia Cross-Reference</h3>
-<p>Wahapedia’s <code>Datasheets.csv</code> exposes <code>id</code>,
-<code>name</code>, <code>faction_id</code>, <code>role</code>, and other
-fields. The match strategy:</p>
-<ol type="1">
-<li><strong>By entry id</strong> (preferred): NR preserves BattleScribe
-catalogue entry ids. If a matching id exists in
-<code>Datasheets.csv</code>, use it directly.</li>
-<li><strong>By name + faction fallback</strong>: fuzzy-match on name
-string within the player’s selected faction. Confidence &gt; 90%
-auto-accepts; 70-90% requires player confirmation; &lt; 70% flags for
-manual review.</li>
-</ol>
-<p>When Wahapedia data is refreshed (nightly cron), the cross-reference
-IDs are re-resolved; unmatched units from prior imports are re-attempted
-with the new data.</p>
+<p>Match strategy: 1. <strong>By entry id</strong> (preferred): NR
+preserves BattleScribe entry ids. Direct lookup in
+<code>Datasheets.csv</code>. 2. <strong>By name + faction
+fallback</strong>: fuzzy match within the player’s selected faction.
+Confidence &gt; 90% auto-accepts; 70-90% requires player confirmation;
+&lt; 70% flags for manual review.</p>
+<p>Unmatched units become <code>Unit.wahapia_id = null</code> and
+display a warning in the draft. They’re still importable (player can
+manually enter stats) but require CM override to be approved.</p>
 <h3 id="crusade-metadata">3.3 Crusade Metadata</h3>
-<p>NR exports often include Crusade-specific entries (Order of Battle,
-Supply Limit, Battle Tally, etc.). These are parsed into a structured
-<code>CrusadeForceState</code> separate from the unit list:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> CrusadeForceState {</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  supplement<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>             <span class="co">// &#39;armageddon&#39; etc.</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  supplyLimit<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span>           <span class="co">// Nachmund</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  logisticsPoints<span class="op">?:</span> <span class="dt">number</span><span class="op">;</span>       <span class="co">// Nachmund</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  battleTally<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  victories<span class="op">:</span> <span class="dt">number</span><span class="op">;</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  alignment<span class="op">?:</span> <span class="st">&#39;guardians&#39;</span> <span class="op">|</span> <span class="st">&#39;despoilers&#39;</span> <span class="op">|</span> <span class="st">&#39;marauders&#39;</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span>  <span class="co">// Nachmund</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  requisitions<span class="op">:</span> RequisitionState[]<span class="op">;</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">// etc.</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<p>This is overlaid on the active RosterVersion, not the unit snapshot.
-Updates to it happen via the post-battle update flow (PRD-4).</p>
+<p>NR exports may include Crusade-specific entries under
+<code>Order of Battle</code> (Supply Limit, Battle Tally, Victories,
+etc.). These are parsed into <code>CrusadeForceState</code> and shown in
+the draft but <strong>not</strong> auto-applied — they only become
+canonical when the Roster is approved. This is important because:</p>
+<ul>
+<li>If the player is wrong about their RP balance, the CM catches it at
+approval</li>
+<li>A re-import can show the player “your Supply Limit dropped from 2800
+to 2400 — did you spend LP?”</li>
+</ul>
 <hr />
-<h2 id="versioning">4. Versioning</h2>
-<p>Every import creates an immutable <code>RosterVersion</code>. A
-roster is a logical entity; versions are concrete snapshots.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> Roster {</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  ownerUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  factionId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  activeVersionId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  versions<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>   <span class="co">// ordered list of RosterVersion ids, oldest first</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> RosterVersion {</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  rosterId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  versionNumber<span class="op">:</span> int<span class="op">;</span>       <span class="co">// 1, 2, 3, ...</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">:</span> timestamp<span class="op">;</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  createdByUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  sourceImportId<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span>  <span class="co">// links back to the Import record</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  snapshot<span class="op">:</span> {</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    units<span class="op">:</span> Unit[]<span class="op">;</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    crusade<span class="op">:</span> CrusadeForceState<span class="op">;</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    pointLimit<span class="op">:</span> int<span class="op">;</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    totalPoints<span class="op">:</span> int<span class="op">;</span></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  label<span class="op">?:</span> <span class="dt">string</span><span class="op">;</span>           <span class="co">// optional player-supplied name</span></span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<p><strong>Versioning rules:</strong> - Versions are never modified
-after creation. - The <code>activeVersionId</code> is the only one
-consulted for battle filings. - A new version becomes active only after
-player confirmation. - Players can roll back: revert
-<code>activeVersionId</code> to an earlier version (creates a new
-version that is a copy of the old one — does not destroy history).</p>
+<h2 id="rule-compliance-engine-the-referee">4. Rule Compliance Engine
+(THE REFEREE)</h2>
+<p>Every import runs a set of checks. Each check produces a
+<code>RuleCheck</code> record with
+<code>status: &#39;pass&#39; | &#39;warn&#39; | &#39;fail&#39;</code>.</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 29%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Check</th>
+<th>Severity</th>
+<th>What it catches</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Point cap</td>
+<td>fail</td>
+<td>Total roster points &gt; <code>campaign.point_cap</code></td>
+</tr>
+<tr class="even">
+<td>Faction lock</td>
+<td>fail</td>
+<td>Unit has a faction keyword not in the player’s selected faction</td>
+</tr>
+<tr class="odd">
+<td>Unit cap (Crusade rules)</td>
+<td>warn</td>
+<td>More than 3 of the same datasheet (universal Crusade rule)</td>
+</tr>
+<tr class="even">
+<td>Requisition provenance</td>
+<td>warn</td>
+<td>Unit in roster but not in any prior RosterApproved AND no
+<code>requisition_purchase</code> event since the prior approval</td>
+</tr>
+<tr class="odd">
+<td>Wargear legality</td>
+<td>warn</td>
+<td>Wargear option not present in the matching datasheet’s Wahapedia
+options</td>
+</tr>
+<tr class="even">
+<td>Legends unit</td>
+<td>warn</td>
+<td>Unit flagged as Legend in Wahapedia (CMs can override per campaign
+setting)</td>
+</tr>
+<tr class="odd">
+<td>Removed unit</td>
+<td>warn</td>
+<td>Unit in prior RosterApproved but not in new draft (could be
+intentional; could be forgotten requisition)</td>
+</tr>
+<tr class="even">
+<td>Honour / scar consistency</td>
+<td>warn</td>
+<td>Unit has a Battle Honour in the new draft that wasn’t earned via a
+prior approved battle event</td>
+</tr>
+<tr class="odd">
+<td>XP / rank consistency</td>
+<td>fail</td>
+<td>Unit’s XP / rank in new draft doesn’t match what the prior battles
+would produce</td>
+</tr>
+<tr class="even">
+<td>Supply limit (Nachmund)</td>
+<td>fail</td>
+<td>Roster units + reinforcements &gt; Supply Limit <em>(deferred; MVP
+is Armageddon)</em></td>
+</tr>
+<tr class="odd">
+<td>Logistics points (Nachmund)</td>
+<td>warn</td>
+<td>Implied LP spend exceeds available <em>(deferred; MVP is
+Armageddon)</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Configurable per campaign</strong>: -
+<code>rule_compliance_mode</code>: <code>soft</code> (warn, player
+acknowledges) | <code>hard</code> (fail blocks draft submission) |
+<code>off</code> - Default: <code>soft</code> with <code>hard</code> on
+the two <code>fail</code>-severity checks (point cap, faction lock,
+XP/rank consistency)</p>
+<p><strong>Output of the engine</strong>: a list of
+<code>RuleCheck</code> records attached to the <code>RosterDraft</code>.
+Surfaced to: 1. The player when they view the draft (must explicitly
+acknowledge before submitting for approval) 2. The CM when they review
+the draft for approval (PRD-5)</p>
+<h3 id="acknowledgment-ux">4.1 Acknowledgment UX</h3>
+<p>If any check is <code>warn</code> or <code>fail</code>, the player
+sees a modal: - List of issues, each with: severity, what’s wrong, how
+to fix - “I understand, submit anyway” button (only enabled if no
+<code>fail</code>-severity issues, or the campaign is in
+<code>soft</code> mode) - “Cancel and re-export from NR” button
+(recommended path)</p>
 <hr />
-<h2 id="diff-view">5. Diff View</h2>
-<p>Side-by-side or unified diff showing:</p>
+<h2 id="diff-view-player-first">5. Diff View (Player-First)</h2>
+<p>The diff is <strong>for the player, not just the CM</strong>. The
+player must explicitly review and acknowledge it before submitting for
+approval.</p>
 <table>
 <colgroup>
 <col style="width: 36%" />
@@ -377,83 +406,111 @@ version that is a copy of the old one — does not destroy history).</p>
 <td>Yellow highlight on changed field</td>
 </tr>
 <tr class="even">
-<td>Stats changed (after Wahapedia refresh)</td>
-<td>Blue info icon with timestamp</td>
-</tr>
-<tr class="odd">
 <td>Crusade state changed (RP, supply limit, etc.)</td>
 <td>Inline numeric delta</td>
 </tr>
+<tr class="odd">
+<td>Honours/scars added</td>
+<td>Inline with reason “earned via Battle #X (approved YYYY-MM-DD)” or
+“unearned — will require CM override”</td>
+</tr>
+<tr class="even">
+<td>Stats changed (after Wahapedia refresh)</td>
+<td>Blue info icon with timestamp</td>
+</tr>
 </tbody>
 </table>
-<p>The diff is computed in two layers: 1. <strong>Structural
-diff</strong>: units and wargear, ignoring cosmetic metadata 2.
-<strong>Crusade diff</strong>: XP, ranks, honours, scars,
-requisitions</p>
+<p>The diff is two layers: 1. <strong>Structural diff</strong>: units
+and wargear 2. <strong>Crusade diff</strong>: XP, ranks, honours, scars,
+requisitions, supply limit</p>
 <hr />
-<h2 id="manual-editing">6. Manual Editing</h2>
-<p>Players can add/remove units and swap wargear without going through
-NR. Use cases: - Player hasn’t built a list in NR yet, just wants to
-start - Player is on mobile and NR is desktop-only - Player wants to use
-a unit NR doesn’t have (e.g., Legends units)</p>
-<p>Manual edits create a new <code>RosterVersion</code> with
-<code>sourceImportId = null</code> and
-<code>createdByUserId = user.id</code>. The system tags the version as
-“manually edited” so CMs can review.</p>
+<h2 id="cm-approval">6. CM Approval</h2>
+<p>When the player submits the draft (status:
+<code>pending_review</code> → <code>pending_approval</code>), it enters
+the CM’s approval inbox (PRD-5).</p>
+<p>CM sees: - The same diff the player saw - The full rule-check report
+- Player’s optional notes - The currently-active RosterApproved (if any)
+for context - A diff between the new draft and the currently-active
+approved (re-using §5)</p>
+<p>CM’s options: - <strong>Approve</strong>: creates a new
+RosterApproved, becomes active. The previous RosterApproved is retained
+in history. - <strong>Reject with feedback</strong>: draft goes back to
+<code>rejected</code> status with CM’s notes. Player can edit and
+resubmit. - <strong>Request changes</strong>: same as reject, but with
+structured change requests. - <strong>Override a specific rule</strong>:
+per campaign, CM can mark a <code>fail</code> as
+<code>pass_with_override</code> with a reason.</p>
+<p>Approval creates a <code>roster_approved</code> event (PRD-4) with a
+<code>Delta</code> capturing the change from the previous approved
+snapshot.</p>
 <hr />
-<h2 id="wahapedia-data-refresh">7. Wahapedia Data Refresh</h2>
-<p>Nightly cron: 1. Fetch
-<code>https://wahapedia.ru/wh40k10ed/Factions.csv</code> and the other
-Wahapedia CSVs 2. Compute diff vs. cached data 3. For each changed
-datasheet, find affected RosterVersions and re-resolve unit data 4. If a
-unit was deleted from Wahapedia, mark the corresponding
-<code>Unit.wahapia_id</code> as <code>deprecated</code> and surface a
-banner 5. If a unit had a points change, write a system Delta to
-affected RosterVersions (visible in PRD-4 timeline)</p>
-<p>The cache key includes edition; when 11th-ed lands, the cache rotates
-and old data is preserved under <code>wh40k10ed.*</code> so the app
-continues to serve 10th-ed campaigns.</p>
+<h2 id="rollback">7. Rollback</h2>
+<p>A CM can roll back a RosterApproval within a configurable window
+(default 7 days). Rollback: - Marks the RosterApproved as
+<code>superseded</code> - Re-activates the previous one - Emits a
+<code>roster_rolled_back</code> event - Inverts any deltas that were
+applied as a consequence (e.g., if a requisition was purchased in the
+rolled-back window and the new roster included that unit, the unit is
+removed)</p>
+<p>For destructive approvals (rare, since approval is mostly additive),
+rollback requires typed confirmation.</p>
 <hr />
-<h2 id="user-flow-first-import">8. User Flow: First Import</h2>
+<h2 id="cron-wahapedia-refresh">8. Cron: Wahapedia Refresh</h2>
+<p>Nightly job: 1. Fetch
+<code>https://wahapedia.ru/wh40k10ed/*.csv</code> and the export spec
+XLSX 2. Compute diff vs. cached 3. For each changed datasheet, find
+affected RosterApproved snapshots and re-resolve unit data 4. If a unit
+was deleted from Wahapedia, mark
+<code>Unit.wahapia_id = deprecated</code> and surface a banner 5. If a
+unit’s points changed, emit a <code>points_updated</code> system event
+per affected RosterApproved 6. Cache key includes edition; when 11th-ed
+data appears on Wahapedia, the cache rotates and 10th-ed is preserved
+under <code>wh40k10ed.*</code></p>
+<hr />
+<h2 id="user-flow-first-time-import">9. User Flow: First-Time
+Import</h2>
 <pre class="mermaid"><code>flowchart TD
-    A[Player clicks &#39;Import Army&#39;] --&gt; B{Source?}
-    B --&gt;|New Recruit URL| C[Paste URL]
-    B --&gt;|File upload| D[Choose .json]
-    B --&gt;|Manual| E[Add units by hand]
-    C --&gt; F[System fetches]
-    D --&gt; F
-    F --&gt; G[Parse + validate]
-    G --&gt; H[Cross-ref Wahapedia]
-    H --&gt; I[Show preview with diff]
-    I --&gt; J{Accept?}
-    J --&gt;|No| K[Show error or cancel]
-    J --&gt;|Yes| L[Create RosterVersion v1]
-    L --&gt; M[Mark active]
-    M --&gt; N[Player sees roster on dashboard]</code></pre>
+    A[Player on campaign dashboard] --&gt; B[Click &#39;Import Roster&#39;]
+    B --&gt; C[Upload .json file]
+    C --&gt; D[System parses + cross-refs Wahapedia]
+    D --&gt; E[Run rule-compliance engine]
+    E --&gt; F[Create RosterDraft &#39;pending_review&#39;]
+    F --&gt; G[Player sees diff + rule check results]
+    G --&gt; H{Issues to resolve?}
+    H --&gt;|Yes, blocking| I[Player goes back to NR, fixes, re-exports]
+    H --&gt;|No or soft warnings| J[Player acknowledges]
+    I --&gt; C
+    J --&gt; K[Submit for CM approval]
+    K --&gt; L[CM reviews per PRD-5]
+    L --&gt; M{Approved?}
+    M --&gt;|Yes| N[RosterApproved created, becomes active]
+    M --&gt;|No| O[Rejected, player can edit and resubmit]
+    N --&gt; P[Player can now file battles]</code></pre>
 <hr />
-<h2 id="out-of-scope">9. Out of Scope</h2>
+<h2 id="out-of-scope">10. Out of Scope</h2>
 <ul>
-<li>BattleScribe XML import (defer; NR JSON covers 90% of use
-cases)</li>
-<li>TTS (Tabletop Simulator) export</li>
-<li>3D-printed proxy generation</li>
-<li>Real-time sync with NR (must be a manual re-import)</li>
+<li>NR URL fetch / scraping</li>
+<li>Manual unit editing in the UI (JSON import is the canonical path;
+CMs have an override tool for emergency fixes per PRD-1)</li>
+<li>Multiple approval-required documents (e.g., a “list of changes” that
+needs separate sign-off)</li>
+<li>Auto-rollback if CM is also the submitter (CM-as-player already
+requires a co-CM per PRD-1)</li>
 </ul>
 <hr />
-<h2 id="dependencies">10. Dependencies</h2>
+<h2 id="dependencies">11. Dependencies</h2>
 <ul>
 <li><strong>PRD-0</strong>: <code>Roster</code>,
-<code>RosterVersion</code>, <code>Unit</code>, <code>User</code>
-types</li>
-<li><strong>Wahapedia CSV cache</strong> (infra): nightly refresh
-job</li>
-<li><strong>PRD-4</strong>: diffs feed into the battle event
-timeline</li>
-<li><strong>PRD-5</strong>: manual edits may require CM approval for
-crusade state changes</li>
+<code>RosterDraft</code>, <code>RosterApproved</code>,
+<code>CrusadeForceState</code>, <code>RuleCheck</code></li>
+<li><strong>PRD-4</strong>: every approval creates an event; timeline is
+the source of truth for what was active when</li>
+<li><strong>PRD-5</strong>: approval workflow is unified</li>
+<li><strong>Wahapedia CSV cache</strong> (infra): nightly refresh,
+shared across tenants</li>
 </ul>
 <hr />
-<h2 id="success-metrics">11. Success Metrics</h2>
+<h2 id="success-metrics">12. Success Metrics</h2>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -467,20 +524,21 @@ crusade state changes</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td>NR import success rate (no manual fixup)</td>
+<td>NR-shaped JSON import success rate (no manual fixup)</td>
 <td>&gt; 90%</td>
 </tr>
 <tr class="even">
-<td>Average import time</td>
-<td>&lt; 10s</td>
+<td>First-try approval rate</td>
+<td>&gt; 85%</td>
 </tr>
 <tr class="odd">
-<td>Manual-edit rate</td>
-<td>&lt; 10% of all imports</td>
+<td>Rule-check catch rate (catches violations CM would otherwise catch
+manually)</td>
+<td>&gt; 95%</td>
 </tr>
 <tr class="even">
-<td>Wahapedia refresh lag</td>
-<td>&lt; 24h</td>
+<td>Time from JSON upload to first RosterApproved</td>
+<td>&lt; 30 min median</td>
 </tr>
 <tr class="odd">
 <td>Wahapedia cross-ref match rate</td>
@@ -489,25 +547,27 @@ crusade state changes</li>
 </tbody>
 </table>
 <hr />
-<h2 id="edge-cases">12. Edge Cases</h2>
+<h2 id="edge-cases">13. Edge Cases</h2>
 <ol type="1">
-<li><strong>Import with custom unit names (“Brother Tyler’s
-Veterans”)</strong>: stored as <code>Unit.customName</code>; preserves
-the lore name while keeping <code>wahapedia_id</code> for stats
-lookup.</li>
-<li><strong>Import with a unit not in Wahapedia</strong> (e.g., a Forge
-World Legends unit): stored with <code>wahapedia_id = null</code>;
-player can manually enter stats or use a generic stat block.</li>
-<li><strong>Two players share a NR list URL</strong> (copy-paste
-mistake): system detects duplicate <code>sourceImportId</code> and
-prompts to clone vs. import-as-new.</li>
-<li><strong>Importing during a pending battle update</strong> (PRD-5):
-the new version is staged; pending update refers to the previous
-version. Approval flow re-checks against the new version before
-applying.</li>
+<li><strong>Two players share the same NR list URL</strong> (copy-paste
+mistake): system detects duplicate import blob and prompts to use the
+existing roster vs. import-as-new.</li>
+<li><strong>Import with a custom unit name</strong> (“Brother Tyler’s
+Veterans”): stored as <code>Unit.customName</code>;
+<code>wahapedia_id</code> retained for stats lookup.</li>
+<li><strong>Import with a Legends / Forge World unit</strong>: stored
+with <code>wahapedia_id = null</code>; rule engine flags
+<code>warn</code>; player acknowledges; CM approves with override.</li>
 <li><strong>Corrupt JSON</strong>: show “Could not parse file” with a
 “Send to support” link that emails the raw file (with user
 consent).</li>
+<li><strong>Player imports during a pending approval</strong>: the new
+draft is staged separately; pending approval refers to the older draft.
+The CM’s approval workflow handles drift (PRD-5).</li>
+<li><strong>CM switches the campaign’s <code>point_cap</code> after a
+roster is approved</strong>: existing approved rosters are retroactively
+checked; if a roster now exceeds the cap, the player is notified and
+must re-import.</li>
 </ol>
 </body>
 </html>

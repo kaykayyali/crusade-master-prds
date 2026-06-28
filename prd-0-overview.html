@@ -222,11 +222,12 @@
 <header id="title-block-header">
 <h1 class="title">prd-0-overview</h1>
 </header>
-<h1 id="prd-0-crusade-master-app-overview">PRD-0: Crusade Master App —
-Overview</h1>
+<h1 id="prd-0-crusade-master-app-overview-v2">PRD-0: Crusade Master App
+— Overview (v2)</h1>
 <blockquote>
-<p>Shared architecture, data model, MVP scope (Armageddon), and links to
-subsystem PRDs.</p>
+<p>Shared architecture, data model, MVP scope, and links to subsystem
+PRDs. v2 reflects the locked tech stack, multi-tenant model, and
+Armageddon-only MVP.</p>
 </blockquote>
 <hr />
 <h2 id="background-and-goals">1. Background and Goals</h2>
@@ -237,16 +238,16 @@ group Crusade (typically 4–16 players over weeks/months) requires a
 “Crusade Master” to:</p>
 <ul>
 <li>Coordinate match pairings and scheduling</li>
-<li>Verify post-battle updates (XP, ranks, honours, scars, requisition
-spends)</li>
+<li>Verify post-battle updates and roster changes</li>
 <li>Enforce house rules and adjudicate disputes</li>
 <li>Maintain a consistent narrative arc</li>
 </ul>
-<p>Today this is mostly done with paper rosters, spreadsheets, or paid
-tools (Administratum, ServoCrypt). The recent release of New Recruit’s
-JSON export and Wahapedia’s CSV data export make it possible to build an
-automated, self-hosted tool that any CM can run without depending on a
-third-party Patreon.</p>
+<p>Players typically prep their lists in New Recruit. NR handles list
+construction well but offers no enforcement tooling: nothing tells a CM
+“this player added a unit without a requisition,” “this roster exceeds
+the campaign point cap,” or “this battle was filed against an
+out-of-date roster.” The app’s job is the <strong>enforcement and
+timeline</strong> layer on top of NR.</p>
 <h3 id="goals">1.2 Goals</h3>
 <table>
 <colgroup>
@@ -263,20 +264,21 @@ third-party Patreon.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Business</strong>: replace paper/spreadsheet Crusade
-administration</td>
-<td>Group campaigns using the app end-to-end</td>
-<td>5+ active campaigns within 90 days of launch</td>
+<td><strong>Business</strong>: replace ad-hoc Crusade administration
+(paper / spreadsheets / Discord)</td>
+<td>Self-hosted instances running ≥ 1 active campaign</td>
+<td>50+ instances within 6 months of v1</td>
 </tr>
 <tr class="even">
 <td><strong>User (CM)</strong>: cut per-battle admin time</td>
 <td>Time CM spends processing a post-battle update</td>
-<td>&lt; 2 minutes per battle</td>
+<td>&lt; 2 min per battle</td>
 </tr>
 <tr class="odd">
-<td><strong>User (Player)</strong>: visibility into own force</td>
-<td>Time for a player to see their current Crusade state</td>
-<td>&lt; 10 seconds (one screen)</td>
+<td><strong>User (Player)</strong>: roster compliance before
+submission</td>
+<td>% of battle filings that pass first-try approval</td>
+<td>&gt; 85%</td>
 </tr>
 <tr class="even">
 <td><strong>Product</strong>: data ownership</td>
@@ -286,217 +288,246 @@ administration</td>
 </tbody>
 </table>
 <h3 id="mvp-scope">1.3 MVP Scope</h3>
-<p><strong>Crusade: Armageddon</strong> (launched June 2026 with 11th
-Edition Warhammer 40,000). The app MVP supports the full Armageddon rule
-set: alignment, supply limit, requisitions, logistics points, and
-Armageddon-specific agendas and relics.</p>
-<p><strong>Explicit non-MVP (future iterations):</strong> - Crusade:
-Leviathan (10th-ed launch book) - Crusade: Tyrannic War - Crusade:
-Pariah Nexus - Crusade: Nachmund Gauntlet</p>
-<p>These are scaffolded in the data model from day one so the schema
-doesn’t need a migration later, but their mechanic-specific UIs (e.g.,
-Nachmund’s three-alignment system) ship in PRD-6+.</p>
+<p><strong>Crusade supplement</strong>: <em>Crusade: Armageddon</em>
+(10th Edition, 128pp, June 2025). Armageddon is the only supplement
+supported at MVP.</p>
+<p><strong>Edition</strong>: 10th Edition only. The app does not model
+11th-edition rules; users running 11th-ed content are out of scope.</p>
+<p><strong>Crusade supplements explicitly out of MVP</strong> (data
+model is schema-ready for all 5, but UI is Armageddon-only): -
+<em>Crusade: Leviathan</em> (launch book, June 2023) - <em>Crusade:
+Tyrannic War</em> (2023) - <em>Crusade: Pariah Nexus</em> (Jan 2024) -
+<em>Crusade: Nachmund Gauntlet</em> (Feb 2025)</p>
 <hr />
 <h2 id="user-types">2. User Types</h2>
 <table>
 <colgroup>
-<col style="width: 15%" />
-<col style="width: 35%" />
-<col style="width: 48%" />
+<col style="width: 17%" />
+<col style="width: 41%" />
+<col style="width: 41%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>User</th>
 <th>What they do</th>
-<th>What they can see</th>
+<th>Tenant scope</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><strong>Crusade Master (CM)</strong></td>
-<td>Owns one or more campaigns. Approves post-battle updates,
-adjudicates disputes, generates events, manages the campaign
-lifecycle</td>
-<td>All campaigns they own + all rosters in those campaigns</td>
+<td><strong>Instance Admin</strong></td>
+<td>Operates the self-hosted Docker instance. Created at first-run via
+env-var bootstrap or wizard. Manages global settings, sees all tenants
+for abuse moderation</td>
+<td>All tenants on the instance</td>
 </tr>
 <tr class="even">
-<td><strong>Player</strong></td>
-<td>Joins a campaign. Imports their army from New Recruit, files
-post-battle updates, requests requisitions</td>
-<td>Only their own roster and public campaign info (leaderboard,
-narrative log)</td>
+<td><strong>Crusade Master (CM)</strong></td>
+<td>Owns one or more campaigns within their tenant. Approves roster
+changes, adjudicates disputes, triggers narrative events, manages
+campaign lifecycle</td>
+<td>One tenant, can be CM of multiple campaigns</td>
 </tr>
 <tr class="odd">
-<td><strong>Spectator (read-only)</strong></td>
-<td>Views campaign narrative, leaderboard, public rosters</td>
-<td>Public campaign info only</td>
+<td><strong>Player</strong></td>
+<td>Joins campaigns in their tenant. Imports rosters (JSON), files
+post-battle updates, requests requisitions, plays in battles</td>
+<td>One tenant, can join multiple campaigns</td>
 </tr>
 <tr class="even">
-<td><strong>System Admin</strong></td>
-<td>Operates the platform (errata refresh, abuse moderation)</td>
-<td>All data, audit log access</td>
+<td><strong>Spectator (read-only)</strong></td>
+<td>Views public campaign narrative, leaderboard, public rosters</td>
+<td>Cross-tenant if campaign is set public</td>
 </tr>
 </tbody>
 </table>
+<p><strong>A user can hold multiple roles</strong> (e.g., Instance Admin
++ CM + Player). A CM can also be a player in their own campaign — this
+is allowed and a “playing in your own campaign” badge is shown to other
+members.</p>
 <hr />
-<h2 id="architecture-shared">3. Architecture (shared)</h2>
+<h2 id="architecture">3. Architecture</h2>
+<h3 id="tech-stack-locked">3.1 Tech Stack (locked)</h3>
+<table>
+<colgroup>
+<col style="width: 31%" />
+<col style="width: 36%" />
+<col style="width: 31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Layer</th>
+<th>Choice</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Frontend</td>
+<td>Vite + (Vue or React, TBD)</td>
+<td>TypeScript, Tailwind, IndexedDB cache</td>
+</tr>
+<tr class="even">
+<td>Backend</td>
+<td>FastAPI (Python 3.12)</td>
+<td>Async, Pydantic v2, SQLAlchemy 2.x</td>
+</tr>
+<tr class="odd">
+<td>Database</td>
+<td>PostgreSQL 16</td>
+<td>Row-level security for tenant isolation</td>
+</tr>
+<tr class="even">
+<td>Object storage</td>
+<td>MinIO</td>
+<td>S3-compatible; for NR export blobs, generated PDFs, avatars</td>
+</tr>
+<tr class="odd">
+<td>Auth</td>
+<td>Magic-link email (or OIDC via env-var config)</td>
+<td>No passwords</td>
+</tr>
+<tr class="even">
+<td>Background jobs</td>
+<td>APScheduler or Celery + Redis</td>
+<td>NR import parsing, Wahapedia refresh, rule-compliance engine</td>
+</tr>
+<tr class="odd">
+<td>Deployment</td>
+<td>Docker Compose (single-node MVP), Docker Swarm or k8s for
+multi-node</td>
+<td>Self-hosted</td>
+</tr>
+</tbody>
+</table>
+<h3 id="components">3.2 Components</h3>
 <pre><code>┌──────────────────────────────────────────────────────────────┐
-│                    Client (Web, mobile-first)                │
-│  React or SvelteKit  ·  Tailwind  ·  IndexedDB cache         │
+│                  Frontend (Vite SPA)                         │
+│  Vite + Vue/React + TypeScript + Tailwind + IndexedDB        │
 └──────────────────┬───────────────────────────────────────────┘
-                   │ HTTPS
+                   │ HTTPS / JSON
 ┌──────────────────▼───────────────────────────────────────────┐
-│                     API Gateway                              │
-│  Auth (OAuth or email-magic-link)  ·  Rate limiting          │
-└──────────────────┬───────────────────────────────────────────┘
-                   │
-   ┌───────────────┼───────────────┬──────────────────┐
-   │               │               │                  │
-┌──▼─────────┐ ┌───▼──────────┐ ┌──▼─────────────┐ ┌──▼─────────┐
-│ Campaign   │ │ Roster &amp;     │ │ Battle &amp;       │ │ Approval   │
-│ Service    │ │ Crusade      │ │ Event Service  │ │ Workflow   │
-│ (CM ops)   │ │ Card Service │ │ (deltas)       │ │ Service    │
-└──┬─────────┘ └──┬───────────┘ └──┬─────────────┘ └──┬─────────┘
-   │             │                │                  │
-   └─────────────┴────────────────┴──────────────────┘
-                     │
-        ┌────────────┼─────────────┐
-        │            │             │
-   ┌────▼────┐  ┌─────▼─────┐ ┌────▼────────┐
-   │Postgres │  │ Object    │ │ Wahapedia   │
-   │ (OLTP)  │  │ Storage   │ │ Cache (CSV) │
-   └─────────┘  │ (exports) │ └─────────────┘
-                └───────────┘</code></pre>
-<p><strong>Key tech choices:</strong> - <strong>Postgres</strong> for
-relational data (campaigns, rosters, battles, audit log) -
-<strong>Object storage</strong> (S3-compatible) for NR export JSON
-blobs, PDF rosters - <strong>Wahapedia data refresh</strong> runs
-nightly; results cached in <code>wahapedia_cache</code> tables and
-joined to faction tables</p>
+│               FastAPI backend (single process MVP)           │
+│  Routers: auth, campaigns, rosters, battles, approvals,      │
+│           events, admin                                      │
+│  Background workers: NR parsing, Wahapedia refresh,           │
+│                      rule-compliance engine                  │
+└──┬───────────────┬───────────────────┬───────────────┬───────┘
+   │               │                   │               │
+┌──▼──────┐  ┌─────▼──────┐  ┌─────────▼──────┐  ┌─────▼────┐
+│Postgres │  │   MinIO    │  │  Redis (cache, │  │  SMTP    │
+│+ RLS    │  │ (S3 API)   │  │   job queue)   │  │  (magic  │
+│         │  │            │  │                │  │   link)  │
+└─────────┘  └────────────┘  └────────────────┘  └──────────┘</code></pre>
+<h3 id="tenancy-model">3.3 Tenancy Model</h3>
+<p>Multi-tenant on a single Docker instance:</p>
+<ul>
+<li>Every domain table has <code>tenant_id UUID NOT NULL</code> with
+row-level security policies</li>
+<li>Tenants are isolated; no cross-tenant queries except via Instance
+Admin role</li>
+<li>Each tenant has its own CM(s), campaigns, members</li>
+<li>A user belongs to one tenant (their account is provisioned with a
+<code>tenant_id</code> at signup)</li>
+<li>The Wahapedia cache and reference data (units, factions,
+supplements) are shared across all tenants on the instance
+(read-only)</li>
+</ul>
+<h3 id="wahapedia-integration">3.4 Wahapedia Integration</h3>
+<ul>
+<li>Nightly job fetches
+<code>https://wahapedia.ru/wh40k10ed/*.csv</code> and the export spec
+XLSX</li>
+<li>Diff against the cached version</li>
+<li>Updated data is republished to all tenants</li>
+<li>Per-tenant override is <strong>not</strong> supported (everyone sees
+the same Wahapedia snapshot)</li>
+</ul>
 <hr />
 <h2 id="shared-data-model">4. Shared Data Model</h2>
-<p>These types are referenced by every subsystem PRD. Detailed fields
-live in each subsystem’s PRD; the table here shows what crosses
-boundaries.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// === Identity ===</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>User { id<span class="op">,</span> email<span class="op">,</span> displayName<span class="op">,</span> role<span class="op">:</span> <span class="st">&#39;player&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;admin&#39;</span><span class="op">,</span> createdAt }</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> createdAt<span class="op">,</span> settings }</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>CampaignMember { campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId }</span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// === Tenancy ===</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Tenant { id<span class="op">,</span> name<span class="op">,</span> slug<span class="op">,</span> createdAt<span class="op">,</span> settings }</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>User { id<span class="op">,</span> tenantId<span class="op">,</span> email<span class="op">,</span> displayName<span class="op">,</span> role<span class="op">,</span> createdAt }</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>Role <span class="op">=</span> <span class="st">&#39;instance_admin&#39;</span> <span class="op">|</span> <span class="st">&#39;cm&#39;</span> <span class="op">|</span> <span class="st">&#39;player&#39;</span> <span class="op">|</span> <span class="st">&#39;spectator&#39;</span>   <span class="co">// user can hold multiple</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (per player, per campaign) ===</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Roster { id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span> version<span class="op">,</span> createdAt }</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>RosterVersion { id<span class="op">,</span> rosterId<span class="op">,</span> versionNumber<span class="op">,</span> sourceImportId<span class="op">,</span> snapshotJson<span class="op">,</span> pointLimit<span class="op">,</span> createdAt }</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>Unit { id<span class="op">,</span> rosterVersionId<span class="op">,</span> wahapediaDatasheetId<span class="op">,</span> name<span class="op">,</span> customName<span class="op">,</span> rank<span class="op">,</span> xp<span class="op">,</span> status }</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade card (lives on Unit) ===</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>BattleHonour { id<span class="op">,</span> unitId<span class="op">,</span> name<span class="op">,</span> sourceSupplementId<span class="op">,</span> gainedAt }</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>BattleScar { id<span class="op">,</span> unitId<span class="op">,</span> name<span class="op">,</span> sourceSupplementId<span class="op">,</span> gainedAt }</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">// === Supplements ===</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement { id<span class="op">,</span> code<span class="op">,</span> name<span class="op">,</span> edition<span class="op">,</span> releaseDate }  <span class="co">// &#39;armageddon&#39;, &#39;nachmund&#39;, etc.</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>Battle { id<span class="op">,</span> campaignId<span class="op">,</span> playerAId<span class="op">,</span> playerBId<span class="op">,</span> scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId }</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> }</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> battleUpdateId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">// === Campaign ===</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>Campaign { id<span class="op">,</span> tenantId<span class="op">,</span> name<span class="op">,</span> supplementId<span class="op">,</span> cmUserId<span class="op">,</span> status<span class="op">,</span> settings<span class="op">,</span> createdAt }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>CampaignMember { id<span class="op">,</span> campaignId<span class="op">,</span> userId<span class="op">,</span> joinedAt<span class="op">,</span> status<span class="op">,</span> factionId }</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">// === Roster (the key new model — see PRD-3 for state machine) ===</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>Roster { id<span class="op">,</span> campaignId<span class="op">,</span> ownerUserId<span class="op">,</span> factionId<span class="op">,</span> name<span class="op">,</span> currentDraftId<span class="op">,</span> currentApprovedId }</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>RosterDraft { id<span class="op">,</span> rosterId<span class="op">,</span> sourceJsonBlobId<span class="op">,</span> status<span class="op">,</span> createdAt<span class="op">,</span> ackByPlayerAt }</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>RosterApproved { id<span class="op">,</span> rosterId<span class="op">,</span> sourceDraftId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId<span class="op">,</span> snapshot<span class="op">,</span> pointLimit }</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>RosterApprovalHistory { rosterId<span class="op">,</span> approvedId<span class="op">,</span> approvedAt<span class="op">,</span> approvedByUserId }   <span class="co">// chron. list</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade state (lives on RosterApproved snapshot) ===</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>CrusadeForceState { supplementId<span class="op">,</span> supplyLimit<span class="op">?,</span> logisticsPoints<span class="op">?,</span> battleTally<span class="op">,</span> victories<span class="op">,</span> requisitions<span class="op">,</span> <span class="op">...</span> }</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">// === Battles ===</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>Battle { id<span class="op">,</span> campaignId<span class="op">,</span> playerAId<span class="op">,</span> playerBId<span class="op">,</span> scheduledAt<span class="op">,</span> status<span class="op">,</span> resultA<span class="op">,</span> resultB<span class="op">,</span> missionId<span class="op">,</span> approvedRosterIdA<span class="op">,</span> approvedRosterIdB }</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>BattleUpdate { id<span class="op">,</span> battleId<span class="op">,</span> submittedByUserId<span class="op">,</span> submittedAt<span class="op">,</span> status }</span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason }</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
-<p><strong>Identifiers are UUIDv7</strong> (time-ordered) so audit log
-scans are efficient.</p>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (the unified delta model — see PRD-4) ===</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility }</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">// === Rule compliance ===</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details<span class="op">,</span> refDraftId }</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval (see PRD-5) ===</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash }</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span></code></pre></div>
+<p><strong>Identifiers</strong>: UUIDv7 (time-ordered) for efficient
+audit-log scans.</p>
 <hr />
 <h2 id="subsystem-prds">5. Subsystem PRDs</h2>
 <table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 29%" />
+<col style="width: 56%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>PRD</th>
 <th>Subsystem</th>
-<th>Status</th>
+<th>v2 changes from v1</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>PRD-1</td>
-<td>Crusade Master Administration</td>
-<td>Drafted</td>
+<td>Instance Admin &amp; Crusade Master Administration</td>
+<td>Added instance admin role; multi-tenant model</td>
 </tr>
 <tr class="even">
 <td>PRD-2</td>
 <td>Player Sign-Up</td>
-<td>Drafted</td>
+<td>Tenant-bounded; invite-code scoped to tenant</td>
 </tr>
 <tr class="odd">
 <td>PRD-3</td>
-<td>Army Export &amp; Versioning</td>
-<td>Drafted</td>
+<td>Roster Import, Approval, &amp; Rule Compliance</td>
+<td><strong>Major rewrite</strong> — state machine,
+diff-to-player-first, NR JSON only</td>
 </tr>
 <tr class="even">
 <td>PRD-4</td>
-<td>Events &amp; Deltas</td>
-<td>Drafted</td>
+<td>Events, Submissions, &amp; Timeline</td>
+<td><strong>Major rewrite</strong> — submission gating, timeline
+model</td>
 </tr>
 <tr class="odd">
 <td>PRD-5</td>
 <td>Approval System</td>
-<td>Drafted</td>
+<td>Added <code>roster_approval</code> kind</td>
 </tr>
 </tbody>
 </table>
-<p>Each PRD can be developed and shipped independently once the shared
-data model is implemented. Dependencies are explicit in each PRD’s
-“Dependencies” section.</p>
 <hr />
-<h2 id="crusade-supplement-coverage">6. Crusade Supplement Coverage</h2>
-<table>
-<colgroup>
-<col style="width: 26%" />
-<col style="width: 13%" />
-<col style="width: 13%" />
-<col style="width: 46%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Supplement</th>
-<th>Code</th>
-<th>MVP?</th>
-<th>Mechanic highlights</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Armageddon</td>
-<td><code>armageddon</code></td>
-<td><strong>Yes</strong></td>
-<td>Alignment, Supply Limit, Armageddon-specific Requisitions</td>
-</tr>
-<tr class="even">
-<td>Nachmund Gauntlet</td>
-<td><code>nachmund</code></td>
-<td>Future</td>
-<td>3 alignments (Guardians/Despoilers/Marauders), Logistics Points</td>
-</tr>
-<tr class="odd">
-<td>Pariah Nexus</td>
-<td><code>pariah</code></td>
-<td>Future</td>
-<td>Contagion mechanic, Nephilim agendas</td>
-</tr>
-<tr class="even">
-<td>Tyrannic War</td>
-<td><code>tyrannic</code></td>
-<td>Future</td>
-<td>Tyrannic agendas, faction-gated objectives</td>
-</tr>
-</tbody>
-</table>
-<p>The MVP is <strong>Armageddon</strong> because it ships with 11th-ed,
-is the active launch supplement, and is the only supplement that
-requires no carryover from 10th-ed data.</p>
-<hr />
-<h2 id="success-metrics">7. Success Metrics</h2>
+<h2 id="success-metrics">6. Success Metrics</h2>
 <table style="width:100%;">
 <colgroup>
 <col style="width: 28%" />
@@ -512,9 +543,8 @@ requires no carryover from 10th-ed data.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Time-to-first-update</td>
-<td>From player joining a campaign to first post-battle update
-filed</td>
+<td>Time-to-first-approved-roster</td>
+<td>Player joins → first RosterApproved exists</td>
 <td>&lt; 30 min</td>
 </tr>
 <tr class="even">
@@ -523,13 +553,23 @@ filed</td>
 <td>&lt; 2 min</td>
 </tr>
 <tr class="odd">
-<td>Roster import success rate</td>
-<td>NR imports that produce a valid roster without manual fixup</td>
-<td>&gt; 90%</td>
+<td>First-try approval rate</td>
+<td>Battle filings passing CM approval on first review</td>
+<td>&gt; 85%</td>
 </tr>
 <tr class="even">
-<td>Data freshness</td>
-<td>Time from Wahapedia data update to reflected in app</td>
+<td>Rule-check catch rate</td>
+<td>Rule violations caught by automated engine vs. manual CM review</td>
+<td>&gt; 95%</td>
+</tr>
+<tr class="odd">
+<td>Tenant density</td>
+<td>Campaigns per tenant at steady state</td>
+<td>&gt; 2</td>
+</tr>
+<tr class="even">
+<td>Data freshness (Wahapedia)</td>
+<td>Time from Wahapedia update to reflected in app</td>
 <td>&lt; 24h</td>
 </tr>
 <tr class="odd">
@@ -540,37 +580,119 @@ filed</td>
 </tbody>
 </table>
 <hr />
-<h2 id="non-goals-mvp">8. Non-Goals (MVP)</h2>
+<h2 id="non-goals-mvp">7. Non-Goals (MVP)</h2>
 <ul>
 <li>❌ Matched Play / non-Crusade 40K rules</li>
-<li>❌ Tournament mode / pairings engine</li>
+<li>❌ Tournament pairings engine</li>
 <li>❌ Mobile native apps (web-only, mobile-responsive)</li>
-<li>❌ Real-time push notifications (email + in-app only for MVP)</li>
+<li>❌ Real-time push (email + in-app only for MVP)</li>
 <li>❌ 9th-ed Crusade support</li>
+<li>❌ 11th-edition rules support</li>
 <li>❌ Other Games Workshop systems (Age of Sigmar, Kill Team, Horus
 Heresy)</li>
+<li>❌ NR URL fetch / scraping (JSON upload only, per user
+direction)</li>
+<li>❌ PDF generation as deliverable (HTML printable versions are
+fine)</li>
 </ul>
 <hr />
-<h2 id="open-questions">9. Open Questions</h2>
-<ul>
-<li><strong>Auth provider</strong>: roll our own (email magic link) or
-use Supabase/Clerk? (TBD by infra team)</li>
-<li><strong>Hosting target</strong>: Vercel + Supabase vs self-hosted
-Docker? (TBD)</li>
-<li><strong>Data residency</strong>: EU-only for GDPR, or multi-region?
-(TBD)</li>
-<li><strong>Multi-tenant CMs</strong>: can one user be CM of multiple
-campaigns? (Yes — supported in schema, UI in PRD-1)</li>
-</ul>
+<h2 id="open-questions">8. Open Questions</h2>
+<table>
+<colgroup>
+<col style="width: 38%" />
+<col style="width: 34%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Question</th>
+<th>Default</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Frontend: Vue or React?</td>
+<td>Vue (better FastAPI integration story)</td>
+<td>TBD by frontend lead</td>
+</tr>
+<tr class="even">
+<td>Email provider for magic links</td>
+<td>SMTP via env vars; supports SES/Postmark/Resend</td>
+<td>TBD</td>
+</tr>
+<tr class="odd">
+<td>Multi-node deployment story</td>
+<td>Document Docker Swarm in v1.1</td>
+<td>TBD</td>
+</tr>
+<tr class="even">
+<td>Cross-tenant spectator campaigns</td>
+<td>Disabled by default; per-campaign toggle</td>
+<td>TBD</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="v2-changes-from-v1">9. v2 Changes from v1</h2>
+<table>
+<colgroup>
+<col style="width: 54%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>What</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Added Vite + FastAPI + Postgres + MinIO stack</td>
+<td>Per user direction</td>
+</tr>
+<tr class="even">
+<td>Added instance admin role</td>
+<td>Multi-tenant self-hosted model</td>
+</tr>
+<tr class="odd">
+<td>Removed 11th-ed references and “edition transition” concerns</td>
+<td><em>Crusade: Armageddon</em> is 10th-ed, June 2025; the 11th-ed
+launch box is a different product</td>
+</tr>
+<tr class="even">
+<td>MVP = Armageddon only (was: Armageddon first, others follow)</td>
+<td>Per user direction</td>
+</tr>
+<tr class="odd">
+<td>Removed NR URL fetch path</td>
+<td>Per user direction (JSON upload only)</td>
+</tr>
+<tr class="even">
+<td>Renamed “Crusade Master Approval System” framing</td>
+<td>Now a unified approval system with multiple kinds</td>
+</tr>
+<tr class="odd">
+<td>Roster state machine: draft → pending → approved</td>
+<td>Per user direction (gating principle)</td>
+</tr>
+<tr class="even">
+<td>Event model reframed as timeline-of-state-transitions</td>
+<td>Per user direction (events = deltas)</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="references">10. References</h2>
 <ul>
-<li>Wahapedia × 10th-ed Crusade data reference (companion research doc,
-deep-research output)</li>
+<li><em>Crusade: Armageddon</em>, Games Workshop, June 2025, 128pp,
+10th-edition supplement (Lexicanum, Bell of Lost Souls, multiple
+retailers)</li>
+<li>Wahapedia × 10th-ed Crusade data reference (companion research
+doc)</li>
 <li>New Recruit JSON export format (BattleScribe schema dialect)</li>
 <li>Administratum (Goonhammer) — closest commercial competitor</li>
 <li>ServoCrypt — closest open collaborative competitor</li>
-<li><em>Crusade: Armageddon</em> (Games Workshop, June 2026)</li>
 </ul>
 </body>
 </html>
