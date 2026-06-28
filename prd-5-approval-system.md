@@ -4,6 +4,14 @@
 
 ---
 
+## 0. Glossary (per PRD-0 §3b)
+
+- **Primary CM**: full campaign authority; the only role that can approve cross-team / campaign-wide actions.
+- **Crusade Team Leader**: a player on a team who has been granted `crusade_team_leader` for that team by the primary CM. Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled.
+- **Co-approval** (in this PRD): an `ApprovalRequest` that requires two distinct approvers. The pair is either Primary CM + second Primary CM (rare; multi-CM campaigns) or Primary CM + Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's team scope). Per-kind team-leader authority is configured by the primary CM in `Campaign.teamLeaderAuthority` (PRD-1 §4.4).
+
+---
+
 ## 1. Goals
 
 One consistent pipeline for every approval-worthy action. The CM's inbox is the single view of "what needs my attention."
@@ -24,11 +32,11 @@ The v1 categories of narrative-affecting actions routed through the approval que
 
 | Category | Concrete actions | Approval required? | Approver |
 |---|---|---|---|
-| **Army roster changes** | Player submits RosterDraft; manual roster edit; requisition purchase; roster revert | **Yes** | CM (or co-CM) |
-| **Crusade points** | RP grants/deducts from narrative events; requisition costs; manual RP adjustments | **Yes** | CM (or co-CM) |
-| **All-player effects** | Campaign-wide announcements; mass narrative events; point-cap changes; rule pack promotion (builtin → campaign) | **Yes** | CM (or co-CM) |
-| **Battle updates** | Per-unit XP, honours, scars, OoA tests, agenda ticks | **Yes** | CM (or co-CM) |
-| **Team / faction changes** | Team switch; faction switch mid-campaign | **Yes** | CM (or co-CM) |
+| **Army roster changes** | Player submits RosterDraft; manual roster edit; requisition purchase; roster revert | **Yes** | Primary CM; **Crusade Team Leader** of the affected team (if enabled per PRD-1 §4.4) |
+| **Crusade points** | RP grants/deducts from narrative events; requisition costs; manual RP adjustments | **Yes** | Primary CM; **Crusade Team Leader** (team-scoped) |
+| **All-player effects** | Campaign-wide announcements; mass narrative events; point-cap changes; rule pack promotion | **Yes** | Primary CM only (cross-team) |
+| **Battle updates** | Per-unit XP, honours, scars, OoA tests, agenda ticks | **Yes** | Primary CM; **Crusade Team Leader** (team-scoped) |
+| **Team / faction changes** | Team switch (cross-team); faction switch (player-level) | **Yes** | Primary CM only (team switch); Primary CM + **Team Leader** (faction switch) |
 
 ### 2.3 Self-Serve (Not Approval-Gated)
 
@@ -50,7 +58,7 @@ Some actions are player-internal and don't enter the approval queue:
 | Player imports RosterDraft (upload JSON) | No (player self-serves upload) | n/a — draft becomes `parsing` |
 | BullMQ parse completes | No (system) | n/a — draft becomes `pending_review` |
 | Player acknowledges rule-check issues | No (player self-serves) | n/a — draft becomes `pending_approval` |
-| **Player submits RosterDraft for approval** | **Yes** | CM (or co-CM) |
+| **Player submits RosterDraft for approval** | **Yes** | Primary CM; **Crusade Team Leader** (team-scoped, if enabled) |
 | Player files post-battle update | Yes | CM |
 | Player files manual roster edit | Yes | CM |
 | Player purchases Requisition | Yes | CM |
@@ -59,12 +67,12 @@ Some actions are player-internal and don't enter the approval queue:
 | Player switches team mid-campaign | Yes | CM |
 | CM edits campaign settings | No (CM is authority) | n/a |
 | CM triggers narrative event (single-team scope) | No (CM is authority) | n/a |
-| CM triggers narrative event (campaign-wide, RP-affecting) | Optional co-CM approval (campaign setting) | Co-CM if enabled; otherwise CM alone |
-| CM mass-rebans a unit mid-campaign | Yes | Co-CM (mandatory) |
+| CM triggers narrative event (campaign-wide, RP-affecting) | No (CM is authority on the trigger side) | n/a — fires events; team leaders see the result on their team log |
+| CM mass-rebans a unit mid-campaign | Yes (CM-only) | Primary CM |
 | CM edits `CampaignTeam.expectedFactionIds` | No (CM is authority) | Audit-logged |
 | CM rolls back a RosterApproval | No (CM is authority) | n/a |
 | CM overrides a rule check | No (CM is authority) | n/a |
-| CM grants or strips a co-CM role | No (primary CM only) | n/a |
+| CM grants or strips the `crusade_team_leader` role for a team | No (primary CM only) | n/a |
 
 A campaign setting `auto_approve_routine_battle_updates: bool` (default false) auto-approves battle updates with no anomalies. Anomalies that always require approval:
 - OoA test failed
@@ -72,7 +80,7 @@ A campaign setting `auto_approve_routine_battle_updates: bool` (default false) a
 - Honours / scars added beyond supplement's universal list
 - Manual edits outside NR import
 - Submitter is a new account (< 7 days)
-- Submitter is the CM themselves (auto-routes to co-CM or self-approves with audit if no co-CM)
+- Submitter is the CM themselves (CM-as-player; auto-approves per PRD-1 §5, except for kinds requiring a second approver which stay pending until one is available)
 
 ---
 
@@ -103,7 +111,7 @@ type ApprovalKind =
   | 'rp_adjustment'                // CM-initiated manual RP grant/deduct (e.g., narrative reward, dispute resolution)
   | 'requisition_rp_override'      // CM waives the RP cost of a requisition (narrative gift)
 
-  // === All-player effects (require co-CM approval) ===
+  // === All-player effects (CM-only, cross-team) ===
   | 'mass_reban'                   // CM bans/unbans a unit catalog-wide mid-campaign
   | 'campaign_announcement'        // CM posts a campaign-wide narrative announcement that persists in the timeline
   | 'point_cap_change'             // CM changes the campaign's point cap mid-campaign
@@ -127,15 +135,14 @@ interface ApprovalRequest {
   ruleCheckIds: string[];            // v3: rule checks attached at submission
   activeRosterApprovedId: string | null; // gating context
 
-  // v3.7 — records HOW the request was approved. Required so future event
+  // v3.7 (updated v3.11) — records HOW the request was approved. Required so future event
   // hooks (team view pages, Discord, narrative analytics) can filter or
   // count self-approved vs human-approved vs routine-auto-approved deltas.
   approvalSource:
-    | 'cm_review'                   // a CM reviewed and approved
-    | 'co_cm_review'                // a co-CM reviewed and approved
+    | 'cm_review'                   // a Primary CM or a Crusade Team Leader (within team scope) reviewed and approved
     | 'auto_approve_routine'        // campaign's auto-approve-routine-battle-updates setting fired
-    | 'self_approved'               // CM-as-player submitted and self-approved (PRD-1 §5)
-    | 'co_cm_required_unavailable'; // kind requires co-CM but none existed; fell back to self with audit
+    | 'self_approved'               // CM-as-player or Team-Leader-as-player submitted and self-approved (PRD-1 §5)
+    | 'co_cm_required_unavailable'; // kind requires a second approver but none existed; stayed pending
 }
 ```
 
@@ -273,7 +280,7 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 }
 ```
 
-#### `mass_reban` (All-player effects — co-CM approval mandatory)
+#### `mass_reban` (All-player effects — CM-only)
 ```ts
 {
   catalogUnitIds: string[],
@@ -283,7 +290,7 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 }
 ```
 
-#### `campaign_announcement` (All-player effects — co-CM approval)
+#### `campaign_announcement` (All-player effects — CM-only)
 ```ts
 {
   message: string,                   // markdown, ≤ 2 KB
@@ -312,23 +319,46 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 }
 ```
 
-### 3.2 Routing Per Kind
+### 3.2 Routing Per Kind (v3.11)
 
-Each kind has a default approver and (for high-impact kinds) a co-approval rule:
+Per-kind routing now reflects the **Crusade Team Leader** model: team leaders can approve actions affecting their team for kinds the primary CM has enabled. The primary CM can always approve anything (their authority is global). Co-approval (two distinct approvers) is reserved for high-impact cross-team / destructive kinds.
 
-| Kind | Approver | Co-approval |
-|---|---|---|
-| `roster_approval` | CM | Optional (campaign setting) |
-| `roster_manual_edit` | Co-CM (since the CM is the actor) | Mandatory — prevents CM self-edit abuse |
-| `requisition_purchase` | CM | Optional (CM-gifted or narrative; routine player requisitions bypass this per PRD-4 §7b.2) |
-| `roster_revert` | CM | Optional |
-| `roster_rollback` | CM | Optional (auto-approve if CM-as-player per PRD-1 §5) |
-| `history_rollback` | CM | Optional (auto-approve if CM-as-player per PRD-1 §5) |
-| `team_switch` | CM | Optional |
-| `faction_switch` | CM | Optional |
-| `post_battle_update` | CM | Optional |
-| `rp_adjustment` | CM | Optional |
-| `requisition_rp_override` | Co-CM | Mandatory |
+**Per-kind routing table:**
+
+| Kind | Primary CM authority | Team Leader authority (default per PRD-1 §4.4; CM-configurable per campaign) | Co-approval required? |
+|---|---|---|---|
+| `roster_approval` | ✅ | ✅ enabled by default — team leader can approve for their team | No |
+| `roster_manual_edit` | ✅ (CM is the actor) | ❌ disabled by default — CM-only | No (single CM; CM cannot self-approve per below) |
+| `requisition_purchase` | ✅ (CM-gifted or narrative) | ❌ disabled — routine player requisitions are NR-side per PRD-4 §7b.2 | No |
+| `roster_revert` | ✅ | ✅ enabled — team leader can approve for their team | No |
+| `roster_rollback` | ✅ | ✅ enabled — team leader can approve for their team (per user's v3.11 confirmation) | No |
+| `history_rollback` | ✅ | ✅ enabled — team leader can approve for their team | No |
+| `team_switch` | ✅ (cross-team) | ❌ disabled — team leaders cannot approve cross-team changes | No |
+| `faction_switch` | ✅ | ✅ enabled — the player's own faction change | No |
+| `post_battle_update` | ✅ | ✅ enabled — team leader can approve for their team | No |
+| `rp_adjustment` | ✅ | ✅ enabled — team leader can approve for their team | No |
+| `requisition_rp_override` | ✅ (high-impact) | ❌ disabled — CM-only | No |
+| `mass_reban` | ✅ (campaign-wide) | ❌ disabled — CM-only | No |
+| `campaign_announcement` | ✅ (campaign-wide) | ❌ disabled — CM-only | No |
+| `point_cap_change` | ✅ (campaign-wide) | ❌ disabled — CM-only | No |
+| `custom` | ✅ (CM-only) | ❌ disabled — CM-only | Per `schemaRef` |
+
+**CM self-edit prevention:**
+
+For kinds where the CM is the actor AND is also a player (`roster_manual_edit`, `rp_adjustment` initiated by the CM, etc.), the request must be approved by someone OTHER than the submitting CM. Options:
+- A second Primary CM (if the campaign has multiple CMs)
+- A Crusade Team Leader of the affected team (if the kind allows it)
+- Otherwise the request stays pending with `approvalSource: 'co_cm_required_unavailable'` until another approver becomes available
+
+The CM cannot approve their own roster_manual_edit of their own roster; this is the abuse-prevention gate.
+
+**Team scope enforcement:**
+
+When a team leader approves a request, the request's `teamId` (inferred from the affected entity: `Roster.teamId`, `CampaignMember.teamId`, etc.) must match the team leader's team. A team leader of Helsreach Defenders cannot approve a `roster_approval` for a Gorgutz WAAAGH! player — the RLS policy and the API both enforce this, returning 403.
+
+**Per-kind rule-pack enforcement (v3.11):**
+
+The CM's configuration of which rules fire on which kinds (PRD-1 §4.4) is enforced at approval time: when an `ApprovalRequest` is created, the rule engine runs the rules configured for that kind. The CM can, e.g., make `team-narrative-alignment` fire on `roster_approval` but not on `post_battle_update`.
 | `mass_reban` | Co-CM | **Mandatory** (per PRD-5 §2.4) |
 | `campaign_announcement` | CM | Optional (campaign setting — default off for routine, on for high-impact) |
 | `point_cap_change` | Co-CM | **Mandatory** |
@@ -336,14 +366,15 @@ Each kind has a default approver and (for high-impact kinds) a co-approval rule:
 
 ### 3.3 CM-as-Player Auto-Approval (PRD-1 §5)
 
-When the submitter is the campaign's only CM, every kind **auto-approves but the pipeline still runs**. The `approvalSource` field records which path fired:
+When the submitter is the campaign's primary CM (CM-as-player), every kind **auto-approves but the pipeline still runs**, except kinds where the CM is the actor (which require a second approver per §3.2 above). The `approvalSource` field records which path fired:
 
 | Scenario | `approvalSource` value |
 |---|---|
-| CM (or co-CM) reviewed and approved manually | `cm_review` or `co_cm_review` |
+| Primary CM (or a Crusade Team Leader within their team's scope) reviewed and approved manually | `cm_review` |
 | Campaign's `auto_approve_routine_battle_updates` fired (no anomalies) | `auto_approve_routine` |
-| CM-as-player submitted, no co-CM exists, kind allows CM-as-actor | `self_approved` |
-| Kind requires co-CM but none exists (high-impact fallback) | `co_cm_required_unavailable` |
+| CM-as-player submitted, no second approver needed (kind allows self-approve) | `self_approved` |
+| Kind requires a second approver but none exists (e.g., CM-only kind in a single-CM campaign) | `co_cm_required_unavailable` |
+| Team Leader of team X approved a request affecting team X | `cm_review` (with `reviewerUserId: teamLeader`) |
 
 **Architectural rule:** auto-approval ≠ pipeline bypass. Every auto-approved request still:
 1. Creates the `ApprovalRequest` row (with `approvalSource` populated)
@@ -540,7 +571,7 @@ flowchart TD
 1. **Two CMs approve the same request simultaneously**: optimistic locking via `contextHash`; second approver sees "already decided."
 2. **Submitter withdraws while a CM has it claimed**: request closed.
 3. **Approval is for a now-deleted entity**: apply step fails transactionally; CM is shown an error and asked to reject.
-4. **CM is the submitter and no co-CM exists**: auto-approves via `approvalSource: 'self_approved'` (or `'co_cm_required_unavailable'` for high-impact kinds). The pipeline still runs — `ApprovalRequest` is created, rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3, the architectural rule is "auto-approve ≠ pipeline bypass" so future event hooks (team view pages, Discord, narrative analytics) work uniformly.
+4. **CM is the submitter and no second approver exists**: auto-approves via `approvalSource: 'self_approved'` (or `'co_cm_required_unavailable'` for kinds requiring a second approver). The pipeline still runs — `ApprovalRequest` is created, rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3, the architectural rule is "auto-approve ≠ pipeline bypass" so future event hooks (team view pages, Discord, narrative analytics) work uniformly.
 5. **Submitter suspended mid-approval**: pending requests auto-rejected with reason "submitter suspended."
 6. **Active RosterApproved changes during approval**: drift detected; CM chooses re-validate, force-apply, or reject.
 7. **Notification email bounces**: status queued for retry; if persistent, in-app notification only.

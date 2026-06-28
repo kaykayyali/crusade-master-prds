@@ -228,6 +228,24 @@
 by the worker; first-class <code>roster_approval</code> kind.</p>
 </blockquote>
 <hr />
+<h2 id="glossary-per-prd-0-3b">0. Glossary (per PRD-0 §3b)</h2>
+<ul>
+<li><strong>Primary CM</strong>: full campaign authority; the only role
+that can approve cross-team / campaign-wide actions.</li>
+<li><strong>Crusade Team Leader</strong>: a player on a team who has
+been granted <code>crusade_team_leader</code> for that team by the
+primary CM. Sees their team’s data; can approve
+<code>ApprovalRequest</code>s affecting their team for kinds the primary
+CM has enabled.</li>
+<li><strong>Co-approval</strong> (in this PRD): an
+<code>ApprovalRequest</code> that requires two distinct approvers. The
+pair is either Primary CM + second Primary CM (rare; multi-CM campaigns)
+or Primary CM + Crusade Team Leader (if the kind allows team-leader
+approval and the request is within that leader’s team scope). Per-kind
+team-leader authority is configured by the primary CM in
+<code>Campaign.teamLeaderAuthority</code> (PRD-1 §4.4).</li>
+</ul>
+<hr />
 <h2 id="goals">1. Goals</h2>
 <p>One consistent pipeline for every approval-worthy action. The CM’s
 inbox is the single view of “what needs my attention.”</p>
@@ -265,33 +283,35 @@ approval queue:</p>
 <td>Player submits RosterDraft; manual roster edit; requisition
 purchase; roster revert</td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM; <strong>Crusade Team Leader</strong> of the affected
+team (if enabled per PRD-1 §4.4)</td>
 </tr>
 <tr class="even">
 <td><strong>Crusade points</strong></td>
 <td>RP grants/deducts from narrative events; requisition costs; manual
 RP adjustments</td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM; <strong>Crusade Team Leader</strong> (team-scoped)</td>
 </tr>
 <tr class="odd">
 <td><strong>All-player effects</strong></td>
 <td>Campaign-wide announcements; mass narrative events; point-cap
-changes; rule pack promotion (builtin → campaign)</td>
+changes; rule pack promotion</td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM only (cross-team)</td>
 </tr>
 <tr class="even">
 <td><strong>Battle updates</strong></td>
 <td>Per-unit XP, honours, scars, OoA tests, agenda ticks</td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM; <strong>Crusade Team Leader</strong> (team-scoped)</td>
 </tr>
 <tr class="odd">
 <td><strong>Team / faction changes</strong></td>
-<td>Team switch; faction switch mid-campaign</td>
+<td>Team switch (cross-team); faction switch (player-level)</td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM only (team switch); Primary CM + <strong>Team
+Leader</strong> (faction switch)</td>
 </tr>
 </tbody>
 </table>
@@ -379,7 +399,8 @@ Matrix</h3>
 <tr class="even">
 <td><strong>Player submits RosterDraft for approval</strong></td>
 <td><strong>Yes</strong></td>
-<td>CM (or co-CM)</td>
+<td>Primary CM; <strong>Crusade Team Leader</strong> (team-scoped, if
+enabled)</td>
 </tr>
 <tr class="odd">
 <td>Player files post-battle update</td>
@@ -423,13 +444,14 @@ Matrix</h3>
 </tr>
 <tr class="odd">
 <td>CM triggers narrative event (campaign-wide, RP-affecting)</td>
-<td>Optional co-CM approval (campaign setting)</td>
-<td>Co-CM if enabled; otherwise CM alone</td>
+<td>No (CM is authority on the trigger side)</td>
+<td>n/a — fires events; team leaders see the result on their team
+log</td>
 </tr>
 <tr class="even">
 <td>CM mass-rebans a unit mid-campaign</td>
-<td>Yes</td>
-<td>Co-CM (mandatory)</td>
+<td>Yes (CM-only)</td>
+<td>Primary CM</td>
 </tr>
 <tr class="odd">
 <td>CM edits <code>CampaignTeam.expectedFactionIds</code></td>
@@ -447,7 +469,8 @@ Matrix</h3>
 <td>n/a</td>
 </tr>
 <tr class="even">
-<td>CM grants or strips a co-CM role</td>
+<td>CM grants or strips the <code>crusade_team_leader</code> role for a
+team</td>
 <td>No (primary CM only)</td>
 <td>n/a</td>
 </tr>
@@ -459,8 +482,9 @@ auto-approves battle updates with no anomalies. Anomalies that always
 require approval: - OoA test failed - Requisition purchased - Honours /
 scars added beyond supplement’s universal list - Manual edits outside NR
 import - Submitter is a new account (&lt; 7 days) - Submitter is the CM
-themselves (auto-routes to co-CM or self-approves with audit if no
-co-CM)</p>
+themselves (CM-as-player; auto-approves per PRD-1 §5, except for kinds
+requiring a second approver which stay pending until one is
+available)</p>
 <hr />
 <h2 id="approvalrequest-schema">3. ApprovalRequest Schema</h2>
 <p>The <code>kind</code> enum is the canonical contract for
@@ -489,7 +513,7 @@ maps to one of the categories in §2.2; new categories extend this enum
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;rp_adjustment&#39;</span>                <span class="co">// CM-initiated manual RP grant/deduct (e.g., narrative reward, dispute resolution)</span></span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_rp_override&#39;</span>      <span class="co">// CM waives the RP cost of a requisition (narrative gift)</span></span>
 <span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === All-player effects (require co-CM approval) ===</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === All-player effects (CM-only, cross-team) ===</span></span>
 <span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;mass_reban&#39;</span>                   <span class="co">// CM bans/unbans a unit catalog-wide mid-campaign</span></span>
 <span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign_announcement&#39;</span>        <span class="co">// CM posts a campaign-wide narrative announcement that persists in the timeline</span></span>
 <span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;point_cap_change&#39;</span>             <span class="co">// CM changes the campaign&#39;s point cap mid-campaign</span></span>
@@ -513,16 +537,15 @@ maps to one of the categories in §2.2; new categories extend this enum
 <span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>            <span class="co">// v3: rule checks attached at submission</span></span>
 <span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// gating context</span></span>
 <span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>  <span class="co">// v3.7 — records HOW the request was approved. Required so future event</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>  <span class="co">// v3.7 (updated v3.11) — records HOW the request was approved. Required so future event</span></span>
 <span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">// hooks (team view pages, Discord, narrative analytics) can filter or</span></span>
 <span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// count self-approved vs human-approved vs routine-auto-approved deltas.</span></span>
 <span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  approvalSource<span class="op">:</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// a CM reviewed and approved</span></span>
-<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_review&#39;</span>                <span class="co">// a co-CM reviewed and approved</span></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;auto_approve_routine&#39;</span>        <span class="co">// campaign&#39;s auto-approve-routine-battle-updates setting fired</span></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span>               <span class="co">// CM-as-player submitted and self-approved (PRD-1 §5)</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_required_unavailable&#39;</span><span class="op">;</span> <span class="co">// kind requires co-CM but none existed; fell back to self with audit</span></span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// a Primary CM or a Crusade Team Leader (within team scope) reviewed and approved</span></span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;auto_approve_routine&#39;</span>        <span class="co">// campaign&#39;s auto-approve-routine-battle-updates setting fired</span></span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span>               <span class="co">// CM-as-player or Team-Leader-as-player submitted and self-approved (PRD-1 §5)</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_required_unavailable&#39;</span><span class="op">;</span> <span class="co">// kind requires a second approver but none existed; stayed pending</span></span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
 <p>Every <code>ApprovalKind</code> has a typed payload. The payload is
 the <em>contract</em> — the inbox UI and the application logic both
@@ -635,16 +658,16 @@ consume it.</p>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  waiveFullCost<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h4 id="mass_reban-all-player-effects-co-cm-approval-mandatory"><code>mass_reban</code>
-(All-player effects — co-CM approval mandatory)</h4>
+<h4 id="mass_reban-all-player-effects-cm-only"><code>mass_reban</code>
+(All-player effects — CM-only)</h4>
 <div class="sourceCode" id="cb13"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  catalogUnitIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  action<span class="op">:</span> <span class="st">&#39;ban&#39;</span> <span class="op">|</span> <span class="st">&#39;unban&#39;</span><span class="op">,</span></span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  effectiveImmediately<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span>     <span class="co">// if false, applies to future roster approvals only</span></span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h4 id="campaign_announcement-all-player-effects-co-cm-approval"><code>campaign_announcement</code>
-(All-player effects — co-CM approval)</h4>
+<h4 id="campaign_announcement-all-player-effects-cm-only"><code>campaign_announcement</code>
+(All-player effects — CM-only)</h4>
 <div class="sourceCode" id="cb14"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  message<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                   <span class="co">// markdown, ≤ 2 KB</span></span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  pinnedToTimeline<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
@@ -666,107 +689,163 @@ point)</h4>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  data<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;,</span></span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h3 id="routing-per-kind">3.2 Routing Per Kind</h3>
-<p>Each kind has a default approver and (for high-impact kinds) a
-co-approval rule:</p>
+<h3 id="routing-per-kind-v3.11">3.2 Routing Per Kind (v3.11)</h3>
+<p>Per-kind routing now reflects the <strong>Crusade Team
+Leader</strong> model: team leaders can approve actions affecting their
+team for kinds the primary CM has enabled. The primary CM can always
+approve anything (their authority is global). Co-approval (two distinct
+approvers) is reserved for high-impact cross-team / destructive
+kinds.</p>
+<p><strong>Per-kind routing table:</strong></p>
 <table>
 <colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th>Kind</th>
-<th>Approver</th>
-<th>Co-approval</th>
+<th>Primary CM authority</th>
+<th>Team Leader authority (default per PRD-1 §4.4; CM-configurable per
+campaign)</th>
+<th>Co-approval required?</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><code>roster_approval</code></td>
-<td>CM</td>
-<td>Optional (campaign setting)</td>
+<td>✅</td>
+<td>✅ enabled by default — team leader can approve for their team</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>roster_manual_edit</code></td>
-<td>Co-CM (since the CM is the actor)</td>
-<td>Mandatory — prevents CM self-edit abuse</td>
+<td>✅ (CM is the actor)</td>
+<td>❌ disabled by default — CM-only</td>
+<td>No (single CM; CM cannot self-approve per below)</td>
 </tr>
 <tr class="odd">
 <td><code>requisition_purchase</code></td>
-<td>CM</td>
-<td>Optional (CM-gifted or narrative; routine player requisitions bypass
-this per PRD-4 §7b.2)</td>
+<td>✅ (CM-gifted or narrative)</td>
+<td>❌ disabled — routine player requisitions are NR-side per PRD-4
+§7b.2</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>roster_revert</code></td>
-<td>CM</td>
-<td>Optional</td>
+<td>✅</td>
+<td>✅ enabled — team leader can approve for their team</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>roster_rollback</code></td>
-<td>CM</td>
-<td>Optional (auto-approve if CM-as-player per PRD-1 §5)</td>
+<td>✅</td>
+<td>✅ enabled — team leader can approve for their team (per user’s
+v3.11 confirmation)</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>history_rollback</code></td>
-<td>CM</td>
-<td>Optional (auto-approve if CM-as-player per PRD-1 §5)</td>
+<td>✅</td>
+<td>✅ enabled — team leader can approve for their team</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>team_switch</code></td>
-<td>CM</td>
-<td>Optional</td>
+<td>✅ (cross-team)</td>
+<td>❌ disabled — team leaders cannot approve cross-team changes</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>faction_switch</code></td>
-<td>CM</td>
-<td>Optional</td>
+<td>✅</td>
+<td>✅ enabled — the player’s own faction change</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>post_battle_update</code></td>
-<td>CM</td>
-<td>Optional</td>
+<td>✅</td>
+<td>✅ enabled — team leader can approve for their team</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>rp_adjustment</code></td>
-<td>CM</td>
-<td>Optional</td>
+<td>✅</td>
+<td>✅ enabled — team leader can approve for their team</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>requisition_rp_override</code></td>
-<td>Co-CM</td>
-<td>Mandatory</td>
+<td>✅ (high-impact)</td>
+<td>❌ disabled — CM-only</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>mass_reban</code></td>
-<td>Co-CM</td>
-<td><strong>Mandatory</strong> (per PRD-5 §2.4)</td>
+<td>✅ (campaign-wide)</td>
+<td>❌ disabled — CM-only</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>campaign_announcement</code></td>
-<td>CM</td>
-<td>Optional (campaign setting — default off for routine, on for
-high-impact)</td>
+<td>✅ (campaign-wide)</td>
+<td>❌ disabled — CM-only</td>
+<td>No</td>
 </tr>
 <tr class="even">
 <td><code>point_cap_change</code></td>
-<td>Co-CM</td>
-<td><strong>Mandatory</strong></td>
+<td>✅ (campaign-wide)</td>
+<td>❌ disabled — CM-only</td>
+<td>No</td>
 </tr>
 <tr class="odd">
 <td><code>custom</code></td>
-<td>Per <code>schemaRef</code></td>
+<td>✅ (CM-only)</td>
+<td>❌ disabled — CM-only</td>
 <td>Per <code>schemaRef</code></td>
 </tr>
 </tbody>
 </table>
+<p><strong>CM self-edit prevention:</strong></p>
+<p>For kinds where the CM is the actor AND is also a player
+(<code>roster_manual_edit</code>, <code>rp_adjustment</code> initiated
+by the CM, etc.), the request must be approved by someone OTHER than the
+submitting CM. Options: - A second Primary CM (if the campaign has
+multiple CMs) - A Crusade Team Leader of the affected team (if the kind
+allows it) - Otherwise the request stays pending with
+<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> until another
+approver becomes available</p>
+<p>The CM cannot approve their own roster_manual_edit of their own
+roster; this is the abuse-prevention gate.</p>
+<p><strong>Team scope enforcement:</strong></p>
+<p>When a team leader approves a request, the request’s
+<code>teamId</code> (inferred from the affected entity:
+<code>Roster.teamId</code>, <code>CampaignMember.teamId</code>, etc.)
+must match the team leader’s team. A team leader of Helsreach Defenders
+cannot approve a <code>roster_approval</code> for a Gorgutz WAAAGH!
+player — the RLS policy and the API both enforce this, returning
+403.</p>
+<p><strong>Per-kind rule-pack enforcement (v3.11):</strong></p>
+<p>The CM’s configuration of which rules fire on which kinds (PRD-1
+§4.4) is enforced at approval time: when an <code>ApprovalRequest</code>
+is created, the rule engine runs the rules configured for that kind. The
+CM can, e.g., make <code>team-narrative-alignment</code> fire on
+<code>roster_approval</code> but not on <code>post_battle_update</code>.
+| <code>mass_reban</code> | Co-CM | <strong>Mandatory</strong> (per
+PRD-5 §2.4) | | <code>campaign_announcement</code> | CM | Optional
+(campaign setting — default off for routine, on for high-impact) | |
+<code>point_cap_change</code> | Co-CM | <strong>Mandatory</strong> | |
+<code>custom</code> | Per <code>schemaRef</code> | Per
+<code>schemaRef</code> |</p>
 <h3 id="cm-as-player-auto-approval-prd-1-5">3.3 CM-as-Player
 Auto-Approval (PRD-1 §5)</h3>
-<p>When the submitter is the campaign’s only CM, every kind
-<strong>auto-approves but the pipeline still runs</strong>. The
-<code>approvalSource</code> field records which path fired:</p>
+<p>When the submitter is the campaign’s primary CM (CM-as-player), every
+kind <strong>auto-approves but the pipeline still runs</strong>, except
+kinds where the CM is the actor (which require a second approver per
+§3.2 above). The <code>approvalSource</code> field records which path
+fired:</p>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -780,8 +859,9 @@ Auto-Approval (PRD-1 §5)</h3>
 </thead>
 <tbody>
 <tr class="odd">
-<td>CM (or co-CM) reviewed and approved manually</td>
-<td><code>cm_review</code> or <code>co_cm_review</code></td>
+<td>Primary CM (or a Crusade Team Leader within their team’s scope)
+reviewed and approved manually</td>
+<td><code>cm_review</code></td>
 </tr>
 <tr class="even">
 <td>Campaign’s <code>auto_approve_routine_battle_updates</code> fired
@@ -789,13 +869,19 @@ Auto-Approval (PRD-1 §5)</h3>
 <td><code>auto_approve_routine</code></td>
 </tr>
 <tr class="odd">
-<td>CM-as-player submitted, no co-CM exists, kind allows
-CM-as-actor</td>
+<td>CM-as-player submitted, no second approver needed (kind allows
+self-approve)</td>
 <td><code>self_approved</code></td>
 </tr>
 <tr class="even">
-<td>Kind requires co-CM but none exists (high-impact fallback)</td>
+<td>Kind requires a second approver but none exists (e.g., CM-only kind
+in a single-CM campaign)</td>
 <td><code>co_cm_required_unavailable</code></td>
+</tr>
+<tr class="odd">
+<td>Team Leader of team X approved a request affecting team X</td>
+<td><code>cm_review</code> (with
+<code>reviewerUserId: teamLeader</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -1087,14 +1173,14 @@ optimistic locking via <code>contextHash</code>; second approver sees
 request closed.</li>
 <li><strong>Approval is for a now-deleted entity</strong>: apply step
 fails transactionally; CM is shown an error and asked to reject.</li>
-<li><strong>CM is the submitter and no co-CM exists</strong>:
+<li><strong>CM is the submitter and no second approver exists</strong>:
 auto-approves via <code>approvalSource: &#39;self_approved&#39;</code> (or
-<code>&#39;co_cm_required_unavailable&#39;</code> for high-impact kinds). The
-pipeline still runs — <code>ApprovalRequest</code> is created, rule
-checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3,
-the architectural rule is “auto-approve ≠ pipeline bypass” so future
-event hooks (team view pages, Discord, narrative analytics) work
-uniformly.</li>
+<code>&#39;co_cm_required_unavailable&#39;</code> for kinds requiring a second
+approver). The pipeline still runs — <code>ApprovalRequest</code> is
+created, rule checks fire, events emit, audit trail recorded. Per PRD-1
+§5 and §3.3, the architectural rule is “auto-approve ≠ pipeline bypass”
+so future event hooks (team view pages, Discord, narrative analytics)
+work uniformly.</li>
 <li><strong>Submitter suspended mid-approval</strong>: pending requests
 auto-rejected with reason “submitter suspended.”</li>
 <li><strong>Active RosterApproved changes during approval</strong>:

@@ -20,7 +20,58 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.10 (current) — History, changeset groupings, rollback
+### v3.11 (current) — Crusade Team Leader + team-isolated data model
+
+Big rename + privacy model. The user clarified: the "co-CM" concept is now a **Crusade Team Leader** — a player on a team who has been approved by the primary CM to approve changes for their own team only.
+
+**Roles (new Glossary in PRD-0 §3b, PRD-1 §0, PRD-2 §0, PRD-5 §0):**
+- **Primary CM** — full campaign authority. The only role that can approve cross-team / campaign-wide actions.
+- **Crusade Team Leader** — a player on a team with delegated per-team approval authority. They are also a player (they have a roster, they play). **Cannot see or approve anything for other teams.**
+- **Player** — on one team, sees own data + own team's narrative log.
+- **Spectator** — public-link read-only.
+- A user can hold multiple roles. CM-as-player (PRD-1 §5) and Team-Leader-as-player both stack.
+
+**Per-kind team-leader authority (PRD-1 §4.4):**
+
+The primary CM configures `Campaign.teamLeaderAuthority: { [kind: ApprovalKind]: boolean }`. Defaults:
+- ✅ Enabled for: `roster_approval`, `roster_revert`, `roster_rollback`, `history_rollback`, `faction_switch`, `post_battle_update`, `rp_adjustment`
+- ❌ Disabled for: `roster_manual_edit`, `requisition_purchase` (CM-gifted), `team_switch` (cross-team), `requisition_rp_override`, `mass_reban`, `campaign_announcement`, `point_cap_change`, `custom`
+
+The CM can flip any of these per campaign. Team leader approvals are scoped to their team — a Helsreach leader cannot approve a Gorgutz WAAAGH! request (RLS + API enforce, returns 403).
+
+**Team data isolation (PRD-0 §3b):**
+- **Two teams cannot search or investigate each other's data through this app.** Enforced at Postgres RLS layer, not just the UI. Players on Team A see only Team A's data; team leaders see only their team's data; only the primary CM (and Instance Admin) cross team boundaries.
+- The app **does not** have a "share with other team" feature. Players share out-of-band if they want (Discord, screenshots).
+- **Exception: when the crusade is archived** (`Campaign.status = 'archived'`), all data is read-only-visible to all players across teams (post-crusade retrospective).
+
+**CM self-edit prevention:**
+
+For kinds where the CM is the actor AND is also a player (`roster_manual_edit`, etc.), the request must be approved by someone OTHER than the submitting CM. Options: a second Primary CM (multi-CM campaigns), or a Crusade Team Leader of the affected team (if the kind allows). Otherwise stays pending with `approvalSource: 'co_cm_required_unavailable'`.
+
+**Narrative log (PRD-4 §8):**
+
+Three scopes:
+1. **Team-scoped** (default for players) — events with `visibility = 'team'` for the player's team
+2. **Public** (cross-team) — events marked `visibility = 'public'` (campaign announcements, point-cap changes, etc.)
+3. **CM-only** — events marked `visibility = 'cm'` (sensitive: team switches, override reasons, rollback audit)
+
+Default visibility per event kind is documented in PRD-4 §8. CM can override per-event.
+
+**Crusade-end archival:**
+
+`Campaign.status = 'archived'` switches the campaign to retrospective mode: RLS policies relax to allow cross-team reads in read-only mode; no new approvals; the narrative log is the central retrospective surface with all teams' chronology.
+
+**Schema changes:**
+- PRD-0 §3b adds glossary
+- `Roles` enum gains `'crusade_team_leader'`
+- PRD-0 RLS section describes team-isolation policies
+- PRD-5 §3 schema's `approvalSource` enum: removed `co_cm_review` (no longer distinct)
+- PRD-5 §3.2 routing table rewritten with team-leader column + scope enforcement
+- PRD-5 §3.3 §3 updated: CM-as-player + Team-Leader-as-player both stack
+
+**Six PRD files updated** (PRD-0, 1, 2, 4, 5 + README).
+
+### v3.10 — History, changeset groupings, rollback
 
 Three new architectural pieces:
 

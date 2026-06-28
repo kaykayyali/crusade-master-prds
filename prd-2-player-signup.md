@@ -4,6 +4,16 @@
 
 ---
 
+## 0. Glossary (per PRD-0 §3b)
+
+- **Player** = a user with the `player` role for one campaign, on one team. Sees their own roster + their team's narrative log + their own data. **Cannot see other teams' data through the app.**
+- **Crusade Team Leader** = a player who has also been granted the `crusade_team_leader` role for their team by the primary CM. They are still a player on that team; they additionally see their team's approval queue and can approve requests affecting their team for kinds the primary CM has enabled (PRD-1 §4.4).
+- **Primary CM** = the user with the `cm` role for the campaign. Sees everything; approves anything.
+
+A player can also be a CM-as-player (PRD-1 §5). A player can be a Crusade Team Leader. Roles stack.
+
+---
+
 ## 1. Goals
 
 Get a player from "I have an invite code" to "I'm a member of the campaign with no roster yet" in under 5 minutes.
@@ -146,6 +156,51 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 - Team picker is always shown — every campaign has teams in v1; free-for-all is out of scope
 - Team picker never restricts 40K faction choice (multi-faction teams are the norm)
 - Team switch mid-campaign requires CM approval (creates a "team_switch" `ApprovalRequest` per PRD-5)
+
+---
+
+## 5b. Team-Scoped Data Isolation (v3.11)
+
+Per PRD-0 §3b: **a player on Team A cannot see Team B's data through this app.** This is enforced at the data layer (Postgres RLS), not just the UI, so no application bug can leak cross-team data.
+
+What a player on Team A sees:
+- Their own roster + their own battle reports + their own history
+- Their team's narrative log (events with `visibility = 'team'` or `visibility = 'public'`)
+- Their team's public-facing announcements (if the CM marks them public)
+- Their team's active players list (so they know who they're playing with)
+
+What a player on Team A does NOT see:
+- Team B's rosters
+- Team B's battle reports
+- Team B's requisitions, history, approval queue
+- Team B's narrative log (unless the CM marks an event `visibility = 'public'`)
+- The names of players on Team B (they know Team B exists by its name; they don't see its roster)
+- Search results that include Team B's data
+
+What a player can do about cross-team data:
+- Talk to players on Team B out-of-band (Discord, in-person, etc.)
+- The app **does not** have a "share with other team" feature; players share on their own
+- The app does not block or facilitate this; it just enforces isolation
+- Exception: when the crusade is archived (`Campaign.status = 'archived'`), all players across teams see all data in read-only mode (post-crusade retrospective)
+
+**Crusade Team Leader view (additional capabilities):**
+
+A Team Leader on Team A additionally sees:
+- Their team's full approval queue (filtered to kinds they're authorized to approve per PRD-1 §4.4)
+- Their team's full event log including `visibility = 'cm'` events that affect their team
+- Their team's roster health overview
+
+A Team Leader on Team A does NOT additionally see (compared to a regular player on Team A):
+- Other teams' data (still isolated)
+- Cross-team events that don't involve their team
+- The primary CM's campaign-wide inbox (they see only their team's queue)
+- Approval queue items for kinds they're not authorized to approve (those go to the primary CM)
+
+**UI signals for isolation:**
+
+- When a player views the campaign dashboard, the team-scoped narrative log is the default view. A "Public announcements only" tab shows cross-team events marked `visibility = 'public'`. There is no "All teams" view.
+- When a player tries to navigate to a URL that would expose cross-team data (e.g., a teammate's roster id), the API returns 404 (per RLS) and the UI shows "Not found."
+- The narrative log never suggests "X happened to Team B's player Y" — it only shows events on the player's own team.
 
 ---
 

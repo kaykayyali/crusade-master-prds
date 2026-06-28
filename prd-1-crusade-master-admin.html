@@ -230,6 +230,63 @@ the CM-facing campaign lifecycle and member management. v3: stack
 updated to Hapi/Node/TS.</p>
 </blockquote>
 <hr />
+<h2 id="glossary">0. Glossary</h2>
+<p>Per PRD-0 §3b. The roles in this app:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>What they are</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Primary CM</strong></td>
+<td>A user with the <code>cm</code> role for a specific campaign. The
+top authority on that campaign.</td>
+<td>Full campaign authority, sees all teams’ data.</td>
+</tr>
+<tr class="even">
+<td><strong>Crusade Team Leader</strong></td>
+<td>A user with the <code>crusade_team_leader</code> role for
+<strong>one specific team</strong>. They are also a player on that
+team.</td>
+<td><strong>Their team only.</strong> Sees their team’s data; can
+approve <code>ApprovalRequest</code>s affecting their team for kinds the
+primary CM has enabled for them; cannot see other teams.</td>
+</tr>
+<tr class="odd">
+<td><strong>Player</strong></td>
+<td>A user with the <code>player</code> role. On exactly one team.</td>
+<td>Their own roster + their team’s narrative log + their own data.
+Cannot see other teams.</td>
+</tr>
+<tr class="even">
+<td><strong>Spectator</strong></td>
+<td>Read-only public-link user.</td>
+<td>Sees what the campaign’s <code>publicVisibility</code> setting
+exposes.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Co-approval (in PRD-5) means:</strong> an
+<code>ApprovalRequest</code> requires two distinct approvers. The pair
+is either Primary CM + second Primary CM (if the campaign has multiple
+CMs) or Primary CM + Crusade Team Leader (if the kind allows team-leader
+approval and the request is within that leader’s team scope). Per-kind
+team-leader authority is configured by the primary CM.</p>
+<p><strong>Data isolation:</strong> teams cannot see each other’s data
+through the app (RLS-enforced). Players share out-of-band if they want;
+the app doesn’t facilitate it. Exception: when the crusade ends
+(<code>Campaign.status = &#39;archived&#39;</code>), all data is
+read-only-visible to all players.</p>
+<hr />
 <h2 id="goals">1. Goals</h2>
 <ul>
 <li>New Docker instance bootstrapped in &lt; 5 minutes</li>
@@ -394,11 +451,21 @@ tenant-scoped shareable URL.</p>
 <ul>
 <li>CM sees:
 <code>displayName, faction, joinedAt, status, lastActivityAt, currentRosterStatus (parsing|pending_review|pending_approval|approved|failed)</code></li>
-<li>CM can: invite (via email or link), remove, suspend, promote to
-co-CM</li>
+<li>CM can: invite (via email or link), remove, suspend, <strong>promote
+a player on a team to <code>crusade_team_leader</code> for that
+team</strong> (the player must consent; promotion is per-team, not
+global)</li>
 <li>Players can self-serve removal</li>
-<li>Co-CMs have all CM rights except: deleting the campaign,
-transferring ownership, changing the supplement</li>
+<li><strong>Crusade Team Leaders</strong> are scoped to their team: they
+see their team’s data, can approve <code>ApprovalRequest</code>s
+affecting their team for kinds the primary CM has enabled, but
+<strong>cannot see or approve anything for other teams</strong>. A team
+leader can be removed by the primary CM at any time.</li>
+<li><strong>Multiple CMs (rare):</strong> if a campaign has more than
+one user with the <code>cm</code> role, they have full campaign
+authority each. Co-approval between them is configurable per kind (PRD-5
+§3.2). This is <strong>distinct</strong> from Crusade Team Leaders, who
+are scoped to a team.</li>
 </ul>
 <h3 id="dashboard">4.3 Dashboard</h3>
 <p>CM dashboard surfaces: 1. <strong>Pending approvals count</strong>
@@ -441,54 +508,187 @@ Changes / Override &amp; Approve</p>
 integration)</p>
 <p>The inbox is the operational surface. The campaign timeline is the
 storytelling surface. Different jobs, different UIs.</p>
+<p><strong>Per-role inbox views (v3.11):</strong></p>
+<ul>
+<li><strong>Primary CM inbox</strong>: every
+<code>ApprovalRequest</code> in the campaign, all teams. The CM can
+approve anything (their authority is global).</li>
+<li><strong>Crusade Team Leader inbox</strong>: only
+<code>ApprovalRequest</code>s affecting their team, AND only for kinds
+the primary CM has enabled for team-leader authority (PRD-1 §4.4). The
+team leader cannot see or act on requests from other teams, and cannot
+see requests from their own team for kinds they’re not authorized for.
+The UI surfaces a clear “this is not in your authority; ask the primary
+CM” message for any request they can’t approve.</li>
+<li><strong>Player view</strong>: no inbox. Players file approvals; they
+don’t review them.</li>
+</ul>
+<p><strong>Cross-team visibility (v3.11):</strong></p>
+<ul>
+<li>A team leader looking at their team queue sees requests from players
+on their team only.</li>
+<li>The primary CM’s view is the only one that crosses team
+boundaries.</li>
+<li>A team leader cannot see a request that was filed by a player who
+switched to their team after the request was filed (the request is bound
+to the team at filing time, not at approval time).</li>
+<li>When the crusade is archived
+(<code>Campaign.status = &#39;archived&#39;</code>), all inboxes become
+read-only and every player across teams sees the full history (per PRD-0
+§3b post-crusade relaxation).</li>
+</ul>
 <h3 id="campaign-settings">4.4 Campaign Settings</h3>
 <p>Editable: point cap, max games/week, OoA variant, house rules.</p>
 <p><strong>Supplement changes are locked</strong> for MVP. Switching
 supplements would invalidate active approved rosters; not supported.</p>
+<p><strong>Per-kind Team Leader authority (v3.11):</strong></p>
+<p>The CM configures, per <code>ApprovalKind</code>, whether Crusade
+Team Leaders can approve requests in their team’s scope. Stored as
+<code>Campaign.teamLeaderAuthority: { [kind: ApprovalKind]: boolean }</code>.
+Default values:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Kind</th>
+<th>Default team-leader authority</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>roster_approval</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="even">
+<td><code>roster_revert</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="odd">
+<td><code>requisition_purchase</code> (CM-gifted)</td>
+<td>❌ disabled (CM-only; routine player requisitions are NR-side per
+PRD-4 §7b.2)</td>
+</tr>
+<tr class="even">
+<td><code>post_battle_update</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="odd">
+<td><code>rp_adjustment</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="even">
+<td><code>roster_rollback</code></td>
+<td>✅ enabled (per user’s v3.11 confirmation)</td>
+</tr>
+<tr class="odd">
+<td><code>history_rollback</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="even">
+<td><code>team_switch</code></td>
+<td>❌ disabled (cross-team, CM-only)</td>
+</tr>
+<tr class="odd">
+<td><code>faction_switch</code></td>
+<td>✅ enabled (the player’s own faction)</td>
+</tr>
+<tr class="even">
+<td><code>roster_manual_edit</code></td>
+<td>❌ disabled (high-impact, CM-only)</td>
+</tr>
+<tr class="odd">
+<td><code>requisition_rp_override</code></td>
+<td>❌ disabled (high-impact, CM-only)</td>
+</tr>
+<tr class="even">
+<td><code>mass_reban</code></td>
+<td>❌ disabled (high-impact, CM-only)</td>
+</tr>
+<tr class="odd">
+<td><code>campaign_announcement</code></td>
+<td>❌ disabled (cross-team, CM-only)</td>
+</tr>
+<tr class="even">
+<td><code>point_cap_change</code></td>
+<td>❌ disabled (cross-team, CM-only)</td>
+</tr>
+<tr class="odd">
+<td><code>custom</code></td>
+<td>❌ disabled (CM-only)</td>
+</tr>
+</tbody>
+</table>
+<p>The CM can flip any of these on/off per campaign. The reasoning for
+defaults: actions affecting only the player’s own team and not
+cross-team-broad are team-leader-eligible; actions that affect the
+campaign as a whole or other teams are CM-only.</p>
+<p><strong>Active rule packs:</strong> which <code>RulePack</code>s
+(PRD-3 §6) are enabled for this campaign. The CM toggles these on/off.
+<strong>Per-kind rule-pack settings (v3.11):</strong> the CM can also
+control which rules are in enforcement per kind (e.g., “the
+team-narrative-alignment rule is enforced at warn severity for
+<code>roster_approval</code> and disabled for
+<code>post_battle_update</code>”).</p>
 <p>Deletable: archive (soft) or hard-delete (typed confirmation
-required).</p>
+required). Archive is the post-crusade state where all data becomes
+read-only-visible to all players across teams (per PRD-0 §3b
+data-isolation relaxation).</p>
 <h3 id="override-tool">4.5 Override Tool</h3>
 <p>CMs can edit any field on any record, with required reason text.
 Every override writes to the audit log and surfaces in the affected
 player’s notification.</p>
 <hr />
-<h2 id="cm-as-player">5. CM-as-Player</h2>
-<p>A CM is allowed to be a player in their own campaign: - “Playing in
-your own campaign” badge shown next to their name - <strong>All
-CM-as-player’s deltas auto-approve, but still go through the full
-pipeline.</strong> PRD-0 §4b’s approval-gating principle still applies —
-the system creates the <code>ApprovalRequest</code>, runs rule checks,
-persists the diff, fires events, and emits notifications. The only thing
-skipped is the wait for a human approver. - This is a deliberate
-architectural choice: future event hooks (team view pages, Discord
-integrations, narrative analytics) depend on every delta firing the same
-events. Bypassing the pipeline would silently break every downstream
-consumer. - <strong>Concrete example:</strong> Mike is CM and a player
-on Helsreach Defenders. He updates his Cadian Shock Troops list. The
-system: 1. Creates <code>RosterDraft</code> and runs the BullMQ parse
-pipeline (PRD-3) 2. Runs rule checks including
-<code>team-narrative-alignment</code> (Cadians fit Helsreach — pass) 3.
-Creates
-<code>ApprovalRequest { kind: &#39;roster_approval&#39;, submittedByUserId: mike }</code>
-4. Auto-approves with <code>approvalSource: &#39;self_approved&#39;</code>
-(PRD-5 §3 schema) 5. Creates <code>RosterApproved</code>, emits
-<code>roster.approved</code> event 6. The team’s future view page can
-now show Helsreach Defenders’ aggregate progress, including Mike’s
-deltas - <strong>High-impact kinds with mandatory co-CM
-approval</strong> (<code>roster_manual_edit</code>,
-<code>requisition_rp_override</code>, <code>mass_reban</code>,
-<code>point_cap_change</code>): if Mike is the only CM, these still fall
-back to self-approve with
-<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code>, audit-logged.
-If a co-CM exists, the request routes to them (Mike cannot self-approve
-high-impact kinds even as a player). - Own battle filings, requisition
-purchases, team switches — all auto-approve but go through the
-pipeline.</p>
+<h2 id="cm-as-player-v3.11-also-covers-crusade-team-leader-as-player">5.
+CM-as-Player (v3.11: also covers Crusade Team Leader as Player)</h2>
+<p>A CM is allowed to be a player in their own campaign. <strong>A
+Crusade Team Leader is by definition a player on their team</strong>
+(per PRD-0 §3b). The CM-as-player and Team-Leader-as-player patterns
+share most of this behavior.</p>
+<ul>
+<li><strong>CM-as-player:</strong>
+<ul>
+<li>“Playing in your own campaign” badge shown next to their name</li>
+<li><strong>All CM-as-player’s deltas auto-approve, but still go through
+the full pipeline.</strong> PRD-0 §4b’s approval-gating principle still
+applies — the system creates the <code>ApprovalRequest</code>, runs rule
+checks, persists the diff, fires events, and emits notifications. The
+only thing skipped is the wait for a human approver.</li>
+<li><strong>High-impact kinds with CM-only authority</strong>
+(<code>mass_reban</code>, <code>point_cap_change</code>,
+<code>roster_manual_edit</code>, <code>requisition_rp_override</code>,
+<code>campaign_announcement</code>, <code>team_switch</code>): the
+primary CM cannot self-approve these even as a player. They go to a
+co-CM if one exists (multiple-CM campaigns), or stay pending with
+<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> (audit-logged,
+must be approved when a co-CM becomes available or by CM at a later
+point). The CM can also configure team-leader authority for some of
+these per PRD-1 §4.4 — by default team leaders cannot approve
+high-impact kinds.</li>
+<li>Own battle filings, requisition purchases, team switches —
+auto-approve but go through the pipeline.</li>
+</ul></li>
+<li><strong>Team Leader as player:</strong>
+<ul>
+<li>The team leader is a player on their team with the
+<code>crusade_team_leader</code> role. Their own
+roster/battle/requisition requests follow the same auto-approve pattern
+as CM-as-player (their own self-actions don’t need approval from
+themselves).</li>
+<li>The team leader is <strong>not</strong> auto-approved for OTHER
+players’ requests on their team — they explicitly approve those, with
+the audit trail recording <code>approvalSource: &#39;cm_review&#39;</code> and
+<code>reviewerUserId: teamLeader</code>.</li>
+</ul></li>
+</ul>
 <p><strong>Conflict-of-interest rationale:</strong> the principle is
-that the CM is a <em>trusted actor in their own campaign</em>, not an
-untrusted player. Auto-approve-with-pipeline preserves the audit trail
-without forcing Mike to wait for himself. Co-CM gating for high-impact
-kinds prevents unilateral abuse.</p>
+that the CM and Team Leader are <em>trusted actors in their scope</em>
+(campaign-wide for CM; team-scoped for Team Leader), not untrusted
+players. Auto-approve-with-pipeline preserves the audit trail without
+forcing trusted actors to wait for themselves. Scope-bounded authority
+prevents unilateral abuse outside their scope.</p>
 <hr />
 <h2 id="b.-campaign-teams-not-40k-factions-a-distinct-concept">5b.
 Campaign Teams (not 40K Factions — a distinct concept)</h2>

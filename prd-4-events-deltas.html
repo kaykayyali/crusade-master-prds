@@ -736,11 +736,107 @@ Battle 2 (2026-08-22) — Helsreach vs. Skari, loss, +1 kill, Battle Scar on Cas
 <pre><code>2026-08-29 — Replaced Leman Russ, -3 RP
   (rolled back 2026-09-05)</code></pre>
 <hr />
-<h2 id="public-narrative-log">8. Public Narrative Log</h2>
-<p>A scrubbed, readable narrative view of the campaign, derived from
-public-visibility events. Each entry shows: - Date - Player handle (or
-“anonymous” if user opted out) - Action summary (1-2 lines generated
-from event payload) - Optional battle report excerpt</p>
+<h2 id="narrative-log-per-team-public-scopes-v3.11">8. Narrative Log —
+Per-Team + Public Scopes (v3.11)</h2>
+<p>A scrubbed, readable narrative view of the campaign. Per v3.11, the
+narrative log is split into <strong>three scopes</strong>, not just one
+“public” log:</p>
+<ol type="1">
+<li><strong>Team-scoped narrative log</strong> (default for players) —
+events with <code>visibility = &#39;team&#39;</code> or
+<code>visibility = &#39;public&#39;</code> for events affecting the player’s
+team. A player on Team A sees Team A’s log only.</li>
+<li><strong>Public narrative log</strong> — events with
+<code>visibility = &#39;public&#39;</code>. Cross-team. Visible to all players
+in the campaign (regardless of team). Use sparingly: cross-team battles,
+campaign-wide announcements.</li>
+<li><strong>CM-only events</strong> — events with
+<code>visibility = &#39;cm&#39;</code>. Visible to the primary CM and (per PRD-1
+§4.3.1) to Crusade Team Leaders when the event affects their team.</li>
+</ol>
+<p><strong>Event visibility defaults (v3.11):</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Event kind</th>
+<th>Default visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>roster.approved</code></td>
+<td><code>team</code> (the player’s own team sees it; other teams do
+not)</td>
+</tr>
+<tr class="even">
+<td><code>roster.rolled_back</code></td>
+<td><code>team</code></td>
+</tr>
+<tr class="odd">
+<td><code>battle_report.filed</code></td>
+<td><code>team</code> (the two players’ teams see it; other teams do
+not)</td>
+</tr>
+<tr class="even">
+<td><code>battle_report.approved</code></td>
+<td><code>team</code></td>
+</tr>
+<tr class="odd">
+<td><code>requisition_purchased</code> (CM-gifted)</td>
+<td><code>team</code></td>
+</tr>
+<tr class="even">
+<td><code>narrative_event.cm_triggered</code> (single-team scope)</td>
+<td><code>team</code></td>
+</tr>
+<tr class="odd">
+<td><code>narrative_event.cm_triggered</code> (campaign-wide scope)</td>
+<td><code>public</code></td>
+</tr>
+<tr class="even">
+<td><code>campaign_announcement.filed</code></td>
+<td><code>public</code></td>
+</tr>
+<tr class="odd">
+<td><code>point_cap.changed</code></td>
+<td><code>public</code></td>
+</tr>
+<tr class="even">
+<td><code>mass_reban.applied</code></td>
+<td><code>public</code></td>
+</tr>
+<tr class="odd">
+<td><code>team_switch.filed</code> /
+<code>team_switch.approved</code></td>
+<td><code>cm</code> (sensitive — CM-only)</td>
+</tr>
+<tr class="even">
+<td><code>approval.overridden</code></td>
+<td><code>cm</code></td>
+</tr>
+<tr class="odd">
+<td><code>rollback.executed</code></td>
+<td><code>cm</code> (audit-detail)</td>
+</tr>
+</tbody>
+</table>
+<p>The CM can override visibility per event in the narrative log view.
+The defaults above reflect a privacy-respecting baseline.</p>
+<p><strong>Crusade-end archival (v3.11):</strong></p>
+<p>When the primary CM archives a campaign
+(<code>Campaign.status = &#39;archived&#39;</code>), the narrative log switches
+to <strong>post-crusade retrospective mode</strong>: - All events become
+readable by every player across all teams (per PRD-0 §3b data-isolation
+relaxation). - No new events can be filed (approvals are frozen; uploads
+blocked). - The narrative log is the central retrospective surface: full
+chronology, all teams, all events, in chronological order. - The UI adds
+an “End of crusade” header with the archival date.</p>
+<p>The campaign can be re-opened by the primary CM (status goes back to
+<code>active</code>) but that’s a deliberate action and is logged.</p>
 <hr />
 <h2 id="out-of-scope-prd-4">9. Out of Scope (PRD-4)</h2>
 <ul>

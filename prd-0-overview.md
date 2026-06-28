@@ -122,6 +122,8 @@ Each step is idempotent and re-runnable on failure. The blob in MinIO is the sou
 Multi-tenant on a single Docker instance:
 
 - Every domain table has `tenant_id UUID NOT NULL` with row-level security policies
+- **Per v3.11: team-isolation policies.** Most queries also filter by the requesting user's team membership. A player on Team A cannot read Team B's data; a Crusade Team Leader of Team A cannot read Team B's data; only the Primary CM (and Instance Admin) cross team boundaries. RLS policies enforce this at the database layer — no application-layer bug can leak cross-team data.
+- **Post-crusade relaxation:** when `Campaign.status = 'archived'`, the team-isolation policies relax to allow cross-team reads in read-only mode. The campaign is over; retrospective access is allowed.
 - Wahapedia data, parser output schema, and reference data are shared across all tenants
 - A user belongs to one tenant (per-`User` row); a CM can be CM of multiple campaigns within their tenant
 - Instance Admin is the only cross-tenant role
@@ -140,7 +142,12 @@ Multi-tenant on a single Docker instance:
 // === Tenancy ===
 Tenant { id, name, slug, createdAt, settings }
 User { id, tenantId, email, displayName, roles, createdAt }
-Roles = 'instance_admin' | 'cm' | 'player' | 'spectator'   // user can hold multiple
+Roles = 'instance_admin' | 'cm' | 'crusade_team_leader' | 'player' | 'spectator'   // user can hold multiple
+// A user with the `cm` role for a campaign has full authority on that campaign.
+// A user with the `crusade_team_leader` role for a team has scoped authority on that team only.
+// A user with the `player` role for a campaign is on exactly one team.
+// A user can be both `cm` AND `player` for the same campaign (CM-as-player per PRD-1 §5).
+// A user who is `crusade_team_leader` for a team is by definition also `player` on that team.
 
 // === Campaign ===
 // Teams are MANDATORY in v1: every campaign has at least one team. Free-for-all
@@ -258,6 +265,32 @@ AuditLog { id, tenantId, actorUserId, action, targetType, targetId, payload, occ
 ```
 
 **Identifiers**: UUIDv7.
+
+---
+
+## 3b. Glossary of Roles
+
+Per v3.11 — these terms have specific meanings in this app. Drift between "what I meant" and "what's written" is exactly what we want to avoid.
+
+| Role | Who they are | What they can do |
+|---|---|---|
+| **Instance Admin** | A user with the `instance_admin` role. Cross-tenant. | Provisions tenants, sees all campaigns, doesn't play. |
+| **Primary CM** | A user with the `cm` role for a specific campaign. One per campaign (more can be promoted to co-CM-via-secondary-CM, but that's a separate concept). | Full campaign authority: create campaign, configure rules, approve any action, see all teams' data, edit any roster. |
+| **Crusade Team Leader** | A user with the `crusade_team_leader` role for one specific team. **They are also a player on that team** (they have a roster, they play in battles). The primary CM promotes them by granting the role for a specific team. | Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; **cannot see or approve anything for other teams**. The primary CM controls which actions a team leader can approve, per `ApprovalKind`. |
+| **Player** | A user with the `player` role for a campaign. On exactly one team. | Sees their own roster + their team's narrative log + their own data. Files approvals, plays games, edits nothing about other teams. |
+| **Spectator** | Read-only public-link user. | Sees what the campaign's `publicVisibility` setting exposes. No team membership. |
+
+**Co-approval (PRD-5):** the term "co-approval" refers to an `ApprovalRequest` requiring two distinct approvers. In v3.11 the candidates are: Primary CM + a second Primary CM (if the campaign has multiple CMs); or Primary CM + a Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's scope). The approval pair depends on the request's scope and the campaign's configuration. **There is no automatic co-approval kind; every dual-approval is a configuration choice.**
+
+**Roster-level CM (player who is also a CM, possibly also a team leader):** a user can hold multiple roles for the same campaign. E.g., the Primary CM is typically also a player (PRD-1 §5); a Crusade Team Leader is by definition also a player on their team. Role combinations resolve at query time: a user's effective permissions are the union of their roles, scoped by team membership where applicable.
+
+**Data isolation between teams (v3.11):**
+
+- **Two teams cannot search, view, or investigate each other's data through this app.** RLS policies enforce isolation at the data layer: most queries filter by the requesting user's team membership.
+- **Players on Team A cannot see Team B's rosters, requisitions, battle reports, narrative log entries, or approval queues through the app.**
+- **Cross-team data sharing is explicitly NOT a feature.** If players want to share, they do it out-of-band (Discord, screenshots, printed sheets, conversation). The app does not facilitate it.
+- **Exception: when a crusade ends** (campaign status transitions to `archived`), all data in that campaign becomes readable by every player across all teams, in read-only mode. This is the post-crusade retrospective surface.
+- The Crusade Team Leader of Team A can see Team A's data fully but cannot see Team B's data even if their own team is playing in cross-team battles. Cross-team battles are visible only via the public narrative log (if the CM marks them as such) or via out-of-band sharing.
 
 ---
 

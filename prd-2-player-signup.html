@@ -165,6 +165,23 @@
 minor content changes.</p>
 </blockquote>
 <hr />
+<h2 id="glossary-per-prd-0-3b">0. Glossary (per PRD-0 §3b)</h2>
+<ul>
+<li><strong>Player</strong> = a user with the <code>player</code> role
+for one campaign, on one team. Sees their own roster + their team’s
+narrative log + their own data. <strong>Cannot see other teams’ data
+through the app.</strong></li>
+<li><strong>Crusade Team Leader</strong> = a player who has also been
+granted the <code>crusade_team_leader</code> role for their team by the
+primary CM. They are still a player on that team; they additionally see
+their team’s approval queue and can approve requests affecting their
+team for kinds the primary CM has enabled (PRD-1 §4.4).</li>
+<li><strong>Primary CM</strong> = the user with the <code>cm</code> role
+for the campaign. Sees everything; approves anything.</li>
+</ul>
+<p>A player can also be a CM-as-player (PRD-1 §5). A player can be a
+Crusade Team Leader. Roles stack.</p>
+<hr />
 <h2 id="goals">1. Goals</h2>
 <p>Get a player from “I have an invite code” to “I’m a member of the
 campaign with no roster yet” in under 5 minutes.</p>
@@ -320,6 +337,57 @@ free-for-all is out of scope - Team picker never restricts 40K faction
 choice (multi-faction teams are the norm) - Team switch mid-campaign
 requires CM approval (creates a “team_switch”
 <code>ApprovalRequest</code> per PRD-5)</p>
+<hr />
+<h2 id="b.-team-scoped-data-isolation-v3.11">5b. Team-Scoped Data
+Isolation (v3.11)</h2>
+<p>Per PRD-0 §3b: <strong>a player on Team A cannot see Team B’s data
+through this app.</strong> This is enforced at the data layer (Postgres
+RLS), not just the UI, so no application bug can leak cross-team
+data.</p>
+<p>What a player on Team A sees: - Their own roster + their own battle
+reports + their own history - Their team’s narrative log (events with
+<code>visibility = &#39;team&#39;</code> or <code>visibility = &#39;public&#39;</code>)
+- Their team’s public-facing announcements (if the CM marks them public)
+- Their team’s active players list (so they know who they’re playing
+with)</p>
+<p>What a player on Team A does NOT see: - Team B’s rosters - Team B’s
+battle reports - Team B’s requisitions, history, approval queue - Team
+B’s narrative log (unless the CM marks an event
+<code>visibility = &#39;public&#39;</code>) - The names of players on Team B
+(they know Team B exists by its name; they don’t see its roster) -
+Search results that include Team B’s data</p>
+<p>What a player can do about cross-team data: - Talk to players on Team
+B out-of-band (Discord, in-person, etc.) - The app <strong>does
+not</strong> have a “share with other team” feature; players share on
+their own - The app does not block or facilitate this; it just enforces
+isolation - Exception: when the crusade is archived
+(<code>Campaign.status = &#39;archived&#39;</code>), all players across teams
+see all data in read-only mode (post-crusade retrospective)</p>
+<p><strong>Crusade Team Leader view (additional
+capabilities):</strong></p>
+<p>A Team Leader on Team A additionally sees: - Their team’s full
+approval queue (filtered to kinds they’re authorized to approve per
+PRD-1 §4.4) - Their team’s full event log including
+<code>visibility = &#39;cm&#39;</code> events that affect their team - Their
+team’s roster health overview</p>
+<p>A Team Leader on Team A does NOT additionally see (compared to a
+regular player on Team A): - Other teams’ data (still isolated) -
+Cross-team events that don’t involve their team - The primary CM’s
+campaign-wide inbox (they see only their team’s queue) - Approval queue
+items for kinds they’re not authorized to approve (those go to the
+primary CM)</p>
+<p><strong>UI signals for isolation:</strong></p>
+<ul>
+<li>When a player views the campaign dashboard, the team-scoped
+narrative log is the default view. A “Public announcements only” tab
+shows cross-team events marked <code>visibility = &#39;public&#39;</code>. There
+is no “All teams” view.</li>
+<li>When a player tries to navigate to a URL that would expose
+cross-team data (e.g., a teammate’s roster id), the API returns 404 (per
+RLS) and the UI shows “Not found.”</li>
+<li>The narrative log never suggests “X happened to Team B’s player Y” —
+it only shows events on the player’s own team.</li>
+</ul>
 <hr />
 <h2 id="critical-user-flows-player-sarah">6. Critical User Flows —
 Player (Sarah)</h2>

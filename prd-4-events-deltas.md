@@ -369,13 +369,43 @@ Same history, viewed per-requisition (G4):
 
 ---
 
-## 8. Public Narrative Log
+## 8. Narrative Log — Per-Team + Public Scopes (v3.11)
 
-A scrubbed, readable narrative view of the campaign, derived from public-visibility events. Each entry shows:
-- Date
-- Player handle (or "anonymous" if user opted out)
-- Action summary (1-2 lines generated from event payload)
-- Optional battle report excerpt
+A scrubbed, readable narrative view of the campaign. Per v3.11, the narrative log is split into **three scopes**, not just one "public" log:
+
+1. **Team-scoped narrative log** (default for players) — events with `visibility = 'team'` or `visibility = 'public'` for events affecting the player's team. A player on Team A sees Team A's log only.
+2. **Public narrative log** — events with `visibility = 'public'`. Cross-team. Visible to all players in the campaign (regardless of team). Use sparingly: cross-team battles, campaign-wide announcements.
+3. **CM-only events** — events with `visibility = 'cm'`. Visible to the primary CM and (per PRD-1 §4.3.1) to Crusade Team Leaders when the event affects their team.
+
+**Event visibility defaults (v3.11):**
+
+| Event kind | Default visibility |
+|---|---|
+| `roster.approved` | `team` (the player's own team sees it; other teams do not) |
+| `roster.rolled_back` | `team` |
+| `battle_report.filed` | `team` (the two players' teams see it; other teams do not) |
+| `battle_report.approved` | `team` |
+| `requisition_purchased` (CM-gifted) | `team` |
+| `narrative_event.cm_triggered` (single-team scope) | `team` |
+| `narrative_event.cm_triggered` (campaign-wide scope) | `public` |
+| `campaign_announcement.filed` | `public` |
+| `point_cap.changed` | `public` |
+| `mass_reban.applied` | `public` |
+| `team_switch.filed` / `team_switch.approved` | `cm` (sensitive — CM-only) |
+| `approval.overridden` | `cm` |
+| `rollback.executed` | `cm` (audit-detail) |
+
+The CM can override visibility per event in the narrative log view. The defaults above reflect a privacy-respecting baseline.
+
+**Crusade-end archival (v3.11):**
+
+When the primary CM archives a campaign (`Campaign.status = 'archived'`), the narrative log switches to **post-crusade retrospective mode**:
+- All events become readable by every player across all teams (per PRD-0 §3b data-isolation relaxation).
+- No new events can be filed (approvals are frozen; uploads blocked).
+- The narrative log is the central retrospective surface: full chronology, all teams, all events, in chronological order.
+- The UI adds an "End of crusade" header with the archival date.
+
+The campaign can be re-opened by the primary CM (status goes back to `active`) but that's a deliberate action and is logged.
 
 ---
 
