@@ -549,20 +549,25 @@ CampaignPhase[‘id’] | null, // pointer to currently active phase (at
 most one) }</p>
 <p>// CampaignPhase (v3.18): CM-defined narrative periods within a
 campaign. // Distinct from Campaign.status (state/lifecycle). Phases are
-CM data used // to communicate narrative context to players, with
-optional game-relevant // effects (v1.x). // Example: Phase 1 -
-“Arrivals” — orbital drop ships battle for dominance; // those who
-succeed may provide orbital support to drop ships, aiding them // to
-setup fortifications and forward operations. CampaignPhase { id,
-campaignId, name: string, // e.g., “Phase 1 - Arrivals” description:
-markdown, // narrative context (what’s happening in the world) //
-Structured game-relevant effects (v1.x). v1: null. // v1.x: {
-availableRequisitions: […], disabledRules: […], pointCapModifier: … }
-effects: object | null, activatedAt: timestamp | null, deactivatedAt:
-timestamp | null, // Soft-delete via revokedAt; phases can be removed
-but history is preserved. revokedAt?: timestamp, revokedByUserId?:
-string, } // v1 invariant: at most one CampaignPhase has activatedAt !=
-null AND deactivatedAt = null per campaign. // v1.x may allow multiple
+CM data used // to communicate narrative context to players.
+<strong>Phase effects are cosmetic // only</strong> (v3.19) — they do
+not modify game rules, available requisitions, // point caps, or any
+system behavior. Players enforce the rules as they // like in their
+matches; our app is a campaign-management tool, not a // rules
+adjudicator. // Example: Phase 1 - “Arrivals” — orbital drop ships
+battle for dominance; // those who succeed may provide orbital support
+to drop ships, aiding them // to setup fortifications and forward
+operations. CampaignPhase { id, campaignId, name: string, // e.g.,
+“Phase 1 - Arrivals” description: markdown, // narrative context (what’s
+happening in the world) // Cosmetic-only effects field. Reserved for
+future use; the system does // NOT interpret this. v1 always has this as
+null. Players see the // <code>description</code> field as flavor text;
+they apply any rule modifications // themselves at the table. effects:
+object | null, activatedAt: timestamp | null, deactivatedAt: timestamp |
+null, // Soft-delete via revokedAt; phases can be removed but history is
+preserved. revokedAt?: timestamp, revokedByUserId?: string, } // v1
+invariant: at most one CampaignPhase has activatedAt != null AND
+deactivatedAt = null per campaign. // v1.x may allow multiple
 simultaneous phases (e.g., overlapping “Day phase” + “Helsreach Siege”
 phase). // Transitions: activate sets activatedAt = now, deactivatedAt =
 null; // activate another phase implicitly deactivates the current one

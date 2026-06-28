@@ -211,8 +211,11 @@ Campaign {
 
 // CampaignPhase (v3.18): CM-defined narrative periods within a campaign.
 // Distinct from Campaign.status (state/lifecycle). Phases are CM data used
-// to communicate narrative context to players, with optional game-relevant
-// effects (v1.x).
+// to communicate narrative context to players. **Phase effects are cosmetic
+// only** (v3.19) — they do not modify game rules, available requisitions,
+// point caps, or any system behavior. Players enforce the rules as they
+// like in their matches; our app is a campaign-management tool, not a
+// rules adjudicator.
 // Example: Phase 1 - "Arrivals" — orbital drop ships battle for dominance;
 // those who succeed may provide orbital support to drop ships, aiding them
 // to setup fortifications and forward operations.
@@ -220,8 +223,10 @@ CampaignPhase {
   id, campaignId,
   name: string,                              // e.g., "Phase 1 - Arrivals"
   description: markdown,                     // narrative context (what's happening in the world)
-  // Structured game-relevant effects (v1.x). v1: null.
-  // v1.x: { availableRequisitions: [...], disabledRules: [...], pointCapModifier: ... }
+  // Cosmetic-only effects field. Reserved for future use; the system does
+  // NOT interpret this. v1 always has this as null. Players see the
+  // `description` field as flavor text; they apply any rule modifications
+  // themselves at the table.
   effects: object | null,
   activatedAt: timestamp | null,
   deactivatedAt: timestamp | null,

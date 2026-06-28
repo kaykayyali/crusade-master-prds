@@ -434,8 +434,8 @@ relevant to their team) see.</li>
 player self-removing).</li>
 </ul>
 <hr />
-<h3 id="state-vs-phase-v3.18-clarification">3.2 State vs Phase (v3.18
-clarification)</h3>
+<h3 id="state-vs-phase-v3.18-v3.19-cosmetic-only-clarification">3.2
+State vs Phase (v3.18 + v3.19: cosmetic-only clarification)</h3>
 <p>Per user: <strong>campaign state and campaign phase are two distinct
 concepts.</strong> Don’t conflate them.</p>
 <ul>
@@ -449,6 +449,16 @@ system-managed. Stored in <code>Campaign.status</code>. Transitions:
 table. Multiple phases can exist; at most one is active at a time in v1.
 The active phase is a narrative context, not a lifecycle state.</li>
 </ul>
+<p><strong>Per v3.19: phase effects are cosmetic only.</strong> The
+system does NOT interpret or enforce the <code>description</code> or
+<code>effects</code> content of a phase. The <code>description</code> is
+markdown text displayed to players (banner on dashboard, header in
+narrative log, phase delimiter in timeline). The <code>effects</code>
+field is reserved for v1.x but always null in v1. Players read the phase
+description and apply any rule modifications themselves at the table —
+the app is not a rules adjudicator. This is consistent with PRD-0 §4b.2
+(NR-as-source-of-truth) and PRD-3 §6 (rule engine is campaign-level
+only).</p>
 <p><strong>Concrete difference:</strong></p>
 <table>
 <colgroup>
@@ -496,6 +506,11 @@ transitions</td>
 enforced)</td>
 <td>CM (free-form narrative periods)</td>
 </tr>
+<tr class="odd">
+<td>Does the system enforce phase rules?</td>
+<td>n/a</td>
+<td><strong>No</strong> (v3.19). Players enforce at the table.</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Lifecycle interactions:</strong></p>
@@ -517,8 +532,7 @@ activates one.</li>
 (no approvals unless <code>started</code>; read-only mode if
 <code>archived</code>).</li>
 <li>Phase is narrative context that the CM controls freely; it doesn’t
-gate system behavior in v1 (v1.x may add structured effects that gate
-certain mechanics).</li>
+gate system behavior in v1.</li>
 </ul>
 <p>Mixing them would mean the CM’s narrative choices accidentally gate
 functionality (e.g., “if I haven’t defined a ‘Phase 1’ yet, players

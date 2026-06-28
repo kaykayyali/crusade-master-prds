@@ -20,7 +20,27 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.18 (current) — State vs Phase + event archival deferred
+### v3.19 (current) — Phase effects are cosmetic only
+
+Per user: "The phase effects are not enforced as part of this system yet. They are cosmetic for now. Players can enforce the rules as they like in their matches."
+
+**Simplification of v3.18:**
+- The `CampaignPhase.effects` field is **reserved for v1.x** but always null in v1. The system does not interpret or enforce it.
+- The `CampaignPhase.description` field is markdown narrative content, **displayed to players as flavor text** but not interpreted by the system.
+- Players read the active phase description and apply any rule modifications themselves at the table.
+- This is consistent with the broader principle from PRD-0 §4b.2 (NR-as-source-of-truth; the app is not a rules adjudicator) and PRD-3 §6 (rule engine is campaign-level only, not unit-level).
+
+**What this means for v1:**
+- Phases are 100% narrative context: banner on the dashboard, header in the narrative log, phase delimiters in the timeline view.
+- Phase activation never affects which rules fire, which requisitions are available, what the point cap is, or any other system behavior.
+- v1.x could add structured `effects` documents that the system interprets — but per user direction, that's deferred indefinitely until there's a clear use case.
+
+**Where this is documented:**
+- PRD-0 §4: `CampaignPhase` schema comment explicitly says effects are cosmetic-only.
+- PRD-1 §4.4.5: Phases section makes the cosmetic-only nature explicit with concrete examples.
+- PRD-4 §3.2: State vs Phase comparison table includes the row "Does the system enforce phase rules? **No (v3.19).**"
+
+### v3.18 — State vs Phase + event archival deferred
 
 Two refinements:
 

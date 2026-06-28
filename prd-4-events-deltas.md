@@ -187,12 +187,14 @@ interface Delta {
 
 ---
 
-### 3.2 State vs Phase (v3.18 clarification)
+### 3.2 State vs Phase (v3.18 + v3.19: cosmetic-only clarification)
 
 Per user: **campaign state and campaign phase are two distinct concepts.** Don't conflate them.
 
 - **State** is the internal lifecycle of the campaign — system-managed. Stored in `Campaign.status`. Transitions: `created` → `started` → `ended` → `archived` (with optional `archived` → `started` re-open).
 - **Phase** is a CM-authored narrative period within a `started` campaign. Stored in the `CampaignPhase` table. Multiple phases can exist; at most one is active at a time in v1. The active phase is a narrative context, not a lifecycle state.
+
+**Per v3.19: phase effects are cosmetic only.** The system does NOT interpret or enforce the `description` or `effects` content of a phase. The `description` is markdown text displayed to players (banner on dashboard, header in narrative log, phase delimiter in timeline). The `effects` field is reserved for v1.x but always null in v1. Players read the phase description and apply any rule modifications themselves at the table — the app is not a rules adjudicator. This is consistent with PRD-0 §4b.2 (NR-as-source-of-truth) and PRD-3 §6 (rule engine is campaign-level only).
 
 **Concrete difference:**
 
@@ -204,6 +206,7 @@ Per user: **campaign state and campaign phase are two distinct concepts.** Don't
 | Can players see the campaign? | Yes if `status ∈ {started, ended, archived}` | Only see the active phase (if any) |
 | Is the campaign over? | `status = 'ended' \| 'archived'` | The active phase can be deactivated; phases don't gate state transitions |
 | Who manages it? | System (state transitions are CM-triggered but the lifecycle is enforced) | CM (free-form narrative periods) |
+| Does the system enforce phase rules? | n/a | **No** (v3.19). Players enforce at the table. |
 
 **Lifecycle interactions:**
 
@@ -215,7 +218,7 @@ Per user: **campaign state and campaign phase are two distinct concepts.** Don't
 **Why separate them:**
 
 - State is enforced by the system; the app gates functionality on it (no approvals unless `started`; read-only mode if `archived`).
-- Phase is narrative context that the CM controls freely; it doesn't gate system behavior in v1 (v1.x may add structured effects that gate certain mechanics).
+- Phase is narrative context that the CM controls freely; it doesn't gate system behavior in v1.
 
 Mixing them would mean the CM's narrative choices accidentally gate functionality (e.g., "if I haven't defined a 'Phase 1' yet, players can't play"). Keeping them separate means the CM can run a `started` campaign with no phases (just defaults) or run a campaign with rich phase descriptions that players see.
 

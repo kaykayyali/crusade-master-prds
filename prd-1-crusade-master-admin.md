@@ -255,9 +255,11 @@ The CM's campaign-administration surface. Sections:
 - **Phases** — define and activate narrative periods (v3.18; see §4.4.5)
 - **Archive** — soft-archive or hard-delete the campaign
 
-### 4.4.5 Phases section (v3.18)
+### 4.4.5 Phases section (v3.18, cosmetic-only per v3.19)
 
-The CM creates narrative periods called **phases**. Distinct from `Campaign.status` (state/lifecycle — created/started/ended/archived). Phases are CM-authored narrative data used to communicate "what's happening in the campaign world right now" to the players, with optional game-relevant effects (v1.x).
+The CM creates narrative periods called **phases**. Distinct from `Campaign.status` (state/lifecycle — created/started/ended/archived). Phases are CM-authored narrative data used to communicate "what's happening in the campaign world right now" to the players.
+
+**Per v3.19: phase effects are cosmetic only.** The system does NOT enforce phase `description` content as rules. The `effects` field is reserved for future use but the system does not interpret it. Players enforce the rules as they like in their matches at the table — our app is a campaign-management tool, not a rules adjudicator. This is consistent with PRD-0 §4b.2 (NR-as-source-of-truth) and PRD-3 §6 (rule engine is campaign-level only, not unit-level).
 
 **Example phase:**
 
@@ -271,11 +273,13 @@ to setup fortifications and forward operations.
 [Activate phase]  [Edit]  [Deactivate]  [Remove]
 ```
 
+Players read this and play accordingly. The app doesn't enforce that "orbital support" is a real game mechanic — if the players agree that's how they want to play, great. If they ignore the lore, that's also fine. The app is agnostic.
+
 **v1 phase fields:**
 
 - **name** (required) — short label, e.g., "Phase 1 - Arrivals"
-- **description** (required) — markdown narrative context
-- **effects** — structured game-relevant effects (v1.x; null in v1)
+- **description** (required) — markdown narrative context (displayed to players; not interpreted by the system)
+- **effects** — reserved for future; always null in v1. When populated, the system does not interpret or enforce it.
 
 **CM workflow:**
 
@@ -314,7 +318,9 @@ Shown on the player dashboard (PRD-2 §5c) above the cards. Also shown on the te
 
 State is system data; phase is CM data. They are orthogonal: a campaign in `started` state can have any phase active (or none). A campaign in `ended` state has no active phase (activation requires `started`).
 
-**v1.x: structured effects.** Phases gain a structured `effects` document that the system applies (e.g., `availableRequisitions: ['orbital_support']`, `disabledRules: ['unit_cap_xxx']`). The v1 schema leaves this null but the data model supports it.
+**Why no system enforcement (v3.19):** the user explicitly clarified that phase effects are cosmetic and players enforce the rules themselves. The app stays out of the way. The `effects` field is reserved in the data model for v1.x+ (a future version could add structured effects that the system enforces — e.g., "during Phase 1, drop-pod units are unavailable"). The PRD-0 §4b.2 principle (NR-as-source-of-truth; app is not a rules adjudicator) extends to phases.
+
+**v1.x: structured effects (deferred).** If a future version adds structured `effects` documents that the system applies, the data model already supports it (the field is in the schema). For v1, the field is reserved but unused; description is the only narrative content.
 
 **v1.x: phase visibility to non-active phases.** Currently only the active phase is visible to players. v1.x could let CMs publish phases publicly (e.g., "Phase 3 - Endgame has been unlocked, here's a preview").
 
