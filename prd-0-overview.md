@@ -40,7 +40,7 @@ The user's existing `bs-roster-parser` Python library already handles the messy 
 | **Player** | One tenant, can join multiple campaigns |
 | **Spectator (read-only)** | Public campaigns (cross-tenant if `allow_cross_tenant_spectators: true`) |
 
-A user can hold multiple roles. A CM playing in their own campaign gets a "playing in your own campaign" badge; their own approvals self-approve with audit log if no second CM exists.
+A user can hold multiple roles. A CM playing in their own campaign gets a "playing in your own campaign" badge; their own approvals self-approve with full audit log (per v3.27: CM unilateral authority).
 
 ---
 
@@ -513,12 +513,10 @@ Per v3.11 — these terms have specific meanings in this app. Drift between "wha
 | Role | Who they are | What they can do |
 |---|---|---|
 | **Instance Admin** | A user with the `instance_admin` role. Cross-tenant. | Provisions tenants, sees all campaigns, doesn't play. |
-| **Primary CM** | A user with the `cm` role for a specific campaign. One per campaign (more CMs can be promoted; multi-CM campaigns are a separate concept from Crusade Team Leaders). | Full campaign authority: create campaign, configure rules, approve any action, see all teams' data, edit any roster. |
+| **Primary CM** | A user with the `cm` role for a specific campaign. The CM has full authority over their campaign: create campaign, configure rules, approve any action, see all teams' data, edit any roster, **and turn off approvals entirely for any changeset** (per v3.27). The CM is also a player if they choose (CM-as-player per PRD-1 §5); they keep full CM authority even as a player. |
 | **Crusade Team Leader** | A user with the `crusade_team_leader` role for one specific team. **They are also a player on that team** (they have a roster, they play in battles). The primary CM promotes them by granting the role for a specific team. **A team can have multiple team leaders.** The CM is the only role that can add or update the team leader list for any team (policy). | Sees their team's data; can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled for them; **cannot see or approve anything for other teams**. The primary CM controls which actions a team leader can approve, per `ApprovalKind`. When multiple team leaders exist on a team, **any one** of them can approve a request in their team's scope (default OR-semantics; the primary CM can switch to AND-semantics per campaign setting if desired). |
 | **Player** | A user with the `player` role for a campaign. On exactly one team. | Sees their own roster + their team's narrative log + their own data. Files approvals, plays games, edits nothing about other teams. |
 | **Spectator** | Read-only public-link user. | Sees what the campaign's `publicVisibility` setting exposes. No team membership. |
-
-**Co-approval (PRD-5):** the term "co-approval" refers to an `ApprovalRequest` requiring two distinct approvers. In v3.12 the candidates are: Primary CM + a second Primary CM (if the campaign has multiple CMs); or Primary CM + a Crusade Team Leader (if the kind allows team-leader approval and the request is within that leader's scope). The approval pair depends on the request's scope and the campaign's configuration. **There is no automatic co-approval kind; every dual-approval is a configuration choice.**
 
 **Multi-leader on a team:** a team can have multiple team leaders. Any one of them can approve a request in their team's scope (default OR-semantics). The primary CM controls whether approval requires any one or all of the team leaders via `Campaign.teamLeaderApprovalMode: 'any' | 'all'` (default `'any'`). With `'all'`, every team leader on the team must approve before the request is decided — a stronger check, used rarely. The audit log records which team leaders approved, in order.
 

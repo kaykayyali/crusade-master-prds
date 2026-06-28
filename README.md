@@ -22,7 +22,36 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.26 (current) — Final cleanup: terminology, diagrams, inconsistencies
+### v3.27 (current) — Authority hierarchy simplification: remove co-CM concept
+
+Per user: "There should be no actions which require a 'co_CM'. The heirarchy is:
+1. CM - Campaign Master, able to make all changes for a campaign they own. Able to update and approve any change set, able to turn off approvals for any changeset
+2. Team Leader - Designated by the CM. Any changeset approval authority delegated to Team Leaders enables them to do those actions for their team members only
+3. Player - Same as the Team Lead. Only difference is that player level approvals effectively means 'no approval' required."
+
+**Removed `co_cm_required_unavailable` enum value entirely** from `ApprovalSource`. The CM has full authority over their campaign; no second approver is required for any kind. The audit log records both submitter and approver; reversibility is via the standard rollback flow (PRD-5 §7), not via a co-approver.
+
+**Removed high-impact CM-cannot-self-approve exception.** The previous design listed 6 kinds (`mass_reban`, `point_cap_change`, `roster_manual_edit`, `requisition_rp_override`, `campaign_announcement`, `team_switch`) as requiring a second CM. Per v3.27, the CM unilaterally approves all of these.
+
+**Removed multi-CM campaigns as a distinct concept.** Two CMs is rare but not special — either can unilaterally approve anything. No co-approval pair (CM + second CM, or CM + TL) is required.
+
+**Removed the Co-approval glossary entry** from PRD-0, PRD-1 §3b, and PRD-5 §0.
+
+**Rewrote PRD-1 §5** as "Authority Hierarchy & Self-Actions" with an explicit hierarchy table (CM / TL / Player), self-action auto-approval rules, and a clear statement that no second approver exists.
+
+**Updated PRD-5 §3.2 routing decision flowchart** to remove the "is there another approver" branch; routing is now purely about routing OTHER players' actions to TL pool or CM fallback. The CM's own actions always auto-approve.
+
+**Updated PRD-5 §3.2 routing table** to drop the "Co-approval required?" column; removed "(high-impact)" annotations; renamed §3.3 to "Submitter Auto-Approval" (was "CM-as-Player Auto-Approval").
+
+**Updated PRD-5 §14 edge cases**: "CM is the submitter" now reads "CM is the submitter: auto-approves via `self_approved`. CM has full authority (v3.27), no second approver needed."
+
+**Updated PRD-1 §4.4 routing defaults**: removed "(high-impact, CM-only)" annotations from CM-only kinds.
+
+**Removed `co_cm_required_unavailable` from PRD-5 class diagram** (the enum now has 3 values, not 4).
+
+**Live references remaining:** only the "v3.27: removed/prior/was" historical notes that explain what was changed. The data-model identifier is fully gone.
+
+### v3.26 — Final cleanup: terminology, diagrams, inconsistencies
 
 Per user: "Do one last cleanup. Plan to scan for inconsistencies, any complicated situations warranting a diagram, any logical place to break up into better sections, finally any concepts that are poorly worded, possibly confusing, easy to conflate."
 

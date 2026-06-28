@@ -329,7 +329,8 @@ schema-ready, UI is not</li>
 </table>
 <p>A user can hold multiple roles. A CM playing in their own campaign
 gets a “playing in your own campaign” badge; their own approvals
-self-approve with audit log if no second CM exists.</p>
+self-approve with full audit log (per v3.27: CM unilateral
+authority).</p>
 <hr />
 <h2 id="architecture">3. Architecture</h2>
 <h3 id="tech-stack-locked-v3">3.1 Tech Stack (locked v3)</h3>
@@ -910,11 +911,13 @@ avoid.</p>
 </tr>
 <tr class="even">
 <td><strong>Primary CM</strong></td>
-<td>A user with the <code>cm</code> role for a specific campaign. One
-per campaign (more CMs can be promoted; multi-CM campaigns are a
-separate concept from Crusade Team Leaders).</td>
-<td>Full campaign authority: create campaign, configure rules, approve
-any action, see all teams’ data, edit any roster.</td>
+<td>A user with the <code>cm</code> role for a specific campaign. The CM
+has full authority over their campaign: create campaign, configure
+rules, approve any action, see all teams’ data, edit any roster,
+<strong>and turn off approvals entirely for any changeset</strong> (per
+v3.27). The CM is also a player if they choose (CM-as-player per PRD-1
+§5); they keep full CM authority even as a player.</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><strong>Crusade Team Leader</strong></td>
@@ -948,14 +951,6 @@ exposes. No team membership.</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Co-approval (PRD-5):</strong> the term “co-approval” refers
-to an <code>ApprovalRequest</code> requiring two distinct approvers. In
-v3.12 the candidates are: Primary CM + a second Primary CM (if the
-campaign has multiple CMs); or Primary CM + a Crusade Team Leader (if
-the kind allows team-leader approval and the request is within that
-leader’s scope). The approval pair depends on the request’s scope and
-the campaign’s configuration. <strong>There is no automatic co-approval
-kind; every dual-approval is a configuration choice.</strong></p>
 <p><strong>Multi-leader on a team:</strong> a team can have multiple
 team leaders. Any one of them can approve a request in their team’s
 scope (default OR-semantics). The primary CM controls whether approval

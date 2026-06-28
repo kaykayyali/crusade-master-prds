@@ -237,13 +237,6 @@ been granted <code>crusade_team_leader</code> for that team by the
 primary CM. Sees their team’s data; can approve
 <code>ApprovalRequest</code>s affecting their team for kinds the primary
 CM has enabled.</li>
-<li><strong>Co-approval</strong> (in this PRD): an
-<code>ApprovalRequest</code> that requires two distinct approvers. The
-pair is either Primary CM + second Primary CM (rare; multi-CM campaigns)
-or Primary CM + Crusade Team Leader (if the kind allows team-leader
-approval and the request is within that leader’s team scope). Per-kind
-team-leader authority is configured by the primary CM in
-<code>Campaign.teamLeaderAuthority</code> (PRD-1 §4.4).</li>
 </ul>
 <hr />
 <h2 id="goals">1. Goals</h2>
@@ -482,9 +475,8 @@ auto-approves battle updates with no anomalies. Anomalies that always
 require approval: - OoA test failed - Requisition purchased - Honours /
 scars added beyond supplement’s universal list - Manual edits outside NR
 import - Submitter is a new account (&lt; 7 days) - Submitter is the CM
-themselves (CM-as-player; auto-approves per PRD-1 §5, except for kinds
-requiring a second approver which stay pending until one is
-available)</p>
+themselves (CM-as-player; auto-approves per PRD-1 §5 — no second
+approver required, see §3.3 v3.27)</p>
 <hr />
 <h2 id="approvalrequest-schema">3. ApprovalRequest Schema</h2>
 <p><strong>Terminology note (avoids conflation):</strong> this PRD uses
@@ -499,10 +491,12 @@ kind</em> of action is being approved (<code>roster_approval</code>,
 <strong><code>approvalSource</code></strong> (a field on
 <code>ApprovalRequest</code>) — <em>how</em> the request was decided
 (<code>cm_review</code>, <code>auto_approve_routine</code>,
-<code>self_approved</code>, <code>co_cm_required_unavailable</code>).
-This field distinguishes human-approved from auto-approved. -
-<strong>“approval”</strong> (the act) — a verb describing the decision;
-we say “Mike approved the request” or “Mike filed for approval.”</p>
+<code>self_approved</code>). This field distinguishes human-approved
+from auto-approved. The prior <code>co_cm_required_unavailable</code>
+value (v3.26 and earlier) is removed in v3.27; the CM has full authority
+and no second approver is required. - <strong>“approval”</strong> (the
+act) — a verb describing the decision; we say “Mike approved the
+request” or “Mike filed for approval.”</p>
 <p>Don’t conflate these. PRD-5 is about <code>ApprovalRequest</code>
 records; the kind comes from <code>ApprovalKind</code>; the audit trail
 records <code>approvalSource</code>.</p>
@@ -562,12 +556,13 @@ maps to one of the categories in §2.2; new categories extend this enum
 <span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  approvalSource<span class="op">:</span></span>
 <span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// routed to a Primary CM or Crusade Team Leader (within team scope); covers both pending and approved</span></span>
 <span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;auto_approve_routine&#39;</span>        <span class="co">// campaign&#39;s auto-approve-routine-battle-updates setting fired</span></span>
-<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span>               <span class="co">// CM-as-player or Team-Leader-as-player submitted and self-approved (PRD-1 §5)</span></span>
-<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_required_unavailable&#39;</span><span class="op">;</span> <span class="co">// kind requires a second approver but none existed; stayed pending</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">// Note: approvalSource is populated at creation based on routing (e.g., a request routed to</span></span>
-<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co">// a TL pool has approvalSource=&#39;cm_review&#39; from the start, even before the TL acts).</span></span>
-<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co">// &#39;pending&#39;/&#39;approved&#39; is ApprovalRequest.status; approvalSource is the routing-decision lineage.</span></span></code></pre></div>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span><span class="op">;</span>              <span class="co">// submitter&#39;s own action; auto-approved at the submitter&#39;s authority level (player / TL / CM)</span></span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a><span class="co">// Note (v3.27): the previous `co_cm_required_unavailable` value is gone. The CM has full</span></span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">// authority over their campaign and can unilaterally approve any kind, including</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co">// CM-only kinds like `mass_reban` or `point_cap_change`. There is no &quot;second approver&quot;</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co">// requirement; co-approval is not a concept in this app.</span></span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a><span class="co">// &#39;pending&#39;/&#39;approved&#39; is ApprovalRequest.status; approvalSource is the routing-decision lineage.</span></span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
 <p>Every <code>ApprovalKind</code> has a typed payload. The payload is
 the <em>contract</em> — the inbox UI and the application logic both
@@ -696,8 +691,8 @@ consume it.</p>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  visibility<span class="op">:</span> <span class="st">&#39;all&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;private_to_cm&#39;</span><span class="op">,</span></span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  targetTeamId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span>       <span class="co">// when visibility = &#39;team&#39;</span></span>
 <span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h4 id="point_cap_change-all-player-effects-second-cm-approval"><code>point_cap_change</code>
-(All-player effects — second CM approval)</h4>
+<h4 id="point_cap_change-all-player-effects-cm-unilateral-approval"><code>point_cap_change</code>
+(All-player effects — CM unilateral approval)</h4>
 <div class="sourceCode" id="cb15"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  fromCap<span class="op">:</span> int<span class="op">,</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  toCap<span class="op">:</span> int<span class="op">,</span></span>
@@ -711,31 +706,75 @@ point)</h4>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  data<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;,</span></span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<h3 id="routing-per-kind-v3.11">3.2 Routing Per Kind (v3.11)</h3>
-<p><strong>Routing decision flow (v3.23):</strong></p>
+<h3 id="routing-per-kind-v3.11-simplified-v3.27">3.2 Routing Per Kind
+(v3.11, simplified v3.27)</h3>
+<p><strong>Authority hierarchy (v3.27 — replaces prior “co-CM”
+concept):</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Authority level</th>
+<th>Can file</th>
+<th>Can approve (others)</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Player</strong></td>
+<td>Yes (own actions)</td>
+<td>No</td>
+<td>Player filings auto-approve at the player level — no approval
+gate</td>
+</tr>
+<tr class="even">
+<td><strong>Team Leader</strong></td>
+<td>Yes (own actions + own team)</td>
+<td>Yes (within team scope, for kinds CM has delegated)</td>
+<td>TL filings of own-team actions auto-approve at the TL level</td>
+</tr>
+<tr class="odd">
+<td><strong>Primary CM</strong></td>
+<td>Yes (anything)</td>
+<td>Yes (anything)</td>
+<td>CM has full authority over their campaign; no second approver
+required for any kind</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Routing decision flow (v3.27):</strong></p>
 <pre class="mermaid"><code>flowchart TD
     Start([ApprovalRequest created]) --&gt; Q1{Who submitted?}
-    Q1 -- &quot;Team Leader&lt;br/&gt;(acting on self)&quot; --&gt; Auto1[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;Skip pipeline steps still emit events]
-    Q1 -- &quot;Primary CM&lt;br/&gt;(as player)&quot; --&gt; Q2{High-impact kind?&lt;br/&gt;mass_reban, point_cap_change,&lt;br/&gt;roster_manual_edit,&lt;br/&gt;requisition_rp_override,&lt;br/&gt;campaign_announcement, team_switch}
-    Q2 -- &quot;Yes&quot; --&gt; Q3{Is there another&lt;br/&gt;CM or TL&lt;br/&gt;allowed for this kind?}
-    Q3 -- &quot;Yes&quot; --&gt; Route2[Route to other approver&lt;br/&gt;approvalSource: cm_review]
-    Q3 -- &quot;No&quot; --&gt; Stay[Stay pending&lt;br/&gt;approvalSource: co_cm_required_unavailable]
-    Q2 -- &quot;No, routine kind&quot; --&gt; Auto2[Auto-approve&lt;br/&gt;approvalSource: self_approved]
-    Q1 -- &quot;Player&lt;br/&gt;(not TL)&quot; --&gt; Q4{What team is affected?&lt;br/&gt;From Roster.teamId or&lt;br/&gt;CampaignMember.teamId}
-    Q4 -- &quot;Team A&quot; --&gt; Q5{Is there an active TL&lt;br/&gt;for Team A AND&lt;br/&gt;kind is TL-enabled?}
-    Q5 -- &quot;Yes&quot; --&gt; Q6{Multiple TLs on Team A?}
-    Q6 -- &quot;Yes, mode=any&quot; --&gt; Route3a[Route to TL pool&lt;br/&gt;Any TL can approve]
-    Q6 -- &quot;Yes, mode=all&quot; --&gt; Route3b[Route to all TLs&lt;br/&gt;All must approve]
-    Q6 -- &quot;No, single TL&quot; --&gt; Route3c[Route to that TL]
-    Q5 -- &quot;No&quot; --&gt; Q7{Route to Primary CM&lt;br/&gt;as fallback}</code></pre>
-<p><strong>Per-kind routing table:</strong></p>
-<p>Per-kind routing now reflects the <strong>Crusade Team
-Leader</strong> model: team leaders can approve actions affecting their
-team for kinds the primary CM has enabled. The primary CM can always
-approve anything (their authority is global). Co-approval (two distinct
-approvers) is reserved for high-impact cross-team / destructive
-kinds.</p>
-<p><strong>Per-kind routing table:</strong></p>
+    Q1 -- &quot;Primary CM&quot; --&gt; Auto1[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;CM has full authority over their campaign]
+    Q1 -- &quot;Team Leader&quot; --&gt; Q2{Submitter is TL&lt;br/&gt;of affected team?}
+    Q2 -- &quot;Yes, own-team action&quot; --&gt; Auto2[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;TL is trusted within team scope]
+    Q2 -- &quot;No, cross-team&quot; --&gt; Reject1[Reject&lt;br/&gt;TL cannot file cross-team actions]
+    Q1 -- &quot;Player&quot; --&gt; Q3{Submitter is on the&lt;br/&gt;affected team?}
+    Q3 -- &quot;Yes, own action&quot; --&gt; Auto3[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;Player filings need no approval]
+    Q3 -- &quot;No&quot; --&gt; Reject2[Reject&lt;br/&gt;Player can only file own actions]
+    Q1 -- &quot;Anyone filing&lt;br/&gt;on behalf of others&quot; --&gt; Q4{Kind is TL-delegated&lt;br/&gt;AND affected team has TL?}
+    Q4 -- &quot;Yes&quot; --&gt; RouteTL[Route to TL pool&lt;br/&gt;approvalSource: cm_review]
+    Q4 -- &quot;No&quot; --&gt; RouteCM[Route to Primary CM&lt;br/&gt;approvalSource: cm_review]
+    RouteTL --&gt; Q5{Multiple TLs?}
+    Q5 -- &quot;Yes, mode=any&quot; --&gt; TLAny[Any TL can approve]
+    Q5 -- &quot;Yes, mode=all&quot; --&gt; TLAll[All TLs must approve]
+    Q5 -- &quot;No, single TL&quot; --&gt; TLSingle[Route to that TL]</code></pre>
+<p><strong>Per-kind routing table (v3.27):</strong></p>
+<p>Per-kind routing now reflects the <strong>authority
+hierarchy</strong> (v3.27): CM has full authority over their campaign;
+TL has delegated authority scoped to their team; Player has no approval
+authority. <strong>There is no concept of “co-approval” or “second
+approver”</strong> — the CM can unilaterally approve any kind.</p>
+<p>The CM can also delegate any kind to team leaders via
+<code>Campaign.teamLeaderAuthority</code> (per PRD-1 §4.4). The defaults
+below reflect a sensible starting point; the CM can flip any of these
+on/off per campaign.</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -746,118 +785,119 @@ kinds.</p>
 <thead>
 <tr class="header">
 <th>Kind</th>
-<th>Primary CM authority</th>
-<th>Team Leader authority (default per PRD-1 §4.4; CM-configurable per
-campaign)</th>
-<th>Co-approval required?</th>
+<th>Primary CM</th>
+<th>Team Leader (default)</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><code>roster_approval</code></td>
 <td>✅</td>
-<td>✅ enabled by default — team leader can approve for their team</td>
-<td>No</td>
+<td>✅ enabled by default — TL can approve for their team</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>roster_manual_edit</code></td>
 <td>✅ (CM is the actor)</td>
 <td>❌ disabled by default — CM-only</td>
-<td>No (single CM; CM cannot self-approve per below)</td>
+<td>CM can edit any player’s roster directly</td>
 </tr>
 <tr class="odd">
 <td><code>requisition_purchase</code></td>
 <td>✅ (CM-gifted or narrative)</td>
 <td>❌ disabled — routine player requisitions are NR-side per PRD-4
 §7b.2</td>
-<td>No</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>roster_revert</code></td>
 <td>✅</td>
-<td>✅ enabled — team leader can approve for their team</td>
-<td>No</td>
+<td>✅ enabled — TL can approve for their team</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>roster_rollback</code></td>
 <td>✅</td>
-<td>✅ enabled — team leader can approve for their team (per user’s
-v3.11 confirmation)</td>
-<td>No</td>
+<td>✅ enabled — TL can approve for their team (per user’s v3.11
+confirmation)</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>history_rollback</code></td>
 <td>✅</td>
-<td>✅ enabled — team leader can approve for their team</td>
-<td>No</td>
+<td>✅ enabled — TL can approve for their team</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>team_switch</code></td>
-<td>✅ (cross-team)</td>
-<td>❌ disabled — team leaders cannot approve cross-team changes</td>
-<td>No</td>
+<td>✅</td>
+<td>❌ disabled — TL cannot approve cross-team changes</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>faction_switch</code></td>
 <td>✅</td>
 <td>✅ enabled — the player’s own faction change</td>
-<td>No</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>post_battle_update</code></td>
 <td>✅</td>
-<td>✅ enabled — team leader can approve for their team</td>
-<td>No</td>
+<td>✅ enabled — TL can approve for their team</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>rp_adjustment</code></td>
 <td>✅</td>
-<td>✅ enabled — team leader can approve for their team</td>
-<td>No</td>
+<td>✅ enabled — TL can approve for their team</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>requisition_rp_override</code></td>
-<td>✅ (high-impact)</td>
-<td>❌ disabled — CM-only</td>
-<td>No</td>
+<td>✅</td>
+<td>❌ disabled by default — CM-only</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>mass_reban</code></td>
-<td>✅ (campaign-wide)</td>
-<td>❌ disabled — CM-only</td>
-<td>No</td>
+<td>✅</td>
+<td>❌ disabled by default — CM-only</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>campaign_announcement</code></td>
-<td>✅ (campaign-wide)</td>
-<td>❌ disabled — CM-only</td>
-<td>No</td>
+<td>✅</td>
+<td>❌ disabled by default — CM-only</td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>point_cap_change</code></td>
-<td>✅ (campaign-wide)</td>
-<td>❌ disabled — CM-only</td>
-<td>No</td>
+<td>✅</td>
+<td>❌ disabled by default — CM-only</td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>custom</code></td>
-<td>✅ (CM-only)</td>
-<td>❌ disabled — CM-only</td>
+<td>✅</td>
+<td>❌ disabled by default — CM-only</td>
 <td>Per <code>schemaRef</code></td>
 </tr>
 </tbody>
 </table>
-<p><strong>CM self-edit prevention:</strong></p>
-<p>For kinds where the CM is the actor AND is also a player
-(<code>roster_manual_edit</code>, <code>rp_adjustment</code> initiated
-by the CM, etc.), the request must be approved by someone OTHER than the
-submitting CM. Options: - A second Primary CM (if the campaign has
-multiple CMs) - A Crusade Team Leader of the affected team (if the kind
-allows it) - Otherwise the request stays pending with
-<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> until another
-approver becomes available</p>
-<p>The CM cannot approve their own roster_manual_edit of their own
-roster; this is the abuse-prevention gate.</p>
+<p><strong>CM unilateral approval (v3.27 — replaces prior “CM self-edit
+prevention”):</strong></p>
+<p>The CM has full authority over their campaign. They can approve any
+kind, including kinds where they themselves are the actor (e.g.,
+<code>roster_manual_edit</code> of their own roster,
+<code>mass_reban</code> of an opposing player). <strong>No second
+approver is required.</strong> The audit log records the CM as both
+submitter and approver; the action is reversible via the standard
+rollback flow (PRD-5 §7) but is otherwise final.</p>
+<p>This is a deliberate trust model: a CM who has been entrusted with
+their campaign is trusted to wield full authority over it. If a CM
+abuses this, the recourse is at the Instance Admin level (PRD-1 §3.1),
+not at the data-model level.</p>
 <p><strong>Team scope enforcement:</strong></p>
 <p>When a team leader approves a request, the request’s
 <code>teamId</code> (inferred from the affected entity:
@@ -921,20 +961,16 @@ approved.</p>
 §4.4) is enforced at approval time: when an <code>ApprovalRequest</code>
 is created, the rule engine runs the rules configured for that kind. The
 CM can, e.g., make <code>team-narrative-alignment</code> fire on
-<code>roster_approval</code> but not on <code>post_battle_update</code>.
-| <code>mass_reban</code> | Second CM | <strong>Mandatory</strong> (per
-PRD-5 §2.4) | | <code>campaign_announcement</code> | CM | Optional
-(campaign setting — default off for routine, on for high-impact) | |
-<code>point_cap_change</code> | Second CM | <strong>Mandatory</strong> |
-| <code>custom</code> | Per <code>schemaRef</code> | Per
-<code>schemaRef</code> |</p>
-<h3 id="cm-as-player-auto-approval-prd-1-5">3.3 CM-as-Player
-Auto-Approval (PRD-1 §5)</h3>
-<p>When the submitter is the campaign’s primary CM (CM-as-player), every
-kind <strong>auto-approves but the pipeline still runs</strong>, except
-kinds where the CM is the actor (which require a second approver per
-§3.2 above). The <code>approvalSource</code> field records which path
-fired:</p>
+<code>roster_approval</code> but not on
+<code>post_battle_update</code>.</p>
+<h3 id="submitter-auto-approval-v3.27-was-cm-as-player-auto-approval">3.3
+Submitter Auto-Approval (v3.27 — was “CM-as-Player Auto-Approval”)</h3>
+<p><strong>Per the authority hierarchy (v3.27):</strong> every
+submission auto-approves at the submitter’s authority level. The CM has
+full authority; TL has delegated authority within their team; Player has
+no approval authority. There is <strong>no second approver</strong> for
+any kind — the CM can unilaterally approve anything.</p>
+<p>The <code>approvalSource</code> field records which path fired:</p>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -948,32 +984,30 @@ fired:</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Primary CM (or a Crusade Team Leader within their team’s scope)
-reviewed and approved manually</td>
+<td>Primary CM or Crusade Team Leader (within team scope) reviewed and
+approved someone else’s request</td>
 <td><code>cm_review</code></td>
 </tr>
 <tr class="even">
-<td>Campaign’s <code>auto_approve_routine_battle_updates</code> fired
-(no anomalies)</td>
+<td>Campaign’s <code>auto_approve_routine_battle_updates</code> setting
+fired (no anomalies)</td>
 <td><code>auto_approve_routine</code></td>
 </tr>
 <tr class="odd">
-<td>CM-as-player submitted, no second approver needed (kind allows
-self-approve)</td>
+<td>Submitter’s own action auto-approved at their authority level
+(Player / TL / CM filing on themselves)</td>
 <td><code>self_approved</code></td>
-</tr>
-<tr class="even">
-<td>Kind requires a second approver but none exists (e.g., CM-only kind
-in a single-CM campaign)</td>
-<td><code>co_cm_required_unavailable</code></td>
-</tr>
-<tr class="odd">
-<td>Team Leader of team X approved a request affecting team X</td>
-<td><code>cm_review</code> (with
-<code>reviewerUserId: teamLeader</code>)</td>
 </tr>
 </tbody>
 </table>
+<p><strong>v3.27 simplification:</strong> the prior
+<code>co_cm_required_unavailable</code> value is gone. A CM who files
+<code>mass_reban</code>, <code>point_cap_change</code>, or any other
+kind — even one where they’re the actor — auto-approves at the CM level
+(<code>self_approved</code>). No second approver required. The audit log
+records both submitter and approver as the same CM user; the action is
+reversible via the standard rollback flow (PRD-5 §7) but is otherwise
+final.</p>
 <p><strong>Architectural rule:</strong> auto-approval ≠ pipeline bypass.
 Every auto-approved request still: 1. Creates the
 <code>ApprovalRequest</code> row (with <code>approvalSource</code>
@@ -1025,7 +1059,6 @@ stays clean.</p>
         cm_review
         auto_approve_routine
         self_approved
-        co_cm_required_unavailable
     }
 
     class RulesEngine {
@@ -1596,15 +1629,15 @@ re-assignment logic — the next query naturally returns the new
 eligible-approver set. RLS + the API WHERE clause evaluate the current
 settings.</p>
 <p><strong>The CM-as-player auto-approval path follows the same
-principle:</strong></p>
-<p>If Mike (CM-as-player) files a high-impact kind like
-<code>mass_reban</code>, the auto-approval logic at PRD-5 §3.3 evaluates
-the current ruleset. If the kind requires a second approver and one
-exists, Mike’s request routes to them. If Mike later removes the other
-approver (leaving only himself), the request stays pending (no second
-approver available). If another approver joins later, the request
-becomes actionable again. The current ruleset — applied at query time —
-always wins.</p>
+principle (v3.27):</strong></p>
+<p>Per the v3.27 authority hierarchy, Mike (CM-as-player) files a
+<code>mass_reban</code> and it auto-approves at the CM level
+(<code>approvalSource: &#39;self_approved&#39;</code>). There is no second
+approver required; no routing decision; no pending state. The full
+pipeline still runs (rule checks, events, notifications, audit log). The
+current ruleset — applied at query time — always wins, but in v3.27 the
+ruleset only governs routing for OTHER players’ requests; the CM’s own
+actions always auto-approve.</p>
 <h3 id="re-assessment-warning-ui-v3.17-always-fires">Re-assessment
 warning UI (v3.17: always fires)</h3>
 <p>Per user (v3.17): when approval settings change, <strong>always show
@@ -1672,9 +1705,9 @@ then re-enables it an hour later, the pending approvals become
 actionable again. But the audit log shows that the ruleset changed
 twice, and during that hour, the pending requests were CM-only. The CM
 can’t pretend the ruleset was stable.</p>
-<p>If the CM wants to avoid this for high-impact changes, they should
-communicate with the team leader(s) before the change. Or wait for the
-queue to drain.</p>
+<p>If the CM wants to avoid this for ruleset changes that affect many
+in-flight approvals, they should communicate with the team leader(s)
+before the change. Or wait for the queue to drain.</p>
 <p><strong>No warning for past-approved or rejected approvals.</strong>
 Those are immutable; the ruleset change doesn’t affect them.</p>
 <p><strong>No warning for changes that don’t affect approvals at
@@ -1993,14 +2026,14 @@ optimistic locking via <code>contextHash</code>; second approver sees
 request closed.</li>
 <li><strong>Approval is for a now-deleted entity</strong>: apply step
 fails transactionally; CM is shown an error and asked to reject.</li>
-<li><strong>CM is the submitter and no second approver exists</strong>:
-auto-approves via <code>approvalSource: &#39;self_approved&#39;</code> (or
-<code>&#39;co_cm_required_unavailable&#39;</code> for kinds requiring a second
-approver). The pipeline still runs — <code>ApprovalRequest</code> is
-created, rule checks fire, events emit, audit trail recorded. Per PRD-1
-§5 and §3.3, the architectural rule is “auto-approve ≠ pipeline bypass”
-so future event hooks (team view pages, Discord, narrative analytics)
-work uniformly.</li>
+<li><strong>CM is the submitter</strong>: auto-approves via
+<code>approvalSource: &#39;self_approved&#39;</code>. The CM has full authority
+over their campaign (v3.27), so no second approver is needed for any
+kind. The pipeline still runs — <code>ApprovalRequest</code> is created,
+rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and
+§3.3, the architectural rule is “auto-approve ≠ pipeline bypass” so
+future event hooks (team view pages, Discord, narrative analytics) work
+uniformly.</li>
 <li><strong>Submitter suspended mid-approval</strong>: pending requests
 auto-rejected with reason “submitter suspended.”</li>
 <li><strong>Active RosterApproved changes during approval</strong>:

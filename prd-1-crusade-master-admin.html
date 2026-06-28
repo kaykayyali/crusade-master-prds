@@ -299,12 +299,6 @@ rejected).</p>
 for any team (policy). Players cannot self-promote, and team leaders
 cannot promote other players to team leader. The CM does this from the
 Crusade Administration panel → Approvals section.</p>
-<p><strong>Co-approval (in PRD-5) means:</strong> an
-<code>ApprovalRequest</code> requires two distinct approvers. The pair
-is either Primary CM + second Primary CM (if the campaign has multiple
-CMs) or Primary CM + Crusade Team Leader (if the kind allows team-leader
-approval and the request is within that leader’s team scope). Per-kind
-team-leader authority is configured by the primary CM.</p>
 <p><strong>Data isolation:</strong> teams cannot see each other’s data
 through the app (RLS-enforced). Players share out-of-band if they want;
 the app doesn’t facilitate it. Exception: when the crusade ends
@@ -629,9 +623,10 @@ affecting their team for kinds the primary CM has enabled, but
 <strong>cannot see or approve anything for other teams</strong>.</li>
 <li><strong>Multiple CMs (rare):</strong> if a campaign has more than
 one user with the <code>cm</code> role, they have full campaign
-authority each. Co-approval between them is configurable per kind (PRD-5
-§3.2). This is <strong>distinct</strong> from Crusade Team Leaders, who
-are scoped to a team.</li>
+authority each. There is no co-approval requirement between them —
+either CM can unilaterally approve anything. This is
+<strong>distinct</strong> from Crusade Team Leaders, who are scoped to a
+team.</li>
 </ul>
 <p><strong>TeamLeader lifecycle (v3.26):</strong></p>
 <pre class="mermaid"><code>stateDiagram-v2
@@ -961,15 +956,15 @@ PRD-4 §7b.2)</td>
 </tr>
 <tr class="even">
 <td><code>roster_manual_edit</code></td>
-<td>❌ disabled (high-impact, CM-only)</td>
+<td>❌ disabled (CM-only)</td>
 </tr>
 <tr class="odd">
 <td><code>requisition_rp_override</code></td>
-<td>❌ disabled (high-impact, CM-only)</td>
+<td>❌ disabled (CM-only)</td>
 </tr>
 <tr class="even">
 <td><code>mass_reban</code></td>
-<td>❌ disabled (high-impact, CM-only)</td>
+<td>❌ disabled (CM-only)</td>
 </tr>
 <tr class="odd">
 <td><code>campaign_announcement</code></td>
@@ -1091,12 +1086,63 @@ limited audit view scoped to their own actions + actions affecting them
 (“show me everything that happened to my roster”). Accessible from their
 settings page.</p>
 <hr />
-<h2 id="cm-as-player-v3.11-also-covers-crusade-team-leader-as-player">5.
-CM-as-Player (v3.11: also covers Crusade Team Leader as Player)</h2>
+<h2 id="authority-hierarchy-self-actions-v3.27-was-cm-as-player">5.
+Authority Hierarchy &amp; Self-Actions (v3.27 — was “CM-as-Player”)</h2>
+<p><strong>Per the v3.27 authority hierarchy:</strong></p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Authority</th>
+<th>Scope</th>
+<th>Can file</th>
+<th>Can approve (others)</th>
+<th>Self-action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Primary CM</strong></td>
+<td>Whole campaign</td>
+<td>Any kind</td>
+<td>Any kind, any team</td>
+<td>Auto-approves (<code>self_approved</code>); no second approver
+needed</td>
+</tr>
+<tr class="even">
+<td><strong>Team Leader</strong></td>
+<td>Own team</td>
+<td>Own actions + own team</td>
+<td>Within team scope, for kinds CM has delegated</td>
+<td>Auto-approves own-team actions (<code>self_approved</code>)</td>
+</tr>
+<tr class="odd">
+<td><strong>Player</strong></td>
+<td>Self</td>
+<td>Own actions only</td>
+<td>None (no approval authority)</td>
+<td>Auto-approves (<code>self_approved</code>); “approval = no approval”
+at player level</td>
+</tr>
+</tbody>
+</table>
 <p>A CM is allowed to be a player in their own campaign. <strong>A
 Crusade Team Leader is by definition a player on their team</strong>
 (per PRD-0 §3b). The CM-as-player and Team-Leader-as-player patterns
 share most of this behavior.</p>
+<p><strong>No second approver exists for any kind (v3.27).</strong> The
+CM unilaterally approves anything they file, including kinds where
+they’re the actor (<code>roster_manual_edit</code> of their own roster,
+<code>mass_reban</code>, <code>point_cap_change</code>, etc.). The audit
+log records both submitter and approver as the same CM user;
+reversibility is via the standard rollback flow (PRD-5 §7), not via a
+second-approver requirement.</p>
 <ul>
 <li><strong>CM-as-player:</strong>
 <ul>
@@ -1106,17 +1152,19 @@ the full pipeline.</strong> PRD-0 §4b’s approval-gating principle still
 applies — the system creates the <code>ApprovalRequest</code>, runs rule
 checks, persists the diff, fires events, and emits notifications. The
 only thing skipped is the wait for a human approver.</li>
-<li><strong>High-impact kinds with CM-only authority</strong>
-(<code>mass_reban</code>, <code>point_cap_change</code>,
-<code>roster_manual_edit</code>, <code>requisition_rp_override</code>,
-<code>campaign_announcement</code>, <code>team_switch</code>): the
-primary CM cannot self-approve these even as a player. They go to
-another CM if one exists (multiple-CM campaigns), or stay pending with
-<code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> (audit-logged,
-must be approved when another CM becomes available or by another CM at a
-later point). The CM can also configure team-leader authority for some
-of these per PRD-1 §4.4 — by default team leaders cannot approve
-high-impact kinds.</li>
+<li><strong>No second approver is required for any kind
+(v3.27).</strong> The CM has full authority over their campaign,
+including kinds where the CM is the actor
+(<code>roster_manual_edit</code> of their own roster,
+<code>mass_reban</code>, <code>point_cap_change</code>, etc.). Per the
+v3.27 authority hierarchy, the CM can unilaterally approve anything. The
+audit log records both submitter and approver as the same CM user;
+reversibility is via the standard rollback flow (PRD-5 §7), not via a
+second-approver requirement.</li>
+<li>The CM can also turn off approvals entirely for any changeset. When
+<code>auto_approve_routine_battle_updates</code> is enabled (or per-kind
+auto-approve is configured), the request skips the approval gate and
+proceeds straight to the pipeline.</li>
 <li>Own battle filings, requisition purchases, team switches —
 auto-approve but go through the pipeline.</li>
 </ul></li>
@@ -1163,16 +1211,11 @@ diagram):</strong></p>
     UI-&gt;&gt;API: POST /approval-requests
     API-&gt;&gt;DB: insert ApprovalRequest&lt;br/&gt;(submittedByUserId=CM,&lt;br/&gt;approvalSource=null)
     API-&gt;&gt;DB: routing decision&lt;br/&gt;(see PRD-5 §3.2)
-    alt Routine kind (e.g., post_battle_update for self)
-        API-&gt;&gt;DB: auto-approve&lt;br/&gt;approvalSource=&#39;self_approved&#39;
-        API-&gt;&gt;DB: write HistoryEntry + Delta[]
-        API-&gt;&gt;EM: emit approval.approved
-        EM-&gt;&gt;DB: insert Notification (loud, for own record)
-    else High-impact kind (e.g., mass_reban)
-        API-&gt;&gt;DB: stay pending&lt;br/&gt;approvalSource=&#39;co_cm_required_unavailable&#39;
-        API-&gt;&gt;EM: emit approval.requested
-        EM-&gt;&gt;DB: insert Notification for OTHER CMs&lt;br/&gt;(none exist in this example)
-    end
+    API-&gt;&gt;DB: auto-approve at CM level&lt;br/&gt;approvalSource=&#39;self_approved&#39;&lt;br/&gt;(v3.27: CM has full authority,
+    no second approver required for any kind)
+    API-&gt;&gt;DB: write HistoryEntry + Delta[]
+    API-&gt;&gt;EM: emit approval.approved
+    EM-&gt;&gt;DB: insert Notification (loud, for own record)
     API--&gt;&gt;UI: 201 with ApprovalRequest</code></pre>
 <p><strong>Key invariants preserved by the flow:</strong> - Every kind
 still produces an <code>ApprovalRequest</code> row — the pipeline runs
@@ -1656,12 +1699,13 @@ provisioning, Postgres RLS policies, BullMQ workers</li>
 <li><strong>Instance Admin lost access</strong>: env-var path stores
 admin email; recovery requires re-running the bootstrap block, which is
 idempotent and resets the admin user.</li>
-<li><strong>CM is also a player, no second CM</strong>: own deltas
-auto-approve via <code>approvalSource: &#39;self_approved&#39;</code> (per PRD-5
-§3.3) and the <strong>full pipeline still runs</strong> —
+<li><strong>CM is also a player (single-CM campaign)</strong>: own
+deltas auto-approve via <code>approvalSource: &#39;self_approved&#39;</code>
+(per PRD-5 §3.3) and the <strong>full pipeline still runs</strong> —
 ApprovalRequest created, rule checks fire, events emit, audit trail
 recorded. Future team view pages and event hooks work without
-special-casing the CM-as-player.</li>
+special-casing the CM-as-player. (v3.27: CM unilateral authority; no
+second approver needed regardless of campaign size.)</li>
 <li><strong>All players leave a campaign</strong>: dormant; auto-archive
 after 90 days.</li>
 <li><strong>Two CMs edit settings concurrently</strong>: last-write-wins
