@@ -670,9 +670,118 @@ campaign</li>
 <li><strong>Approvals</strong> — per-kind team-leader authority;
 rule-pack enforcement per kind; team-leader approval mode
 (<code>any</code> vs <code>all</code>); bulk-approve cap</li>
+<li><strong>Phases</strong> — define and activate narrative periods
+(v3.18; see §4.4.5)</li>
 <li><strong>Archive</strong> — soft-archive or hard-delete the
 campaign</li>
 </ul>
+<h3 id="phases-section-v3.18">4.4.5 Phases section (v3.18)</h3>
+<p>The CM creates narrative periods called <strong>phases</strong>.
+Distinct from <code>Campaign.status</code> (state/lifecycle —
+created/started/ended/archived). Phases are CM-authored narrative data
+used to communicate “what’s happening in the campaign world right now”
+to the players, with optional game-relevant effects (v1.x).</p>
+<p><strong>Example phase:</strong></p>
+<pre><code>Phase 1 - &quot;Arrivals&quot;
+
+As forces land on the planet, orbital drop ships battle for dominance.
+Those who succeed may provide orbital support to drop ships, aiding them
+to setup fortifications and forward operations.
+
+[Activate phase]  [Edit]  [Deactivate]  [Remove]</code></pre>
+<p><strong>v1 phase fields:</strong></p>
+<ul>
+<li><strong>name</strong> (required) — short label, e.g., “Phase 1 -
+Arrivals”</li>
+<li><strong>description</strong> (required) — markdown narrative
+context</li>
+<li><strong>effects</strong> — structured game-relevant effects (v1.x;
+null in v1)</li>
+</ul>
+<p><strong>CM workflow:</strong></p>
+<ol type="1">
+<li><strong>Create phases</strong> ahead of time. Multiple phases can
+exist in the campaign at any time, all in <code>deactivated</code>
+state.</li>
+<li><strong>Activate a phase</strong> when the campaign enters that
+narrative period. Activating a phase implicitly deactivates the
+currently active one (v1: at most one active at a time).</li>
+<li><strong>Deactivate manually</strong> if needed (e.g., a phase ends
+early).</li>
+<li><strong>Edit description</strong> mid-campaign if the narrative
+shifts.</li>
+<li><strong>Remove (soft-delete)</strong> when no longer relevant;
+historical events still reference the phase.</li>
+</ol>
+<p><strong>Activation rules (v1):</strong></p>
+<ul>
+<li>A phase can only be activated when
+<code>Campaign.status = &#39;started&#39;</code> (no phases during
+<code>created</code> / <code>ended</code> / <code>archived</code>).</li>
+<li>Activating a phase emits <code>campaign.phase_activated</code> event
+(PRD-4 §3).</li>
+<li>Deactivating emits <code>campaign.phase_deactivated</code>
+event.</li>
+<li>The active phase is shown in the campaign header (banner above the
+dashboard) and in the narrative log as a phase delimiter.</li>
+<li>Players see the active phase’s name + description as part of the
+campaign context. They don’t see the inactive phases (those are CM-only
+by default; visibility is configurable in v1.x).</li>
+</ul>
+<p><strong>Active phase UI:</strong></p>
+<pre><code>+-----------------------------------------------------------+
+| 📍 Current Phase: &quot;Arrivals&quot;                              |
+| As forces land on the planet, orbital drop ships battle  |
+| for dominance... [Read more]                              |
++-----------------------------------------------------------+</code></pre>
+<p>Shown on the player dashboard (PRD-2 §5c) above the cards. Also shown
+on the team leader and CM dashboards.</p>
+<p><strong>Phase vs State (clarification):</strong></p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Concept</th>
+<th>What</th>
+<th>Where</th>
+<th>Lifecycle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>State</strong></td>
+<td>Internal lifecycle of the campaign</td>
+<td><code>Campaign.status</code></td>
+<td><code>created</code> → <code>started</code> → <code>ended</code> →
+<code>archived</code> (PRD-0 §4)</td>
+</tr>
+<tr class="even">
+<td><strong>Phase</strong></td>
+<td>CM-authored narrative period</td>
+<td><code>CampaignPhase</code> table</td>
+<td>Created/deactivated by CM at any time during
+<code>started</code></td>
+</tr>
+</tbody>
+</table>
+<p>State is system data; phase is CM data. They are orthogonal: a
+campaign in <code>started</code> state can have any phase active (or
+none). A campaign in <code>ended</code> state has no active phase
+(activation requires <code>started</code>).</p>
+<p><strong>v1.x: structured effects.</strong> Phases gain a structured
+<code>effects</code> document that the system applies (e.g.,
+<code>availableRequisitions: [&#39;orbital_support&#39;]</code>,
+<code>disabledRules: [&#39;unit_cap_xxx&#39;]</code>). The v1 schema leaves this
+null but the data model supports it.</p>
+<p><strong>v1.x: phase visibility to non-active phases.</strong>
+Currently only the active phase is visible to players. v1.x could let
+CMs publish phases publicly (e.g., “Phase 3 - Endgame has been unlocked,
+here’s a preview”).</p>
 <p>Editable: point cap, max games/week, OoA variant, house rules.</p>
 <p><strong>Supplement changes are locked</strong> for MVP. Switching
 supplements would invalidate active approved rosters; not supported.</p>

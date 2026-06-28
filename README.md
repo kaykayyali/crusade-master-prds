@@ -20,7 +20,38 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.17 (current) — Always-fire warning + comprehensive event taxonomy + no live updates
+### v3.18 (current) — State vs Phase + event archival deferred
+
+Two refinements:
+
+**1. State vs Phase are distinct concepts (PRD-0 §4, PRD-1 §4.4.5, PRD-4 §3.2).**
+Per user: "Let's break phases into 2 construct. Campaigns have a state, and a phase. State is internal, tracking if it's created. started, ended, or archived. Phase would be a field section of data for the CM, useful for periods in the campaign where certain modifiers or lore is in place."
+
+- **State** = `Campaign.status` (lifecycle): `created` → `started` → `ended` → `archived` (with optional re-open). System-managed, gates functionality (no approvals unless `started`, read-only if `archived`).
+- **Phase** = `CampaignPhase` table (CM data): narrative periods within a `started` campaign. CM-authored, freely toggled. At most one active at a time in v1.
+- Example given by user: Phase 1 - "Arrivals" — "As forces land on the planet, orbital drop ships battle for dominance. Those who succeed may provide orbital support to drop ships, aiding them to setup fortifications and forward operations."
+
+**Why separate them:**
+- State is system-managed; phase is CM data. Mixing them would mean the CM's narrative choices accidentally gate functionality.
+- State transitions emit `campaign.started` / `campaign.ended` / `campaign.archived` events.
+- Phase transitions emit `campaign.phase_activated` / `campaign.phase_deactivated` / `campaign.phase_created` / `campaign.phase_updated` / `campaign.phase_removed` events.
+
+**Crusade Administration panel → Phases section (PRD-1 §4.4.5):**
+- CM creates phases ahead of time (multiple, all deactivated).
+- CM activates a phase when the narrative period begins; activating another phase implicitly deactivates the current one.
+- Active phase is shown as a banner on the player dashboard above the cards (PRD-2 §5c).
+- Activation requires `Campaign.status = 'started'`.
+- v1: phases are pure narrative (name + description); v1.x adds structured `effects` document for game-relevant modifiers.
+- Players see only the active phase; inactive phases are CM-only by default.
+
+**2. Event archival deferred (PRD-4 §3).**
+Per user: "Event archival is not something to worry about. We can review performance implications later, and could easily control things via pagination, or indexing by campaign."
+- v1 does not include an event archival / cold-storage strategy.
+- The timeline view (PRD-4 §6) uses pagination + indexing by campaign for performance.
+- Audit log (PRD-1 §4.6) is retained for the lifetime of the campaign + 1 year after archival (already documented; this is the only retention rule for events).
+- v1.x may add an archival strategy if performance requires it (cold-storage of old events; online queries limited to recent window).
+
+### v3.17 — Always-fire warning + comprehensive event taxonomy + no live updates
 
 Four refinements:
 

@@ -535,11 +535,42 @@ multi-team-leader teams. ‘any’ = any one team leader // can approve;
 ‘all’ = every team leader must approve. Default ‘any’.
 teamLeaderApprovalMode: ‘any’ | ‘all’, // Per-kind rule-pack enforcement
 settings (PRD-1 §4.4; CM-configurable). rulePackEnforcement: { [kind:
-string]: { ruleKeys: string[] } }, } CampaignTeam { id, campaignId,
-name, description, color, narrativeLogFilter, // Narrative intent: which
-40K factions fit this team’s story. NOT enforced // by the app — the
-rule engine surfaces a soft warn, and the CM has final // approval on
-every roster. Books (e.g., Armageddon) ship with these pre-filled.
+string]: { ruleKeys: string[] } },</p>
+<p>// State (lifecycle): internal, tracks campaign progression. //
+‘created’ — initial; CM created the campaign; not yet started; no
+players yet // ‘started’ — active; players can join, file approvals,
+play battles // ‘ended’ — campaign is over (CM clicked “End”); roster
+updates locked // but narrative log still accessible; team isolation
+still enforced // ‘archived’ — full read-only; team data isolation
+relaxed (PRD-0 §3b); // retrospective mode for the post-crusade view //
+Phases (narrative): see CampaignPhase below — distinct concept. status:
+‘created’ | ‘started’ | ‘ended’ | ‘archived’, activePhaseId:
+CampaignPhase[‘id’] | null, // pointer to currently active phase (at
+most one) }</p>
+<p>// CampaignPhase (v3.18): CM-defined narrative periods within a
+campaign. // Distinct from Campaign.status (state/lifecycle). Phases are
+CM data used // to communicate narrative context to players, with
+optional game-relevant // effects (v1.x). // Example: Phase 1 -
+“Arrivals” — orbital drop ships battle for dominance; // those who
+succeed may provide orbital support to drop ships, aiding them // to
+setup fortifications and forward operations. CampaignPhase { id,
+campaignId, name: string, // e.g., “Phase 1 - Arrivals” description:
+markdown, // narrative context (what’s happening in the world) //
+Structured game-relevant effects (v1.x). v1: null. // v1.x: {
+availableRequisitions: […], disabledRules: […], pointCapModifier: … }
+effects: object | null, activatedAt: timestamp | null, deactivatedAt:
+timestamp | null, // Soft-delete via revokedAt; phases can be removed
+but history is preserved. revokedAt?: timestamp, revokedByUserId?:
+string, } // v1 invariant: at most one CampaignPhase has activatedAt !=
+null AND deactivatedAt = null per campaign. // v1.x may allow multiple
+simultaneous phases (e.g., overlapping “Day phase” + “Helsreach Siege”
+phase). // Transitions: activate sets activatedAt = now, deactivatedAt =
+null; // activate another phase implicitly deactivates the current one
+(sets deactivatedAt = now). CampaignTeam { id, campaignId, name,
+description, color, narrativeLogFilter, // Narrative intent: which 40K
+factions fit this team’s story. NOT enforced // by the app — the rule
+engine surfaces a soft warn, and the CM has final // approval on every
+roster. Books (e.g., Armageddon) ship with these pre-filled.
 expectedFactionIds: string[] | null } // TeamLeader join table — a user
 can be a team leader for multiple teams // (rare; usually just one), and
 a team can have multiple team leaders (v3.12). TeamLeader { id, teamId,

@@ -36,13 +36,20 @@ The taxonomy below is the canonical list of events the system emits. New events 
 
 ```ts
 type EventKind =
-  // === Campaign lifecycle (v3.17) ===
+  // === Campaign lifecycle (v3.17 + v3.18) ===
   | 'campaign.created'
   | 'campaign.settings_updated'          // generic catch-all; specific kinds below
-  | 'campaign.started'                   // CM flips status: pending → active
-  | 'campaign.archived'                  // CM flips status: active → archived
-  | 'campaign.unarchived'                // CM flips status: archived → active
-  | 'campaign.phase_changed'             // setup | active | endgame | concluded
+  | 'campaign.started'                   // CM flips state: created → started
+  | 'campaign.ended'                     // CM flips state: started → ended (v3.18; was previously collapsed into archived)
+  | 'campaign.archived'                  // CM flips state: ended → archived (full read-only)
+  | 'campaign.unarchived'                // CM flips state: archived → started (re-open)
+  // Phases (v3.18) — distinct from state (see PRD-0 §4 / PRD-1 §4.4.5).
+  // Phases are CM-authored narrative periods; state is system lifecycle.
+  | 'campaign.phase_created'             // CM creates a new phase (preparation)
+  | 'campaign.phase_activated'           // CM activates a phase; the campaign's activePhaseId updates
+  | 'campaign.phase_deactivated'         // CM deactivates the active phase (or it was auto-deactivated by activating another)
+  | 'campaign.phase_updated'             // CM edits phase name or description
+  | 'campaign.phase_removed'             // soft-delete; historical events still reference the phase
 
   // === Member lifecycle (v3.17) ===
   | 'member.joined'                      // user accepted campaign invite
@@ -177,6 +184,40 @@ interface Delta {
 - `team` — only the affected team's players + CM see.
 - `cm_only` — only the primary CM + team leaders (when relevant to their team) see.
 - `private` — only the affected user + CM see (e.g., a player self-removing).
+
+---
+
+### 3.2 State vs Phase (v3.18 clarification)
+
+Per user: **campaign state and campaign phase are two distinct concepts.** Don't conflate them.
+
+- **State** is the internal lifecycle of the campaign — system-managed. Stored in `Campaign.status`. Transitions: `created` → `started` → `ended` → `archived` (with optional `archived` → `started` re-open).
+- **Phase** is a CM-authored narrative period within a `started` campaign. Stored in the `CampaignPhase` table. Multiple phases can exist; at most one is active at a time in v1. The active phase is a narrative context, not a lifecycle state.
+
+**Concrete difference:**
+
+| Question | State | Phase |
+|---|---|---|
+| Has the campaign begun? | `status = 'started'` | n/a |
+| What's the narrative period right now? | n/a | `Campaign.activePhaseId` |
+| Can players file approvals? | Yes if `status = 'started'` | Yes (any active phase; phase doesn't gate approvals) |
+| Can players see the campaign? | Yes if `status ∈ {started, ended, archived}` | Only see the active phase (if any) |
+| Is the campaign over? | `status = 'ended' \| 'archived'` | The active phase can be deactivated; phases don't gate state transitions |
+| Who manages it? | System (state transitions are CM-triggered but the lifecycle is enforced) | CM (free-form narrative periods) |
+
+**Lifecycle interactions:**
+
+- A campaign in `created` state has no active phase (activation requires `started`).
+- When the CM flips `started` → `ended`, the active phase is implicitly deactivated (emit `campaign.phase_deactivated`).
+- When the CM flips `started` → `archived`, same — the active phase is deactivated.
+- When the CM re-opens via `archived` → `started`, the campaign has no active phase until the CM activates one.
+
+**Why separate them:**
+
+- State is enforced by the system; the app gates functionality on it (no approvals unless `started`; read-only mode if `archived`).
+- Phase is narrative context that the CM controls freely; it doesn't gate system behavior in v1 (v1.x may add structured effects that gate certain mechanics).
+
+Mixing them would mean the CM's narrative choices accidentally gate functionality (e.g., "if I haven't defined a 'Phase 1' yet, players can't play"). Keeping them separate means the CM can run a `started` campaign with no phases (just defaults) or run a campaign with rich phase descriptions that players see.
 
 ---
 
