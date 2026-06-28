@@ -117,6 +117,26 @@ The instance admin sees:
 
 ### 4.1 Campaign Creation
 
+The campaign-creation flow is a **multi-step wizard**, not a single form. Steps in order:
+
+```mermaid
+flowchart TD
+    A[Step 1: Basics] --> B[Step 2: Teams]
+    B --> C[Step 3: Rules]
+    C --> D[Step 4: Approvals]
+    D --> E{Every team has >=1 team leader?}
+    E -->|No| F[Block: assign team leader for each team]
+    F --> B
+    E -->|Yes| G[Step 5: Invite Players]
+    G --> H[Step 6: Review & Start]
+    H --> I{Campaign has >=1 player invited?}
+    I -->|No| J[Block: invite at least 1 player before starting]
+    J --> G
+    I -->|Yes| K[Campaign.status: 'pending' → 'active']
+```
+
+**Step 1: Basics**
+
 | Field | Type | Notes |
 |-------|------|-------|
 | name | string | 3-60 chars |
@@ -127,6 +147,28 @@ The instance admin sees:
 | require_approved_roster_for_battles | bool | Default **true** |
 | allow_manual_roster_edits | bool | Default false (JSON import is canonical) |
 | custom_house_rules | markdown | Free text |
+
+**Step 2: Teams** (mandatory, v3.12)
+
+The CM creates the campaign's teams. For Armageddon, the system pre-fills the 4 template teams (Helsreach Defenders, Hades Defenders, Gorgutz's WAAAGH!, Skari's Kult) with their `expectedFactionIds` seeded from the book (PRD-1 §5b). The CM can use as-is, edit, delete, or add custom teams.
+
+**Within Step 2 — Team leader assignment is required.** For each team, the CM must assign at least one player as a team leader before the wizard proceeds. The UI:
+
+- Shows the team's player list (initially empty since no players have joined yet — players invite happens in Step 5)
+- **However**, the CM can pre-assign players by email: the CM types a player's email, the system creates a `PendingTeamLeaderInvite` row tied to the team, and when the player accepts their campaign invite, they automatically become a team leader.
+- A team cannot proceed to Step 3 without at least one **active** team leader OR at least one pending team leader invite.
+- The UI surfaces a clear warning: "This team has no team leader. Assign one now, or invite a player to be team leader."
+- This is a hard block — the wizard's "Next" button is disabled until every team has a leader or pending invite.
+
+**Step 3: Rules** — enable/disable `RulePack`s per campaign (PRD-3 §6). Default packs: `builtin-core`, `armageddon-narrative`. CM can disable packs they don't want.
+
+**Step 4: Approvals** — per-kind team-leader authority (PRD-1 §4.4 defaults), `teamLeaderApprovalMode: 'any' | 'all'` (default `'any'`), bulk-approve cap (default 50), `auto_approve_routine_battle_updates` (default false), `require_battle_report` (default true).
+
+**Step 5: Invite Players** — CM invites by email or shareable link. Each invite is a single use or multi-use (CM-configurable). The invite email includes the campaign name + CM name + a magic-link-style auth URL.
+
+**Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'pending' → 'active'`. **Hard gate:** if any team still has no team leader (the pending invites haven't been accepted), the system blocks Start with: "Team X has no team leader. Either assign one or wait for invites to be accepted."
+
+**Pre-campaign state (`Campaign.status: 'pending'`):** the campaign exists but is not yet active. Players can join via invite but cannot file approvals or play in battles. The CM can still edit settings. The state transitions to `active` when the CM clicks Start (and the team-leader gate passes).
 | start_date | date | When battles can begin being filed |
 
 **Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
@@ -255,6 +297,41 @@ Deletable: archive (soft) or hard-delete (typed confirmation required). Archive 
 ### 4.5 Override Tool
 
 CMs can edit any field on any record, with required reason text. Every override writes to the audit log and surfaces in the affected player's notification.
+
+### 4.6 Audit Log Viewer (v3.13)
+
+A dedicated surface for the CM to inspect the campaign's audit trail. Lives under Crusade Administration panel → Audit.
+
+**Layout:**
+
+```
++----------------------------------------------------------------+
+| Audit Log                                [Filter ▾] [Export ▾] |
++----------------------------------------------------------------+
+| Time      | Actor     | Action              | Target   | Reason|
+| 14:32:01  | mike_t    | approval.override   | Roster v17| "Castellan needed for arc" |
+| 14:28:55  | system    | roster.parsed       | jake42/v18| —      |
+| 14:25:10  | sarah_k   | post_battle.filed   | Battle 14 | —      |
+| 14:20:00  | mike_t    | team_leader.grant    | helsreach| —      |
+| 14:18:33  | system    | notification.email.sent| sarah_k| —      |
+| ...                                                              |
++----------------------------------------------------------------+
+```
+
+**Filters:** by actor, by action kind, by target type, by date range, by campaign, by tenant. The default view is "this campaign, last 7 days."
+
+**Click a row** → opens the underlying record: the `ApprovalRequest`, the `Event`, the `AuditLog` entry payload. From here the CM can navigate to the source data (the affected roster, the player, the battle).
+
+**Export:** the audit log can be exported as CSV or JSON. Useful for post-crusade review, dispute resolution, or sharing with co-players.
+
+**Why this matters:** when a player disputes "I never approved that," the CM opens the audit log and shows the player the exact timestamp + actor + payload of the approval. When Mike needs to remember "why did I override that rule 3 weeks ago?" the audit log shows his reason text. The audit log is the campaign's institutional memory.
+
+**Retention:** audit log is retained for the lifetime of the campaign + 1 year after archival. Even after `Campaign.status = 'archived'`, the audit log is read-only accessible for the retention window. Hard-delete is only available to the Instance Admin and is logged separately (with a stronger audit trail).
+
+**Per-role visibility:**
+- **Primary CM**: full audit log for their campaign.
+- **Crusade Team Leader**: audit entries scoped to their team (player joins/leaves, team leader grants, approvals they participated in). They do NOT see CM-only actions on other teams.
+- **Player**: limited audit view scoped to their own actions + actions affecting them ("show me everything that happened to my roster"). Accessible from their settings page.
 
 ---
 

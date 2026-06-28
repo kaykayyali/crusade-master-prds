@@ -20,7 +20,60 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.12 (current) — Multi-team-leader + removal workflow + Crusade Administration panel
+### v3.13 (current) — UI critical pass + campaign-creation team-leader gate
+
+Critical pass through the UI surfaces. Six additions / expansions:
+
+**1. Campaign-creation wizard with team-leader gate (PRD-1 §4.1).**
+Per user: "Yes" — update §4.1 to require team leader assignment before "Start campaign."
+- 6-step wizard: Basics → Teams → Rules → Approvals → Invite Players → Review & Start.
+- Step 2 (Teams) has a hard block: every team needs at least one team leader OR a pending team leader invite before the wizard proceeds to Step 3.
+- Step 5 (Invite Players) lets the CM pre-assign players by email; their team-leader invite is automatic when they accept.
+- Step 6 (Review & Start) blocks Start if any team still has no leader and no accepted invite.
+- Pre-campaign state (`Campaign.status: 'pending'`) lets players join but blocks approvals/battles.
+
+**2. Player Dashboard UI (PRD-2 §5c, new).**
+- Top-level surface for all signed-in users (Player / Team Leader / Primary CM).
+- Cards: MY ROSTER CARD / MY PENDING APPROVALS / RECENT ACTIVITY / TEAM PROGRESS.
+- Team Leader variant: adds MY TEAM'S INBOX + TEAM HEALTH with nudge.
+- Primary CM variant: adds CM inbox + Crusade Admin nav.
+- Empty states table for every card with explicit CTAs.
+- Per-role navigation matrix at the bottom.
+
+**3. Audit Log Viewer (PRD-1 §4.6, new).**
+- Filter by actor / action / target / date / campaign.
+- Click row → opens the underlying record.
+- Export CSV / JSON.
+- Retention: lifetime of campaign + 1 year after archival.
+- Per-role visibility: CM full, Team Leader team-scoped, Player own-actions.
+
+**4. Inbox UX expanded (PRD-5 §5, v3.13).**
+- Role-aware layouts: Primary CM (all teams) vs Team Leader (their team only, kinds authorized).
+- Tab-by-kind navigation (Roster / Battle / Requisition / Rollback / Settings).
+- **Bulk approve modal**: groups by kind, shows safety check ("5 of 7 selected, 2 skipped: details"), consequence preview, two-button confirmation, 5-second undo banner. Cap 50 per batch.
+- Approval detail view: 3 tabs (Diff / Rule Checks / Context), sticky action buttons, keyboard shortcuts (A/R for routine).
+- Empty states for inbox.
+- Notification indicator bell in inbox header.
+
+**5. Notifications UX (PRD-5 §8, v3.13).**
+- Per-user `Notification` table (PRD-0 §4 schema).
+- Three loudness classes: `loud` (toast + email + bell), `normal` (bell + list), `quiet` (list only).
+- Toast UX (8s auto-dismiss, bottom-right desktop / top mobile).
+- Bell badge + side panel.
+- Full `/notifications` page with filters (kind / campaign / read / date range).
+- Self-approval notifications are `quiet` (CM already knows); team-leader-approves-player notifications to player are `loud`.
+
+**6. Timeline + Narrative Log UI (PRD-4 §6, §8, v3.13).**
+- Per-unit timeline view (PRD-4 §7b G1 grouping): cards with event type icons, expandable battle reports, filter chips, "Show rolled-back" toggle, export as markdown.
+- All 6 v1 groupings supported on the same underlying `HistoryEntry` rows.
+- Narrative log: player view (team-scoped) / Team Leader view (team-scoped + cm-only-for-team) / CM view (full + visibility filter) / Retrospective view (when archived).
+- Empty states for each view.
+
+**Schema additions:**
+- PRD-0 §4: `Notification { id, recipientUserId, kind, title, summary, sourceEventId?, sourceApprovalRequestId?, readAt, loudness, ... }`
+- `PendingTeamLeaderInvite` (implied; for campaign-creation flow): player invited by email, automatically becomes team leader when they accept.
+
+### v3.12 — Multi-team-leader + removal workflow + Crusade Administration panel
 
 Four refinements from the user:
 

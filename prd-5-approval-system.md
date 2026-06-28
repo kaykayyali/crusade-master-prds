@@ -414,42 +414,128 @@ When a roster is approved, `RosterApproved.snapshot` becomes the canonical state
 
 ---
 
-## 5. Inbox UX
+## 5. Inbox UX (v3.13)
+
+The inbox is **role-aware**. Three views:
+
+- **Primary CM inbox**: every `ApprovalRequest` in the campaign, all teams.
+- **Crusade Team Leader inbox**: only `ApprovalRequest`s affecting their team, AND only for kinds the primary CM has enabled for team-leader authority (PRD-1 §4.4).
+- **Player inbox**: doesn't exist. Players file approvals; they don't review them. (Notifications arrive via toast + notification list page; see §6.)
+
+**Primary CM inbox layout:**
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ Inbox                              [Filter ▾] [⚙]  │
-├─────────────────────────────────────────────────────┤
-│ 7 pending · 0 claimed by you                        │
-├─────────────────────────────────────────────────────┤
-│ ☐ Roster approval — jake42                          │
-│   Submitted 1h ago · Campaign: Aurelian Crusade    │
-│   Diff: +2 units, −1 unit, 3 wargear swaps         │
-│   Rule checks: 1 warn (Legends unit — needs override)
-│   [View Diff] [Approve] [Reject] [Override & Approve] │
-├─────────────────────────────────────────────────────┤
-│ ☐ Post-battle update — sarah_k vs. mike_t            │
-│   Submitted 2h ago · Battle 12                       │
-│   Result: W · 1 unit promoted, 1 OoA test           │
-│   [View] [Approve] [Reject] [Request Changes]      │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Inbox (CM)                       [Filter ▾] [Bulk ▾] [⚙]    │
+├─────────────────────────────────────────────────────────────┤
+│ 7 pending · 0 claimed by you                                │
+│ Tabs: [All] [Roster] [Battle] [Requisition] [Rollback]      │
+│        [Settings] ·  (each tab shows count)                │
+├─────────────────────────────────────────────────────────────┤
+│ ☐ Roster approval — jake42 (Helsreach Defenders)            │
+│   Submitted 1h ago · Campaign: Aurelian Crusade            │
+│   Diff: +2 units, −1 unit, 3 wargear swaps                 │
+│   Rule checks: 1 warn (Legends unit — needs override)       │
+│   [View Diff] [Approve] [Reject] [Override & Approve]      │
+├─────────────────────────────────────────────────────────────┤
+│ ☐ Post-battle update — sarah_k vs. mike_t                    │
+│   Submitted 2h ago · Battle 12 · Helsreach Defenders         │
+│   Result: W · 1 unit promoted, 1 OoA test                   │
+│   Battle report: 200 chars [Expand]                         │
+│   [View] [Approve] [Reject] [Request Changes]              │
+├─────────────────────────────────────────────────────────────┤
+│ ☐ Roster rollback — sarah_k                                  │
+│   Submitted 30m ago · Helsreach Defenders                    │
+│   "Imported wrong NR file, want to revert to v16"            │
+│   [View Diff] [Approve] [Reject]                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-- **Filter**: by campaign, kind, submitter, age
-- **Sort**: oldest first (FIFO)
-- **Claim**: optional
-- **Bulk actions**: only for `post_battle_update` with no anomalies
+**Crusade Team Leader inbox layout:**
 
-### 5.1 Detail View
+Identical structure but filtered. A Helsreach Defenders team leader sees:
 
-Side panel with:
-- Full proposed change with deltas highlighted
-- Current state of affected entity
-- Submitter's notes
-- Recent related events
-- For `roster_approval`: full diff view, rule check report
-- Quick-approve / quick-reject buttons
-- "Open in full view" link
+- Only Helsreach Defenders' requests
+- Only kinds the CM has enabled (e.g., `roster_approval` ✓, `mass_reban` ✗)
+- The team name and color appear in the row header for visual confirmation
+- A non-enabled request that arrived before the CM toggled the setting stays in their queue if already claimed; otherwise it auto-routes to the CM with a note "this kind is not in your authority; routing to CM"
+
+**Bulk approve UX (v3.13):**
+
+When the CM selects multiple rows + clicks "Approve N selected":
+
+1. A **bulk approve modal** opens (not a single confirm button).
+2. The modal groups the selected rows by kind, showing:
+   - 4 × `post_battle_update` (all routine)
+   - 2 × `roster_approval` (1 routine, 1 has a rule warn)
+3. The modal surfaces the **safety check**: "Approving 5 of 7 selected. 2 will be skipped: see details."
+4. The skipped items are listed with their reason: "Roster approval for jake42 has a Legends-unit rule warning; not eligible for bulk approve. Approve individually."
+5. The CM sees the consequence preview: "Approving 5 routine battle updates will: send 5 in-app + email notifications, fire 5 `battle_update.approved` events, mark 5 BattleUpdates as approved."
+6. Two confirmation buttons:
+   - **Approve 5 routine** (primary, with the consequence preview above)
+   - **Cancel**
+7. After confirm: a 5-second "undo" banner appears at the top of the inbox ("5 approvals just applied. Undo?"); clicking undo reverses them in batch.
+
+The 5-second undo is a safety net for accidental bulk-approves. The cap on batch size is `Campaign.bulk_approve_max_batch_size` (default 50; PRD-1 §4.4). If the CM selects more than 50, the modal refuses: "Bulk actions are capped at 50 selections. Approve in two batches."
+
+**Filter chips:**
+
+- By campaign (when CM manages multiple)
+- By kind
+- By team (CM-only; team leaders see their team only)
+- By submitter
+- By age: "Today" / "This week" / "Older"
+- By status: "Pending" / "Recently decided" (last 24h, allow undo)
+
+**Sort:** oldest first by default (FIFO). CM can switch to "newest first" or "by submitter."
+
+**Claim (optional):** a CM can claim a row to mark "I'm reviewing this." Other CMs see "claimed by Mike" and don't double-approve. Auto-release after 30 min of inactivity.
+
+### 5.1 Detail View (expanded v3.13)
+
+Click a row → opens a **right-side detail panel** (does not navigate away from the inbox). Three tabs:
+
+**Tab 1: Diff** — the proposed change with deltas highlighted.
+- For `roster_approval`: full diff (units added, removed, modified; wargear changes; crusade state changes). Side-by-side: previous RosterApproved vs. new draft.
+- For `post_battle_update`: formData preview (the campaign-level fields) + linked roster diff as a side panel (read-only display, per PRD-0 §4b.2).
+- For `requisition_purchase`: the unit being added/removed + the RP cost delta + the CM's note.
+- For `roster_rollback`: the RosterApproved being rolled back + the diff that will be reverted + the player's reason text.
+
+**Tab 2: Rule Checks** — the rule engine's report. For each rule that fired:
+- Rule name + description
+- Status: pass / warn / fail
+- For warn/fail: details (what specifically failed, on what entity)
+- Severity override (if the CM has dialed it)
+- For `team-narrative-alignment`: a clear note "this is a guiding-light warn; you can override with a reason"
+
+**Tab 3: Context** — the surrounding state:
+- Submitter's name + team + role (player / team leader / CM-as-player)
+- Campaign settings summary (point cap, OoA variant, key house rules)
+- Recent related events on this player / this unit / this battle
+- For battle updates: the linked battle (opponent, mission, when played)
+- For requisitions: the player's current RP balance + supply
+
+**Action buttons** (in the detail panel header, sticky):
+- Approve (green, primary)
+- Reject (red, with required reason text)
+- Request Changes (yellow, with structured change list)
+- Override & Approve (only shown when a rule has warn/fail; requires reason text)
+- For `roster_rollback`: Approve / Reject (simpler — no rule checks typically)
+
+**Quick-approve keyboard shortcut:** when the detail panel is open, pressing `A` approves, `R` rejects. Useful for routine battle updates. Disabled when the row has anomalies (must use mouse).
+
+### 5.2 Empty States (v3.13)
+
+| State | Message | CTA |
+|---|---|---|
+| No pending approvals | "Inbox zero. Your team is up to date." | (no CTA, info card) |
+| Filter returns nothing | "No approvals match this filter." | [Clear filters] |
+| All routine battle updates auto-approved | "Nothing pending — all routine updates were auto-approved. Recent decided items shown below." | [Show recent] |
+| Team leader inbox empty | "Your team's queue is clear." | (no CTA) |
+
+### 5.3 Notification indicator in inbox header
+
+The inbox header shows a count of unread notifications from the campaign's recent activity feed (PRD-5 §6). Clicking the bell opens a side panel with the recent activity; the inbox itself stays focused on approvals.
 
 ---
 
@@ -472,18 +558,78 @@ For destructive approvals (e.g., RosterApproval that included a unit that no lon
 
 ---
 
-## 8. Notifications
+## 8. Notifications UX (v3.13)
 
-When a submission's status changes, the submitter is notified:
+Notifications are derived from the Event outbox via a `notification-fanout-job`. Each notification has a `loudness` class that determines delivery channels and UI prominence:
 
-| Channel | MVP? |
-|---------|------|
-| In-app (toast + notifications list) | Yes |
-| Email | Yes |
+| Loudness | In-app | Email | Use case |
+|---|---|---|---|
+| `loud` | Toast (auto-dismiss 8s) + bell badge + email | Yes | Approvals decided, roster rollbacks, narrative events with campaign-wide effect |
+| `normal` | Bell badge + notification list page | No (in-app only) | Battle reports approved, requisition history entries |
+| `quiet` | Notification list page only | No | Audit events (CM self-edits, team leader grants), system health (BullMQ worker restarted) |
 
-Notifications fire through a BullMQ `notification-job` to avoid blocking the approval flow.
+### 8.1 Toast UX
+
+Toast appears bottom-right (desktop) or full-width top (mobile). Content:
+
+```
++---------------------------------------------+
+| ✓ Mike approved your roster update          |
+|   1 unit added, 3 wargear swaps             |
+|   [View]  [×]                               |
++---------------------------------------------+
+```
+
+Auto-dismisses after 8 seconds (`loud` only). User can dismiss manually with ×. Multiple toasts stack with a max of 3 visible; older ones queue.
+
+### 8.2 Bell badge + notification list
+
+The header bell icon shows an unread count. Click → side panel slides in from the right:
+
+```
++---------------------------------------------+
+| Notifications                  [Mark all read]|
++---------------------------------------------+
+| Today                                          |
+| ✓ Mike approved your roster update    2h     |
+|   [View roster]                               |
+| ! CM requested changes on your roster 4h     |
+|   [View request]                              |
+|                                              |
+| Yesterday                                     |
+| ✓ Battle 12 update approved by Mike    1d    |
+| ✗ Requisition "Replace Destroyed Unit"       |
+|   needs more RP — auto-rejected        2d    |
++---------------------------------------------+
+```
+
+Each notification links to the source record (the approval, the roster, the event). "Mark all read" clears the badge. Notifications stay in the list for 30 days then archive.
+
+### 8.3 Notification list page (full)
+
+For long-term history: `/notifications` page shows all notifications in reverse-chronological order. Filterable by:
+- Kind (approvals, events, audit)
+- Campaign
+- Read/unread
+- Date range
+
+Useful for "what happened to my army last month?" — the player can scroll back through their army's story from their perspective.
+
+### 8.4 Email notifications
+
+Email is sent only for `loud` notifications by default. CM can adjust per-user preference (PRD-2 §3.5 — user settings page). Email content mirrors the toast but includes a "View in app" CTA.
+
+Email delivery goes through BullMQ `notification-job` (already documented) — the user-facing email is generated from the `Notification` row, not directly from the Event.
+
+### 8.5 Self-approval notification loudness (v3.13)
+
+When the CM-as-player self-approves their own delta (PRD-1 §5), the resulting notification is `quiet` (no toast, no email). Rationale: the CM already knows what they did; notifying themselves is noise. The audit log still records the action.
+
+When a Team Leader approves another player's request on their team, the notification to the player is `loud` (player benefits from knowing). The notification to the team leader is `normal` (they just did it).
 
 ---
+
+## 9. Campaign-Level Approval Policies
 
 ## 9. Campaign-Level Approval Policies
 

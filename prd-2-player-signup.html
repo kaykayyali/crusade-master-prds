@@ -389,6 +389,205 @@ RLS) and the UI shows “Not found.”</li>
 it only shows events on the player’s own team.</li>
 </ul>
 <hr />
+<h2 id="c.-player-dashboard-ui-v3.13">5c. Player Dashboard UI
+(v3.13)</h2>
+<p>When a player (or Team Leader) signs in, they land on a campaign
+dashboard. The dashboard adapts based on role and team membership.</p>
+<h3 id="c.1-campaign-dashboard-top-level-surface">5c.1 Campaign
+dashboard — top-level surface</h3>
+<pre><code>+---------------------------------------------------+
+| HEADER: [Campaign Name] [User Menu]              |
++---------------------------------------------------+
+| MY ROSTER CARD                                    |
+|  Status: Approved (v17, 2026-08-29)               |
+|  [Upload new NR JSON] [View roster]               |
+|  Battle tally: 8  RP: 3  Supply: 1980/2000        |
++---------------------------------------------------+
+| MY PENDING APPROVALS (1)                          |
+|  - Last battle update pending CM review (2h ago)  |
++---------------------------------------------------+
+| RECENT ACTIVITY (last 7 days)                     |
+|  - 2h ago: Mike approved your battle update       |
+|  - 1d ago: You filed Battle Update #8             |
+|  - 3d ago: Mike triggered &quot;Ork WAAAGH!&quot;            |
++---------------------------------------------------+
+| TEAM HUDSON&#39;S PROGRESS                            |
+|  Players: 4/6 active                              |
+|  Recent: Mike rolled back Roster v16              |
++---------------------------------------------------+
+| NAVIGATION: [Roster] [Battles] [Requisitions]    |
+|             [Timeline] [Narrative Log] [Settings] |
++---------------------------------------------------+</code></pre>
+<h3 id="c.2-card-by-card-behavior">5c.2 Card-by-card behavior</h3>
+<p><strong>MY ROSTER CARD</strong> — the most important surface. Shows
+the player’s current <code>RosterApproved</code> (or
+<code>pending_approval</code> if a new draft is in flight): - “Upload
+new NR JSON” is the primary CTA. Big button. The async parse flow PRD-2
+§6 Flow 1 starts here. - “View roster” links to the per-unit roster
+detail (the crusade card view, derived from
+<code>CrusadeForceState[unit]</code>). - Battle tally, RP, supply are
+campaign-level metrics computed from the active roster.</p>
+<p><strong>MY PENDING APPROVALS</strong> — shows the player’s own
+approvals that are awaiting review (their own roster drafts, their own
+battle updates). The player sees the status; they don’t take action on
+these (the CM or Team Leader does).</p>
+<p><strong>RECENT ACTIVITY</strong> — a personalized feed of events
+affecting the player (their own events + events on their team that
+mention them). Filterable by kind. Each row links to the source
+event.</p>
+<p><strong>TEAM HUDSON’S PROGRESS</strong> — a per-team rollup (PRD-4
+§7.1). Shows engagement health (active players count, days since last
+activity). Helps the player see “is my team active?”</p>
+<h3 id="c.3-empty-states-v3.13">5c.3 Empty states (v3.13)</h3>
+<p>Every card has a deliberate empty state with a CTA:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>State</th>
+<th>Empty message</th>
+<th>CTA</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>No roster yet (just joined)</td>
+<td>“Welcome. Upload your first New Recruit JSON to get started.”</td>
+<td>[Upload roster]</td>
+</tr>
+<tr class="even">
+<td>Roster draft pending CM review</td>
+<td>“Mike is reviewing your new roster. You’ll be notified when it’s
+approved.”</td>
+<td>(no CTA, info card)</td>
+</tr>
+<tr class="odd">
+<td>Roster parse failed</td>
+<td>“We couldn’t parse your last upload. Common causes: corrupt
+download, NR’s ‘private list’ feature, or a list built in BattleScribe.
+Try re-exporting from NR.”</td>
+<td>[Re-upload] [Contact CM]</td>
+</tr>
+<tr class="even">
+<td>No pending approvals</td>
+<td>“You’re all caught up. Nothing waiting for review.”</td>
+<td>(no CTA, info card)</td>
+</tr>
+<tr class="odd">
+<td>No recent activity</td>
+<td>“Your team has been quiet this week. Reach out to schedule a
+game.”</td>
+<td>[Team page]</td>
+</tr>
+<tr class="even">
+<td>No team progress data</td>
+<td>“Your team hasn’t started yet. Invite players to fill out the
+team.”</td>
+<td>[Invite link] (only if player has invite permission, rare)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c.4-team-leader-dashboard-variant">5c.4 Team Leader dashboard
+variant</h3>
+<p>A Team Leader on the same surface sees additional elements:</p>
+<ul>
+<li><strong>MY TEAM’S INBOX (3)</strong> — the team leader’s approval
+queue, filtered to kinds they’re authorized to approve (PRD-1 §4.4).
+Click to enter the inbox view (PRD-5 §5).</li>
+<li><strong>TEAM HEALTH (expanded)</strong> — per-player engagement
+table with one-click “nudge” (in-app + email) to inactive players.
+Available to Team Leaders.</li>
+<li><strong>NO CM INBOX</strong> — the team leader does NOT see the
+primary CM’s campaign-wide inbox; that’s CM-only. The “Pending
+approvals” card on a Team Leader’s dashboard is filtered to kinds
+they’re authorized for.</li>
+</ul>
+<h3 id="c.5-player-dashboard-permissions-matrix">5c.5 Player dashboard
+permissions matrix</h3>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Element</th>
+<th>Player (team X)</th>
+<th>Team Leader (team X)</th>
+<th>Primary CM</th>
+<th>Player (team Y) seeing this URL</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MY ROSTER CARD</td>
+<td>✅ their own</td>
+<td>✅ their own</td>
+<td>✅ any</td>
+<td>❌ (404)</td>
+</tr>
+<tr class="even">
+<td>MY PENDING APPROVALS</td>
+<td>✅ their own</td>
+<td>✅ their own</td>
+<td>✅ any</td>
+<td>❌</td>
+</tr>
+<tr class="odd">
+<td>RECENT ACTIVITY (team-scoped)</td>
+<td>✅ team X</td>
+<td>✅ team X (incl. cm-only events for team X)</td>
+<td>✅ any team</td>
+<td>❌ (sees team Y activity only)</td>
+</tr>
+<tr class="even">
+<td>TEAM HUDSON’S PROGRESS</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅ any team</td>
+<td>❌</td>
+</tr>
+<tr class="odd">
+<td>MY TEAM’S INBOX</td>
+<td>❌ (no inbox)</td>
+<td>✅ (kinds authorized)</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr class="even">
+<td>TEAM HEALTH with nudge</td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<p>The table makes explicit: the same URL accessed by different users
+shows different content based on role + team. RLS + the API filter
+ensure the data is correct; the UI uses the same components with
+role-aware data fetching.</p>
+<h3 id="c.6-per-role-campaign-home-navigation">5c.6 Per-role campaign
+home navigation</h3>
+<p>The bottom navigation differs by role:</p>
+<ul>
+<li><strong>Player</strong>: [Roster] [Battles] [Requisitions]
+[Timeline] [Narrative Log] [Settings]</li>
+<li><strong>Team Leader</strong>: [Roster] [Battles] [Requisitions]
+[Timeline] [Narrative Log] [Team Inbox] [Settings]</li>
+<li><strong>Primary CM</strong>: [Roster] [Battles] [Requisitions]
+[Timeline] [Narrative Log] [CM Inbox] [Crusade Admin] [Settings]</li>
+</ul>
+<p>The “CM Inbox” item is CM-only. The “Team Inbox” item is
+team-leader-only. The “Crusade Admin” item is CM-only.</p>
+<hr />
 <h2 id="critical-user-flows-player-sarah">6. Critical User Flows —
 Player (Sarah)</h2>
 <p><strong>Persona — Sarah, the player:</strong> Late 20s, software

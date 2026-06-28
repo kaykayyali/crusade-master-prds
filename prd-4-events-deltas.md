@@ -227,7 +227,7 @@ flowchart TD
 
 ---
 
-## 6. Timeline View
+## 6. Timeline View (v3.13)
 
 A dedicated UI surface: "show me the campaign state at this moment."
 
@@ -240,6 +240,59 @@ flowchart LR
 ```
 
 **Performance**: single SQL query against events table, indexed on `occurredAt` and `(targetType, targetId)`. Materialize `CampaignStateSnapshot` per timestamp on demand.
+
+### 6.1 Timeline UI (per-unit, G1 grouping — PRD-4 §7b)
+
+When Sarah clicks on a unit (e.g., her Cadian Castellan), she sees the unit's timeline:
+
+```
++----------------------------------------------------------+
+| Cadian Castellan          [+3 XP] [Battle Scar: Lost]   |
+| Owner: sarah_k · Helsreach Defenders · 2026-08-01 added |
++----------------------------------------------------------+
+| 2026-08-29  Requisition: Replaced Leman Russ           |
+|             Approved by Mike · -3 RP                    |
+| 2026-08-22  Battle 14: sarah_k vs. mike_t (Tyranids)   |
+|             Result: L · +3 XP · +1 kill                 |
+|             Battle Scar gained: Lost in the Fog         |
+|             [View battle report (480 chars)]            |
+|             — rollback-able                             |
+| 2026-08-15  Battle 13: sarah_k vs. jake42 (Orks)        |
+|             Result: W · +3 XP · Promotion: Blooded      |
+|             Agendas: Extermination Targets achieved     |
+|             [View battle report (320 chars)]            |
+| 2026-08-01  Unit added (Battle-ready)                   |
+|             Roster v1 approved by Mike                  |
++----------------------------------------------------------+
+| [Show rolled-back history] [Export as markdown]         |
++----------------------------------------------------------+
+```
+
+Each event card shows:
+- Date
+- Event type icon
+- Summary line (auto-generated from event payload)
+- For battle reports: expandable inline
+- For requisitions: RP cost
+- For promotions: rank transition (Battle-ready → Blooded)
+- For tombstones: rendered as struck-through entries behind a "Show rolled-back" toggle
+
+**Filter chips:** by event kind (XP gain, rank promotion, honour, scar, OoA test, requisition, roster update). "Show rolled-back history" toggle reveals tombstoned entries (PRD-4 §7b.4) with a struck-through visual.
+
+**Export as markdown** copies the timeline as a markdown block for sharing in Discord or printing. Sarah uses this to show off her army's journey.
+
+### 6.2 Timeline view per grouping (PRD-4 §7b.3)
+
+The timeline view supports all 6 v1 groupings:
+
+- **Per-Unit (G1)**: as above. Default view when clicking a unit.
+- **Per-Roster-Version (G2)**: when clicking a RosterApproved in the roster history, shows everything that changed in that import.
+- **Per-Battle (G3)**: a battle-detail view showing all events attributable to one battle (roster diff + agenda outcomes + RP delta + requisitions bought during that battle).
+- **Per-Requisition (G4)**: a requisition-detail view showing the unit added/removed + RP cost + the battle context where the requisition was earned.
+- **Per-ApprovalRequest (G5)**: an approval-detail view showing the full state change authorized by that one approval. Always available from any approval link.
+- **Per-State-Field (G6)**: the granular view — one entry per field change. Default: hidden behind a "Show granular" toggle for technical users / CMs investigating.
+
+The same underlying `HistoryEntry` rows power all 6 views; the UI just re-groups for display.
 
 ---
 
@@ -376,6 +429,70 @@ A scrubbed, readable narrative view of the campaign. Per v3.11, the narrative lo
 1. **Team-scoped narrative log** (default for players) — events with `visibility = 'team'` or `visibility = 'public'` for events affecting the player's team. A player on Team A sees Team A's log only.
 2. **Public narrative log** — events with `visibility = 'public'`. Cross-team. Visible to all players in the campaign (regardless of team). Use sparingly: cross-team battles, campaign-wide announcements.
 3. **CM-only events** — events with `visibility = 'cm'`. Visible to the primary CM and (per PRD-1 §4.3.1) to Crusade Team Leaders when the event affects their team.
+
+### 8.1 Narrative Log UI (v3.13)
+
+**Player view (team-scoped, default):**
+
+```
++----------------------------------------------------------+
+| Helsreach Defenders — Narrative Log                     |
+| [Public announcements only]                              |
++----------------------------------------------------------+
+| 2026-09-05                                                |
+|   Mike approved your roster update (v18 → v19)          |
+|     2 units added, 1 wargear swap                        |
+| 2026-09-04                                                |
+|   You filed Battle Update #14                            |
+|     Result: L · 1 unit promoted, 1 Battle Scar          |
+|     [View battle report]                                 |
+| 2026-09-01                                                |
+|   Mike triggered "Ork WAAAGH!" — Helsreach +1 RP        |
+|     "The sky darkened over Hive Helsreach..."           |
+| 2026-08-28                                                |
+|   jake42 joined Helsreach Defenders                      |
++----------------------------------------------------------+
+```
+
+- Date-grouped, reverse chronological
+- Each entry has a 1-line summary + optional expand for the full battle report or narrative text
+- The "Public announcements only" tab shows only `visibility = 'public'` events (e.g., campaign-wide narrative triggers, point-cap changes)
+- Filter chips: by event kind, by player, by date range
+
+**Crusade Team Leader view (team-scoped + cm-only-for-team):**
+
+Same as player view but additionally includes `visibility = 'cm'` events that affect their team:
+- Team leader grants/revocations (when they happen)
+- Approval override reasons (when those approvals affected their team)
+- Rollback audit events
+
+The CM-only cross-team events (other teams' overrides, other teams' team-leader grants) are NOT shown.
+
+**Primary CM view (full):**
+
+The CM sees all three scopes, plus a "Visibility" filter column:
+- All events
+- Filter by visibility (`team` / `public` / `cm`)
+- Filter by team
+- Filter by player
+- Filter by event kind
+- Filter by date
+
+The CM can click any event to override its visibility (PRD-4 §8 default visibility can be changed per-event).
+
+**Crusade-end retrospective view (when `Campaign.status = 'archived'`):**
+
+A special read-only mode that supersedes all the above. All events across all teams are visible to every player, in chronological order. A banner at the top reads: "End of crusade — this campaign has been archived. Retrospective view enabled."
+
+Retrospective mode disables all approvals, uploads, and edits. The narrative log is the only write-protected surface; it becomes the campaign's permanent record.
+
+**Empty states (v3.13):**
+
+| State | Message |
+|---|---|
+| New campaign, no events yet | "The campaign has just begun. The narrative log fills as you play." |
+| Player with no team activity | "Your team hasn't started yet. Reach out to your CM." |
+| Filter returns nothing | "No events match this filter." |
 
 **Event visibility defaults (v3.11):**
 

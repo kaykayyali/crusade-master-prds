@@ -204,6 +204,97 @@ A Team Leader on Team A does NOT additionally see (compared to a regular player 
 
 ---
 
+## 5c. Player Dashboard UI (v3.13)
+
+When a player (or Team Leader) signs in, they land on a campaign dashboard. The dashboard adapts based on role and team membership.
+
+### 5c.1 Campaign dashboard — top-level surface
+
+```
++---------------------------------------------------+
+| HEADER: [Campaign Name] [User Menu]              |
++---------------------------------------------------+
+| MY ROSTER CARD                                    |
+|  Status: Approved (v17, 2026-08-29)               |
+|  [Upload new NR JSON] [View roster]               |
+|  Battle tally: 8  RP: 3  Supply: 1980/2000        |
++---------------------------------------------------+
+| MY PENDING APPROVALS (1)                          |
+|  - Last battle update pending CM review (2h ago)  |
++---------------------------------------------------+
+| RECENT ACTIVITY (last 7 days)                     |
+|  - 2h ago: Mike approved your battle update       |
+|  - 1d ago: You filed Battle Update #8             |
+|  - 3d ago: Mike triggered "Ork WAAAGH!"            |
++---------------------------------------------------+
+| TEAM HUDSON'S PROGRESS                            |
+|  Players: 4/6 active                              |
+|  Recent: Mike rolled back Roster v16              |
++---------------------------------------------------+
+| NAVIGATION: [Roster] [Battles] [Requisitions]    |
+|             [Timeline] [Narrative Log] [Settings] |
++---------------------------------------------------+
+```
+
+### 5c.2 Card-by-card behavior
+
+**MY ROSTER CARD** — the most important surface. Shows the player's current `RosterApproved` (or `pending_approval` if a new draft is in flight):
+- "Upload new NR JSON" is the primary CTA. Big button. The async parse flow PRD-2 §6 Flow 1 starts here.
+- "View roster" links to the per-unit roster detail (the crusade card view, derived from `CrusadeForceState[unit]`).
+- Battle tally, RP, supply are campaign-level metrics computed from the active roster.
+
+**MY PENDING APPROVALS** — shows the player's own approvals that are awaiting review (their own roster drafts, their own battle updates). The player sees the status; they don't take action on these (the CM or Team Leader does).
+
+**RECENT ACTIVITY** — a personalized feed of events affecting the player (their own events + events on their team that mention them). Filterable by kind. Each row links to the source event.
+
+**TEAM HUDSON'S PROGRESS** — a per-team rollup (PRD-4 §7.1). Shows engagement health (active players count, days since last activity). Helps the player see "is my team active?"
+
+### 5c.3 Empty states (v3.13)
+
+Every card has a deliberate empty state with a CTA:
+
+| State | Empty message | CTA |
+|---|---|---|
+| No roster yet (just joined) | "Welcome. Upload your first New Recruit JSON to get started." | [Upload roster] |
+| Roster draft pending CM review | "Mike is reviewing your new roster. You'll be notified when it's approved." | (no CTA, info card) |
+| Roster parse failed | "We couldn't parse your last upload. Common causes: corrupt download, NR's 'private list' feature, or a list built in BattleScribe. Try re-exporting from NR." | [Re-upload] [Contact CM] |
+| No pending approvals | "You're all caught up. Nothing waiting for review." | (no CTA, info card) |
+| No recent activity | "Your team has been quiet this week. Reach out to schedule a game." | [Team page] |
+| No team progress data | "Your team hasn't started yet. Invite players to fill out the team." | [Invite link] (only if player has invite permission, rare) |
+
+### 5c.4 Team Leader dashboard variant
+
+A Team Leader on the same surface sees additional elements:
+
+- **MY TEAM'S INBOX (3)** — the team leader's approval queue, filtered to kinds they're authorized to approve (PRD-1 §4.4). Click to enter the inbox view (PRD-5 §5).
+- **TEAM HEALTH (expanded)** — per-player engagement table with one-click "nudge" (in-app + email) to inactive players. Available to Team Leaders.
+- **NO CM INBOX** — the team leader does NOT see the primary CM's campaign-wide inbox; that's CM-only. The "Pending approvals" card on a Team Leader's dashboard is filtered to kinds they're authorized for.
+
+### 5c.5 Player dashboard permissions matrix
+
+| Element | Player (team X) | Team Leader (team X) | Primary CM | Player (team Y) seeing this URL |
+|---|---|---|---|---|
+| MY ROSTER CARD | ✅ their own | ✅ their own | ✅ any | ❌ (404) |
+| MY PENDING APPROVALS | ✅ their own | ✅ their own | ✅ any | ❌ |
+| RECENT ACTIVITY (team-scoped) | ✅ team X | ✅ team X (incl. cm-only events for team X) | ✅ any team | ❌ (sees team Y activity only) |
+| TEAM HUDSON'S PROGRESS | ✅ | ✅ | ✅ any team | ❌ |
+| MY TEAM'S INBOX | ❌ (no inbox) | ✅ (kinds authorized) | ✅ | ❌ |
+| TEAM HEALTH with nudge | ❌ | ✅ | ✅ | ❌ |
+
+The table makes explicit: the same URL accessed by different users shows different content based on role + team. RLS + the API filter ensure the data is correct; the UI uses the same components with role-aware data fetching.
+
+### 5c.6 Per-role campaign home navigation
+
+The bottom navigation differs by role:
+
+- **Player**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [Settings]
+- **Team Leader**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [Team Inbox] [Settings]
+- **Primary CM**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [CM Inbox] [Crusade Admin] [Settings]
+
+The "CM Inbox" item is CM-only. The "Team Inbox" item is team-leader-only. The "Crusade Admin" item is CM-only.
+
+---
+
 ## 6. Critical User Flows — Player (Sarah)
 
 **Persona — Sarah, the player:**

@@ -283,7 +283,21 @@ JobRecord { id, kind, payload, status, attempts, lastError, resultRef, enqueuedA
 
 // === Audit ===
 AuditLog { id, tenantId, actorUserId, action, targetType, targetId, payload, occurredAt }
-```
+
+// === Notifications ===
+// Per-user notification queue. Generated from Event outbox at fanout time.
+// Toast and email delivery are derived from this table; list page reads it.
+Notification {
+  id, tenantId, recipientUserId,
+  kind: 'approval_status' | 'approval_requested' | 'event_visible_to_user' | 'team_leader_grant' | 'team_leader_revoke' | 'roster_rollback_executed' | 'campaign_archived',
+  title, summary,                                 // markdown summaries, not full payloads
+  sourceEventId?, sourceApprovalRequestId?,       // links to the originating record
+  readAt: timestamp | null,
+  createdAt,
+  campaignId?: string,
+  // Quiet-class determines UI delivery loudness (see PRD-5 §6).
+  loudness: 'loud' | 'normal' | 'quiet',
+}
 
 **Identifiers**: UUIDv7.
 

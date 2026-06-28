@@ -489,7 +489,7 @@ player “your Castellan should be Battle-ready by now based on Battle 12”
     I --&gt; J[CM approves per PRD-5]
     J --&gt; K[Emit crusade.req_purchased event + unit.replaced if applicable]</code></pre>
 <hr />
-<h2 id="timeline-view">6. Timeline View</h2>
+<h2 id="timeline-view-v3.13">6. Timeline View (v3.13)</h2>
 <p>A dedicated UI surface: “show me the campaign state at this
 moment.”</p>
 <pre class="mermaid"><code>flowchart LR
@@ -501,20 +501,80 @@ moment.”</p>
 indexed on <code>occurredAt</code> and
 <code>(targetType, targetId)</code>. Materialize
 <code>CampaignStateSnapshot</code> per timestamp on demand.</p>
+<h3 id="timeline-ui-per-unit-g1-grouping-prd-4-7b">6.1 Timeline UI
+(per-unit, G1 grouping — PRD-4 §7b)</h3>
+<p>When Sarah clicks on a unit (e.g., her Cadian Castellan), she sees
+the unit’s timeline:</p>
+<pre><code>+----------------------------------------------------------+
+| Cadian Castellan          [+3 XP] [Battle Scar: Lost]   |
+| Owner: sarah_k · Helsreach Defenders · 2026-08-01 added |
++----------------------------------------------------------+
+| 2026-08-29  Requisition: Replaced Leman Russ           |
+|             Approved by Mike · -3 RP                    |
+| 2026-08-22  Battle 14: sarah_k vs. mike_t (Tyranids)   |
+|             Result: L · +3 XP · +1 kill                 |
+|             Battle Scar gained: Lost in the Fog         |
+|             [View battle report (480 chars)]            |
+|             — rollback-able                             |
+| 2026-08-15  Battle 13: sarah_k vs. jake42 (Orks)        |
+|             Result: W · +3 XP · Promotion: Blooded      |
+|             Agendas: Extermination Targets achieved     |
+|             [View battle report (320 chars)]            |
+| 2026-08-01  Unit added (Battle-ready)                   |
+|             Roster v1 approved by Mike                  |
++----------------------------------------------------------+
+| [Show rolled-back history] [Export as markdown]         |
++----------------------------------------------------------+</code></pre>
+<p>Each event card shows: - Date - Event type icon - Summary line
+(auto-generated from event payload) - For battle reports: expandable
+inline - For requisitions: RP cost - For promotions: rank transition
+(Battle-ready → Blooded) - For tombstones: rendered as struck-through
+entries behind a “Show rolled-back” toggle</p>
+<p><strong>Filter chips:</strong> by event kind (XP gain, rank
+promotion, honour, scar, OoA test, requisition, roster update). “Show
+rolled-back history” toggle reveals tombstoned entries (PRD-4 §7b.4)
+with a struck-through visual.</p>
+<p><strong>Export as markdown</strong> copies the timeline as a markdown
+block for sharing in Discord or printing. Sarah uses this to show off
+her army’s journey.</p>
+<h3 id="timeline-view-per-grouping-prd-4-7b.3">6.2 Timeline view per
+grouping (PRD-4 §7b.3)</h3>
+<p>The timeline view supports all 6 v1 groupings:</p>
+<ul>
+<li><strong>Per-Unit (G1)</strong>: as above. Default view when clicking
+a unit.</li>
+<li><strong>Per-Roster-Version (G2)</strong>: when clicking a
+RosterApproved in the roster history, shows everything that changed in
+that import.</li>
+<li><strong>Per-Battle (G3)</strong>: a battle-detail view showing all
+events attributable to one battle (roster diff + agenda outcomes + RP
+delta + requisitions bought during that battle).</li>
+<li><strong>Per-Requisition (G4)</strong>: a requisition-detail view
+showing the unit added/removed + RP cost + the battle context where the
+requisition was earned.</li>
+<li><strong>Per-ApprovalRequest (G5)</strong>: an approval-detail view
+showing the full state change authorized by that one approval. Always
+available from any approval link.</li>
+<li><strong>Per-State-Field (G6)</strong>: the granular view — one entry
+per field change. Default: hidden behind a “Show granular” toggle for
+technical users / CMs investigating.</li>
+</ul>
+<p>The same underlying <code>HistoryEntry</code> rows power all 6 views;
+the UI just re-groups for display.</p>
 <hr />
 <h2 id="cm-triggered-narrative-events">7. CM-Triggered Narrative
 Events</h2>
 <p>Minimal v3 — focus is enforcement, not narrative flavor.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> NarrativeEventEffect <span class="op">=</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_deduct&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// FilterExpr can match on:</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">//   - teamId:    affects only one campaign team (e.g., &quot;Helsreach Defenders&quot;)</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">//   - factionId: affects only one 40K faction (e.g., &quot;Orks&quot;)</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co">//   - memberIds: explicit player list</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">//   - (combinations of the above with AND/OR)</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> NarrativeEventEffect <span class="op">=</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_deduct&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">// FilterExpr can match on:</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">//   - teamId:    affects only one campaign team (e.g., &quot;Helsreach Defenders&quot;)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">//   - factionId: affects only one 40K faction (e.g., &quot;Orks&quot;)</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">//   - memberIds: explicit player list</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">//   - (combinations of the above with AND/OR)</span></span></code></pre></div>
 <p>Armageddon templates: - <strong>“Yarrick’s Broadcast”</strong> — all
 Imperial factions +1 RP (faction filter) - <strong>“Ork
 WAAAGH!”</strong> — all non-Ork factions −1 RP (faction filter,
@@ -754,6 +814,86 @@ campaign-wide announcements.</li>
 <code>visibility = &#39;cm&#39;</code>. Visible to the primary CM and (per PRD-1
 §4.3.1) to Crusade Team Leaders when the event affects their team.</li>
 </ol>
+<h3 id="narrative-log-ui-v3.13">8.1 Narrative Log UI (v3.13)</h3>
+<p><strong>Player view (team-scoped, default):</strong></p>
+<pre><code>+----------------------------------------------------------+
+| Helsreach Defenders — Narrative Log                     |
+| [Public announcements only]                              |
++----------------------------------------------------------+
+| 2026-09-05                                                |
+|   Mike approved your roster update (v18 → v19)          |
+|     2 units added, 1 wargear swap                        |
+| 2026-09-04                                                |
+|   You filed Battle Update #14                            |
+|     Result: L · 1 unit promoted, 1 Battle Scar          |
+|     [View battle report]                                 |
+| 2026-09-01                                                |
+|   Mike triggered &quot;Ork WAAAGH!&quot; — Helsreach +1 RP        |
+|     &quot;The sky darkened over Hive Helsreach...&quot;           |
+| 2026-08-28                                                |
+|   jake42 joined Helsreach Defenders                      |
++----------------------------------------------------------+</code></pre>
+<ul>
+<li>Date-grouped, reverse chronological</li>
+<li>Each entry has a 1-line summary + optional expand for the full
+battle report or narrative text</li>
+<li>The “Public announcements only” tab shows only
+<code>visibility = &#39;public&#39;</code> events (e.g., campaign-wide narrative
+triggers, point-cap changes)</li>
+<li>Filter chips: by event kind, by player, by date range</li>
+</ul>
+<p><strong>Crusade Team Leader view (team-scoped +
+cm-only-for-team):</strong></p>
+<p>Same as player view but additionally includes
+<code>visibility = &#39;cm&#39;</code> events that affect their team: - Team
+leader grants/revocations (when they happen) - Approval override reasons
+(when those approvals affected their team) - Rollback audit events</p>
+<p>The CM-only cross-team events (other teams’ overrides, other teams’
+team-leader grants) are NOT shown.</p>
+<p><strong>Primary CM view (full):</strong></p>
+<p>The CM sees all three scopes, plus a “Visibility” filter column: -
+All events - Filter by visibility (<code>team</code> /
+<code>public</code> / <code>cm</code>) - Filter by team - Filter by
+player - Filter by event kind - Filter by date</p>
+<p>The CM can click any event to override its visibility (PRD-4 §8
+default visibility can be changed per-event).</p>
+<p><strong>Crusade-end retrospective view (when
+<code>Campaign.status = &#39;archived&#39;</code>):</strong></p>
+<p>A special read-only mode that supersedes all the above. All events
+across all teams are visible to every player, in chronological order. A
+banner at the top reads: “End of crusade — this campaign has been
+archived. Retrospective view enabled.”</p>
+<p>Retrospective mode disables all approvals, uploads, and edits. The
+narrative log is the only write-protected surface; it becomes the
+campaign’s permanent record.</p>
+<p><strong>Empty states (v3.13):</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>State</th>
+<th>Message</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>New campaign, no events yet</td>
+<td>“The campaign has just begun. The narrative log fills as you
+play.”</td>
+</tr>
+<tr class="even">
+<td>Player with no team activity</td>
+<td>“Your team hasn’t started yet. Reach out to your CM.”</td>
+</tr>
+<tr class="odd">
+<td>Filter returns nothing</td>
+<td>“No events match this filter.”</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Event visibility defaults (v3.11):</strong></p>
 <table>
 <colgroup>
