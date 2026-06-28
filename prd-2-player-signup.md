@@ -301,6 +301,9 @@ When a player (or Team Leader) signs in, they land on a campaign dashboard. The 
 +---------------------------------------------------+
 | HEADER: [Campaign Name] [User Menu]              |
 +---------------------------------------------------+
+| [ACTIVE PHASE BANNER — shown if a phase is active;  |
+|  hidden entirely if no active phase, per v3.20]      |
++---------------------------------------------------+
 | MY ROSTER CARD                                    |
 |  Status: Approved (v17, 2026-08-29)               |
 |  [Upload new NR JSON] [View roster]               |

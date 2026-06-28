@@ -297,7 +297,9 @@ Players read this and play accordingly. The app doesn't enforce that "orbital su
 - The active phase is shown in the campaign header (banner above the dashboard) and in the narrative log as a phase delimiter.
 - Players see the active phase's name + description as part of the campaign context. They don't see the inactive phases (those are CM-only by default; visibility is configurable in v1.x).
 
-**Active phase UI:**
+**Active phase UI (CM, Team Leader, Player):**
+
+When a phase is active, all three roles see the banner above their dashboard:
 
 ```
 +-----------------------------------------------------------+
@@ -307,7 +309,21 @@ Players read this and play accordingly. The app doesn't enforce that "orbital su
 +-----------------------------------------------------------+
 ```
 
-Shown on the player dashboard (PRD-2 §5c) above the cards. Also shown on the team leader and CM dashboards.
+**No active phase — CM only (v3.20).** Per user: "If there is no phase, only show it empty to the cm. Other players shouldn't see default or placeholders unless it's something they can change."
+
+When `Campaign.activePhaseId = null` (no active phase):
+
+- **Primary CM dashboard**: shows a subtle "No phase active" empty state with a CTA "Activate a phase" linking to the Phases section of the Crusade Administration panel. The CM is the only role who can act on this, so the empty state is shown.
+- **Team Leader dashboard**: shows nothing about phases. No banner, no "no phase" placeholder. Team leaders can't activate phases; the empty state would be noise.
+- **Player dashboard**: shows nothing about phases. No banner, no "no phase" placeholder. Players can't activate phases; the empty state would be noise.
+
+**General principle (v3.20): empty UI surfaces are visible only to users who can act on them.** Phases are the canonical example, but the principle applies elsewhere:
+- Player dashboard "TEAM HUDSON'S PROGRESS" empty state: shown because the player can engage with their team (schedule a game, send a nudge if they're a TL)
+- Player dashboard "REQUISITIONS" empty state: shown because the player can take action (buy in NR, re-import)
+- Inbox empty state: shown to CMs and TLs (they can act), hidden from players (no inbox)
+- Player "MY PENDING APPROVALS" empty state: shown (informs them about the state of their own requests, even if no action needed)
+
+The principle: **if a user can't act on an empty surface, don't show them the empty state.** Show empty UI only to users who have agency over it.
 
 **Phase vs State (clarification):**
 

@@ -20,7 +20,27 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.19 (current) — Phase effects are cosmetic only
+### v3.20 (current) — Empty UI surfaces visible only to users who can act
+
+Per user: "If there is no phase, only show it empty to the cm. Other players shouldn't see default or placeholders unless it's something they can change."
+
+**Specific rule for phases:**
+- Active phase: shown to CM, Team Leader, Player (banner above dashboard)
+- No active phase: shown only to CM with a CTA "Activate a phase"; hidden from Team Leader and Player dashboards entirely (no placeholder, no "no phase" message)
+
+**General principle (documented in PRD-1 §4.4.5):** **Empty UI surfaces are visible only to users who can act on them.**
+- Phases are the canonical example.
+- Other examples:
+  - Inbox empty state: shown to CMs and TLs (they have agency), hidden from players (no inbox)
+  - Team leader's "team queue empty" empty state: shown (TL has agency)
+  - Player's "MY PENDING APPROVALS" empty state: shown (the player benefits from knowing the state of their requests, even if no action is needed; this is informational, not an "empty" placeholder)
+  - Player's "no active phase" placeholder: NOT shown (player has no agency over phases)
+
+**Where this is documented:**
+- PRD-1 §4.4.5: Phase empty state visibility by role + general principle
+- PRD-2 §5c.1: Player dashboard layout shows phase banner conditional on active phase
+
+### v3.19 — Phase effects are cosmetic only
 
 Per user: "The phase effects are not enforced as part of this system yet. They are cosmetic for now. Players can enforce the rules as they like in their matches."
 
