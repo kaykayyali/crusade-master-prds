@@ -20,7 +20,46 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.15 (current) — OAuth + magic-link auth + campaign-scoped inbox
+### v3.16 (current) — Authority is current-ruleset; ruleset-change warning
+
+Per user: **there is no concept of "in flight authority change."** All open items requiring approval are associated to a campaign, and the API/UI enforces whatever setting is currently set in the campaign. When team leaders change OR when the ruleset changes, the eligible-approver set updates immediately.
+
+**Why this matters architecturally:**
+- Authority is **derived** from the campaign's current state, not stored on the approval request.
+- When settings change, no migrations, no re-assignment logic — the next query naturally returns the new eligible-approver set.
+- RLS + API WHERE clause evaluate the current settings at every query.
+- Past decisions stand (immutable). In-flight requests re-assess automatically.
+
+**Worked example (PRD-5 §5.4):**
+- Mike disables `roster_approval` for TLs while Alice has a pending roster approval open in her detail view.
+- Alice's UI updates live: "Approve" button disabled, tooltip "this kind is no longer in your authority per the current campaign settings."
+- If Alice tries to click Approve anyway (stale tab), the API returns 403.
+- Item stays pending; now CM-only. Mike sees it.
+- If Mike re-enables the authority later, item becomes Alice's again automatically — current ruleset always wins.
+- Past approvals stand. Audit log records the ruleset change as a separate event.
+
+**Re-assessment warning UI (PRD-5 §5.4, PRD-1 §4.4):**
+
+When the CM is about to save a ruleset change that affects pending approvals, the UI must warn them before saving, because the change is "difficult to rollback" (the audit log will reflect the change even if rules are toggled back).
+
+The warning modal shows:
+- The settings being changed
+- The count and breakdown of pending approvals that would be re-assessed
+- After-change state
+- Explicit note: past approvals are NOT affected; the change is difficult to rollback
+- [Cancel] / [Confirm change] buttons
+
+If no pending approvals would be affected, the change saves silently without a warning.
+
+The warning fires for any settings change that affects pending approvals — including Approvals section changes (team-leader authority, approval mode) and Rules section changes (rule pack toggle, per-kind rule enforcement).
+
+**Concrete example from user:**
+- TL A approves a roster change.
+- TL A leaves the team.
+- TL B comes in, wants to rollback the change.
+- TL B files a NEW `roster_rollback` approval request. The original approval is untouched.
+
+### v3.15 — OAuth + magic-link auth + campaign-scoped inbox
 
 Three significant architecture shifts:
 

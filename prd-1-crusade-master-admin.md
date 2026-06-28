@@ -292,6 +292,20 @@ The CM can flip any of these on/off per campaign. The reasoning for defaults: ac
 
 **Active rule packs:** which `RulePack`s (PRD-3 §6) are enabled for this campaign. The CM toggles these on/off in the Rules section.
 
+**Save behavior — re-assessment warning (v3.16):**
+
+When the CM clicks "Save" on the Approvals section, the system evaluates: would any pending `ApprovalRequest` in this campaign change eligible-approvers under the new settings?
+
+If yes: the warning modal described in PRD-5 §5.4 fires. The CM must explicitly confirm. The warning lists:
+- The settings being changed (e.g., "disable team leader authority for `roster_approval`")
+- The count of pending approvals that would be re-assessed (e.g., "4 × roster_approval")
+- After-change state (e.g., "only actionable by you")
+- Explicit note: past approvals are NOT affected; the change is difficult to rollback because the audit log will show the ruleset change
+
+If no pending approvals would be affected: the change saves silently without a warning.
+
+The same warning pattern applies to the Rules section (rule pack toggle / per-kind enforcement changes) — any settings change that affects pending approvals fires the warning.
+
 Deletable: archive (soft) or hard-delete (typed confirmation required). Archive is the post-crusade state where all data becomes read-only-visible to all players across teams (per PRD-0 §3b data-isolation relaxation).
 
 ### 4.5 Override Tool

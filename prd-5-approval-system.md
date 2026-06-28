@@ -657,19 +657,72 @@ API filter: team scope = Gorgutz's WAAAGH! only → no items currently pending f
 
 API: no authority filter (CM sees everything). Mike sees all 13 items across all teams. Mike can also see Alice's actions (the audit log records `reviewerUserId: alice`).
 
-### Mid-flight authority change
+### Mid-flight authority change (v3.16: current ruleset always wins)
 
-If Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k's roster) open:
+Per user direction: **there is no concept of "intent at filing time."** All open items requiring approval are associated with a campaign, and the API/UI enforces whatever setting is currently set in the campaign at query time. When team leaders change OR when the ruleset changes, the eligible-approver set updates immediately. Past decisions stand (they're already done); in-flight requests are re-assessed automatically by the next API call.
 
-1. Alice still sees item #2 with "Approve" enabled (intent at filing time wins per Q2 default; the policy in effect at filing time applies).
-2. If Alice approves, the approval stands; `approvalSource: 'cm_review'`, `reviewerUserId: alice`. The decision is permanent.
-3. After Alice approves, item #2 leaves the queue. New `roster_approval` requests go directly to Mike's queue.
-4. The audit log records the authority change timestamp separately from the approval action — both are queryable.
+**Concrete example:**
 
-If Mike ENABLES `roster_manual_edit` for TLs (it was off):
+1. Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k's roster) open in her detail view.
+2. Alice's UI receives a real-time notification: "Campaign ruleset changed — your authority for `roster_approval` has been revoked." The "Approve" button in her detail view is now disabled with a tooltip "this kind is no longer in your authority per the current campaign settings."
+3. If Alice tries to click Approve anyway (e.g., from a stale browser tab), the API returns 403. The decision cannot be made.
+4. Item #2 stays pending; it's now CM-only. Mike sees it in his inbox.
+5. If Mike re-enables `roster_approval` for TLs later, item #2 becomes actionable for Alice again at that moment (still pending, still her approval to make). No special "resume from where we left off" logic — the current ruleset always applies.
+6. Past approvals stand. If Alice already approved a `roster_approval` before the ruleset changed, that approval is permanent. The audit log records both the approval and the ruleset change as separate events.
 
-1. New `roster_manual_edit` requests on Helsreach appear in Alice's "Actionable" tab.
-2. In-flight requests filed BEFORE the change stay with Mike.
+**Why this matters architecturally:**
+
+This is the simplest model: authority is **derived** from the campaign's current state, not stored on the approval request. No snapshot needed. When settings change, no migrations, no re-assignment logic — the next query naturally returns the new eligible-approver set. RLS + the API WHERE clause evaluate the current settings.
+
+**The CM-as-player auto-approval path follows the same principle:**
+
+If Mike (CM-as-player) files a high-impact kind like `mass_reban`, the auto-approval logic at PRD-5 §3.3 evaluates the current ruleset. If the kind requires co-CM and a co-CM exists, Mike's request routes to them. If Mike later removes the co-CM, the request stays pending (no co-CM available). If a co-CM joins later, the request becomes actionable again. The current ruleset — applied at query time — always wins.
+
+### Re-assessment warning UI (when CM changes ruleset that affects pending approvals)
+
+Per user: when the CM is about to save a ruleset change that would affect pending approvals, the UI must warn them before saving, because the change is difficult to rollback.
+
+**When the warning fires:** the CM opens the Crusade Administration panel → Approvals (PRD-1 §4.4), edits `teamLeaderAuthority` or `teamLeaderApprovalMode`, and clicks "Save." Before the save, the system evaluates: "Are there any pending `ApprovalRequest`s in this campaign that would change eligible approvers under the new settings?"
+
+If yes, the warning modal opens:
+
+```
++----------------------------------------------------------+
+| ⚠ Confirm ruleset change                                |
++----------------------------------------------------------+
+| You are about to change campaign settings that affect  |
+| pending approvals.                                       |
+|                                                         |
+| Changes:                                                |
+|   - Disable team leader authority for: roster_approval |
+|   - Disable team leader authority for: post_battle_update |
+|                                                         |
+| Affected pending approvals: 7                            |
+|   - 4 × roster_approval (currently Alice can act)       |
+|   - 3 × post_battle_update (currently Alice can act)  |
+|                                                         |
+| After this change:                                       |
+|   - These 7 approvals will only be actionable by you.  |
+|   - Team leaders will see them as read-only.            |
+|   - Past approvals are NOT affected.                     |
+|                                                         |
+| ⚠ This change is difficult to rollback: if you re-      |
+| enable the authority later, the same pending approvals |
+| become actionable again — but in the meantime team       |
+| leaders could not act on them. The audit log will       |
+| reflect the change.                                      |
+|                                                         |
+| [Cancel] [Confirm change]                                |
++----------------------------------------------------------+
+```
+
+**What "difficult to rollback" means (the audit trail doesn't lie):** if the CM disables `roster_approval` for TLs, then re-enables it an hour later, the pending approvals become actionable again. But the audit log shows that the ruleset changed twice, and during that hour, the pending requests were CM-only. The CM can't pretend the ruleset was stable.
+
+If the CM wants to avoid this, they should communicate with the team leader(s) before the change. Or wait for the queue to drain.
+
+**No warning when the change does NOT affect pending approvals.** If the CM disables `roster_approval` for TLs and there are zero pending `roster_approval` requests, the warning does not fire. The change saves silently.
+
+**No warning for past-approved or rejected approvals.** Those are immutable; the ruleset change doesn't affect them.
 
 ### Player view (e.g., Sarah on Helsreach)
 
@@ -719,19 +772,15 @@ A direct API request from Alice asking for item #9 (a Hades roster approval) ret
 
 These don't appear in Alice's inbox at all. They go directly to Mike.
 
-**Mid-flight authority change scenario:**
+**Mid-flight authority change scenario (v3.16 — current ruleset always wins):**
 
-If Mike disables `roster_approval` for TLs while Alice has item #2 (sarah_k's roster) open in her detail view:
+Per user: there is no concept of "intent at filing time." All open items requiring approval are associated to a campaign, and the API/UI enforces whatever setting is currently set in the campaign. See §5.4 "Mid-flight authority change" above for the full treatment, but the worked example: if Mike disables `roster_approval` for TLs while Alice has item #2 open:
 
-1. Alice still sees item #2 with "Approve" enabled (the policy in effect at filing time still applies per Q2 default).
-2. If Alice approves, the approval stands; `approvalSource: 'cm_review'`, `reviewerUserId: alice`.
-3. If Alice refreshes, her "Actionable" tab count drops to 4 (item #2 was the last; new `roster_approval` requests now route directly to Mike).
-4. Mike's inbox gets all new `roster_approval` requests going forward.
-
-If Mike ENABLES `roster_manual_edit` for TLs (it was off by default):
-
-1. New `roster_manual_edit` requests on Helsreach now appear in Alice's "Actionable" tab.
-2. In-flight `roster_manual_edit` requests that were already filed before the change are NOT retroactively routed to Alice — they stay with Mike (intent at filing time).
+1. Alice's UI updates live: "Approve" button disabled, tooltip "this kind is no longer in your authority."
+2. If Alice tries to click Approve anyway, the API returns 403.
+3. Item #2 stays pending; now CM-only. Mike sees it.
+4. If Mike re-enables the authority later, item #2 becomes Alice's again automatically (current ruleset always wins).
+5. The CM was warned BEFORE saving (per the warning UI in §5.4) about how many pending approvals would be affected.
 
 **Bob's view (Team Leader of Hades Defenders):**
 
