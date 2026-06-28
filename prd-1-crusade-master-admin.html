@@ -411,6 +411,36 @@ health overview</strong> — per player: “last approved roster date”,
 knows if a stuck import is a real player issue vs. infra) 6.
 <strong>Narrative log preview</strong> 7. <strong>Errata alert</strong>
 — banner when Wahapedia refresh affected units in this campaign</p>
+<h3 id="the-inbox-clarified-per-user-direction">4.3.1 The Inbox
+(clarified per user direction)</h3>
+<p>The CM inbox is the load-bearing surface of the dashboard. The user
+clarified what the inbox must show:</p>
+<ul>
+<li><strong>Requested approvals</strong> (all kinds, not just battle
+updates) with their <strong>deltas</strong></li>
+<li><strong>Battle reports</strong> that accompany the approvals</li>
+</ul>
+<p>That’s the inbox. The user explicitly said the inbox does not need to
+compute every detail — just enough for the CM to make approval
+decisions, with battle reports + deltas giving the agenda context the CM
+needs to verify claims.</p>
+<p><strong>Inbox content (v1):</strong> - For each
+<code>ApprovalRequest</code>: - Submitter name + campaign - Kind + age -
+Status of related entity (e.g., active roster version, battle id) -
+<strong>Delta preview</strong>: for <code>roster_approval</code>, the
+structural diff; for <code>post_battle_update</code>, the per-unit
+XP/honour/scar changes; for <code>requisition_purchase</code>, the unit
+being added/removed - <strong>Battle report</strong> (when applicable):
+the player’s markdown report - Rule check results (PRD-3):
+pass/warn/fail with details - Quick actions: Approve / Reject / Request
+Changes / Override &amp; Approve</p>
+<p><strong>Inbox content NOT in v1:</strong> - Full event timeline
+(lives in the campaign’s narrative log view) - Per-unit historical diff
+(lives in the player’s roster view) - AI-generated agenda verification
+(v2+) - Discord previews of battle reports (v2+ via Discord
+integration)</p>
+<p>The inbox is the operational surface. The campaign timeline is the
+storytelling surface. Different jobs, different UIs.</p>
 <h3 id="campaign-settings">4.4 Campaign Settings</h3>
 <p>Editable: point cap, max games/week, OoA variant, house rules.</p>
 <p><strong>Supplement changes are locked</strong> for MVP. Switching
@@ -430,6 +460,30 @@ Own battle filings subject to the same submission gating</p>
 <p>Default behavior; CM cannot opt out (conflicts of interest require a
 co-CM, not a setting).</p>
 <hr />
+<h2 id="b.-custom-factions-future-schema-ready-now">5b. Custom Factions
+(future, schema-ready now)</h2>
+<p>The user wants the option for CMs to define custom factions later
+(homebrew chapters, custom Imperial Guard regiments, narrative-only
+factions). The schema is built to support this from day one:</p>
+<ul>
+<li><code>Faction</code> is a database table, not a hard-coded enum</li>
+<li>Wahapedia’s 26 factions ship as the seed data</li>
+<li><code>Campaign.factionWhitelist: string[] | null</code> controls
+which factions are selectable in the campaign</li>
+<li>A CM creating a custom faction is a v1.x feature (UI for it is out
+of scope for v1; data model + APIs are ready)</li>
+</ul>
+<p>The faction picker (PRD-2) shows seeded factions only in v1. CMs who
+want custom factions in v1 can edit the seed list via a future admin
+tool; otherwise v1.x ships the full UI.</p>
+<hr />
+<h2 id="c.-discord-integration-future-not-in-v1">5c. Discord Integration
+(future, not in v1)</h2>
+<p>Webhook-based Discord integration is a high-value v2 feature
+(community runs most 40K conversation in Discord). The system will emit
+events that can be forwarded to Discord channels; the wiring lives in
+v2.</p>
+<hr />
 <h2 id="user-flow-first-run-first-campaign">6. User Flow: First-Run →
 First Campaign</h2>
 <pre class="mermaid"><code>flowchart TD
@@ -445,6 +499,222 @@ First Campaign</h2>
     I --&gt; J[CM creates campaign, picks Armageddon]
     J --&gt; K[CM invites players via code/email]
     K --&gt; L[Players join, upload JSON, see async parse + diff + approval flow]</code></pre>
+<hr />
+<h2 id="b.-critical-user-flows-campaign-master-mike">6b. Critical User
+Flows — Campaign Master (Mike)</h2>
+<p><strong>Persona — Mike, the CM:</strong> Mid-30s, IT professional,
+runs a local gaming group’s Wednesday night sessions. Has run 3
+campaigns over 4 years. Used Administratum for the last one but quit
+over the Patreon paywall for the campaign-management tier. Plays
+Tyranids, Aeldari, Necrons — whatever the narrative needs. Spends ~3
+hours/week on CM work: pre-session prep, post-battle processing,
+narrative writing. Goal: cut that to 90 minutes/week.</p>
+<p>Mike’s pain points with current tools: - Administratum is a roster
+tracker, not a referee. Players file roster changes that violate his
+house rules; he catches them only after the fact. - He runs a Discord
+server for the group; the in-app notifications live in a different tool
+from the conversation. - PDF rosters he exports for the table are always
+slightly out of date by the time the game starts.</p>
+<p>Mike’s success criteria for this app: - Every approval request shows
+him what changed AND the player’s justification (battle report or rule
+acknowledgement), so he can decide in &lt;30 seconds for routine ones. -
+He can see, at a glance, which players are engaged and which have gone
+quiet. - He can write a campaign event (“Orks WAAAGH!”) and the system
+shows the impact before he commits.</p>
+<h3 id="flow-1-campaign-setup-the-first-impression">Flow 1: Campaign
+setup (the first impression)</h3>
+<p><strong>Trigger:</strong> Mike decides to start a new campaign. He
+clicks “New Campaign” from the dashboard.</p>
+<p><strong>Why this matters:</strong> First impressions. If setup takes
+20 minutes, Mike will tell his group “this tool is too much work.” The
+user goal is &lt;5 minutes from “New Campaign” click to “ready to invite
+players.”</p>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li><strong>Form is pre-filled with sensible defaults</strong> (2000
+pts, max 2 games/week, standard OoA test, require-approved-roster ON,
+JSON-only mode ON). Mike edits what he wants, ignores the rest.</li>
+<li><strong>House rules markdown editor with live preview</strong> —
+Mike writes “Allied Detachments not allowed except in narrative
+missions.” This is the most subjective field; a preview pane lets him
+see what the player will see.</li>
+<li><strong>“Copy settings from another campaign” button</strong> — Mike
+has run campaigns before. The fastest setup is reusing the last one’s
+config.</li>
+<li><strong>Settings explainer tooltips</strong> — “What does OoA test
+variant do? What’s require-approved-roster?” — short, plain language, no
+wiki dive.</li>
+<li><strong>The “Invite Players” step happens on the success
+page</strong>, not a separate screen. The campaign exists, the invite
+link is the headline, “Copy link” is the primary action.</li>
+</ul>
+<p><strong>Critical moment:</strong> The house rules field. Mike’s house
+rules are the soul of his campaign. A 4KB textarea with no preview is
+hostile. Live preview = “what the player sees when they join.”</p>
+<p><strong>Edge case:</strong> Mike wants to run two campaigns
+simultaneously (one for veterans, one for newcomers) with different
+house rules. The setup flow should support that without forcing him to
+re-enter settings; “Clone campaign” is the fast path.</p>
+<h3 id="flow-2-the-inbox-triage-day-the-most-used-flow">Flow 2: The
+inbox triage day (the most-used flow)</h3>
+<p><strong>Trigger:</strong> It’s Wednesday. Mike logs in. Six players
+filed battle updates over the weekend. One player uploaded a new roster.
+The inbox shows 7 pending items.</p>
+<p><strong>Why this matters:</strong> This is Mike’s weekly 90-minute
+task. If the inbox is slow or noisy, the task grows. If it’s fast and
+clean, the task shrinks.</p>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li><strong>Inbox loads in &lt;2 seconds</strong> for up to 50 pending
+items. Indexes on
+<code>(tenantId, campaignId, status, submittedAt)</code>.</li>
+<li><strong>Default sort: oldest first</strong> (FIFO). Mike processes
+in submission order.</li>
+<li><strong>Filter chips at the top</strong>: by campaign, by kind, by
+submitter, by age. Mike filters to one campaign to focus.</li>
+<li><strong>Each row is scannable in &lt;2 seconds</strong>: submitter +
+kind + age + a 1-line summary of the diff (“+2 units, -1 unit, 3 wargear
+swaps”) + rule check status (green/yellow/red dot).</li>
+<li><strong>Bulk-approve routine battle updates</strong>: a checkbox per
+row; “Approve 4 selected” is one click. Per the auto-approve rules in
+PRD-5, the bulk action refuses if any selected item is non-routine (a
+failed OoA, a requisition, etc.). Mike gets a clear refusal: “2 items
+skipped (manual review needed): see details.”</li>
+<li><strong>Click into a row to expand</strong> — does NOT navigate. The
+detail view is inline (right pane or modal). Mike can decide without
+leaving the inbox list.</li>
+<li><strong>Live updates</strong> — if a player files a new approval
+while Mike is reviewing, the new row appears at the bottom with a subtle
+animation. No full reload.</li>
+<li><strong>Recently-decided items stay visible for 24 hours</strong>
+under a “Recently decided” tab, so Mike can undo if needed.</li>
+</ul>
+<p><strong>Critical moment:</strong> The bulk-approve. If it
+accidentally approves something non-routine, Mike loses trust in the
+tool. The refusal-when-non-routine behavior is the safety net. The UI
+must make it obvious <em>why</em> an item is being skipped.</p>
+<p><strong>Edge case:</strong> Mike approves a roster, but 30 seconds
+later the player uploads a new version because they realized they forgot
+to add a unit. The new RosterDraft is “pending_review” again. Mike’s
+inbox now shows a new item. The previously approved roster is no longer
+“active” (it was superseded by the new pending draft). The UI must show
+this clearly — “Approved 2 minutes ago, superseded by new draft 30
+seconds ago.” This is a subtle UI problem; v1 handles it with a
+“superseded” badge on the older approved item.</p>
+<h3 id="flow-3-roster-approval-with-rule-override">Flow 3: Roster
+approval with rule override</h3>
+<p><strong>Trigger:</strong> Mike clicks into a pending roster approval.
+The diff shows: 1 unit added (a Rogal Dorn tank, 320 pts), 1 unit
+unchanged, 0 removals. Rule checks: 1 warn (point cap is 2000, this
+roster is 2120, 120 over). The player has acknowledged the warn.</p>
+<p><strong>Why this matters:</strong> Roster approvals are the most
+common decision Mike makes. The UI has to support fast yes/no on the
+typical case AND a confident override when the player has a good
+reason.</p>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li><strong>Three-pane layout</strong>: roster diff (left), rule check
+results (center), approve/reject controls (right). All visible without
+scrolling on a 1440x900 display.</li>
+<li><strong>Rule check report is human-readable</strong>: “<strong>Over
+point cap by 120.</strong> Cap: 2000. Roster total: 2120. Largest
+contributors: Rogal Dorn (320), Cadian Castellan (75), Hellhound
+(180).”</li>
+<li><strong>Override &amp; Approve button</strong> is prominent,
+requires a reason text field (mandatory, min 10 chars), and shows the
+rule severity with a color tag.</li>
+<li><strong>The reason is recorded in the audit log and shown to the
+player</strong> when they see the approval. Mike is held accountable for
+overrides.</li>
+<li><strong>A “preview timeline” link</strong> in the diff pane shows
+the events that will be added if Mike approves (the approval creates
+events). This is a “what happens if I click yes” affordance.</li>
+<li><strong>If Mike previously approved this player</strong>, the prior
+decisions are visible in a small “history” pane — did Mike override the
+same rule for this player last time? That’s a signal.</li>
+</ul>
+<p><strong>Critical moment:</strong> The override reason. Mike needs to
+type something. “I know what I’m doing” is not a good reason; “Rogal
+Dorn is a special character for this narrative arc” is. The text field
+placeholder should be helpful: “Why is this rule being overridden?
+(visible to the player)”.</p>
+<p><strong>Edge case:</strong> Mike opens a roster, scrolls around, and
+a player uploads a new version of the same roster while he’s reviewing.
+Drift detection (PRD-5 §6) flags it; Mike sees “Drift detected — player
+uploaded new version 2 minutes ago. Approve original or re-validate?”
+The original approval is the older draft; Mike chooses to wait for the
+player to re-submit the new one.</p>
+<h3 id="flow-4-triggering-a-narrative-event">Flow 4: Triggering a
+narrative event</h3>
+<p><strong>Trigger:</strong> Mike wants to inject drama. He picks “Ork
+WAAAGH!” from the narrative event templates.</p>
+<p><strong>Why this matters:</strong> Narrative events are the
+storytelling centerpiece. Mike is a story-teller; this is his moment.
+The UI must show him the <em>impact</em> before he commits, and make the
+event feel weighty.</p>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li><strong>Templates gallery</strong>: 3 Armageddon templates ship in
+v1 (“Yarrick’s Broadcast”, “Ork WAAAGH!”, “Armageddon Stands”). Each
+shows a 1-line description and a sample message.</li>
+<li><strong>Preview before commit</strong>: “This will affect 8 of 12
+players. Each non-Ork faction loses 1 RP. Current RP: 0-5 across
+affected players. Will not go negative.”</li>
+<li><strong>Optional message</strong>: Mike types a 280-character
+narrative flourish that gets attached to the event. (“The sky darkened
+over Hades Hive. WAAAGH!”)</li>
+<li><strong>Apply to which players</strong>: by default, all eligible
+players per the template’s filter; Mike can deselect specific
+players.</li>
+<li><strong>Confirm screen</strong> with a summary; apply is
+irreversible except via rollback.</li>
+<li><strong>Post-apply</strong>: a notification-job fires to all
+affected players, the event appears in the public narrative log, and the
+affected RosterApproved’s RP field updates.</li>
+</ul>
+<p><strong>Critical moment:</strong> The preview. Mike needs to know “if
+I do this, Sarah loses 1 RP and is now at 0. Should I instead apply it
+only to Ork factions as a bounty?” Preview → adjust → apply.</p>
+<p><strong>Edge case:</strong> A narrative event that would push a
+player below 0 RP. The system clamps to 0 and emits a warning event.
+Mike sees the warning before he applies; if he applies anyway, the audit
+log records “CM applied X despite Y warnings.”</p>
+<h3 id="flow-5-monitoring-campaign-health">Flow 5: Monitoring campaign
+health</h3>
+<p><strong>Trigger:</strong> Mike’s been busy. It’s been 3 weeks since
+he logged in. He opens the dashboard to see how the campaign is
+doing.</p>
+<p><strong>Why this matters:</strong> Campaigns die from neglect, not
+from rules. The #1 challenge per Tabletop Battles’ roundtable is
+“keeping people active and engaged right up to the end.” Mike needs a
+health view that surfaces the soft signals.</p>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li><strong>Engagement heatmap</strong>: per player, days since last
+battle filing, days since last login, days since last roster update.
+Color-coded (green / yellow / red).</li>
+<li><strong>Soft warnings</strong>: “Player X has not filed an update in
+21 days. Send a nudge?” with a one-click “send nudge” button (in-app +
+email).</li>
+<li><strong>Recent activity feed</strong>: the last 20 events, with
+filters (battles / roster changes / events / system).</li>
+<li><strong>Pending actions for Mike</strong>: not just approvals, but
+also “3 players have drafts in <code>parsing</code> state for over 5
+minutes — BullMQ health might be off, or these are stuck.”</li>
+<li><strong>Narrative log</strong>: a view of the campaign’s story so
+far, derived from public-visibility events. Mike can copy text from here
+to post in Discord.</li>
+</ul>
+<p><strong>Critical moment:</strong> The engagement heatmap. Mike sees
+Sarah hasn’t filed an update in 18 days. He clicks on her row, sees she
+logged in yesterday (so she’s not gone, just not playing battles). Mike
+sends a one-line nudge: “Hey Sarah, free for a game this week?” The tool
+made the nudge possible; without it, Mike wouldn’t have noticed.</p>
+<p><strong>Edge case:</strong> A player who’s been gone 60+ days. Mike
+can mark them as “AWOL” — their Roster is frozen, their requisition shop
+is locked, but their data is retained. If they come back, the AWOL is
+reversible. v1 handles this with a single “Mark AWOL” button on the
+member row.</p>
 <hr />
 <h2 id="out-of-scope-prd-1">7. Out of Scope (PRD-1)</h2>
 <ul>

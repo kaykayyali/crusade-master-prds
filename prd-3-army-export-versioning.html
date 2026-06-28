@@ -575,11 +575,123 @@ supplement</p>
 supplement ships them) → CM rules (per-campaign). The campaign’s
 <code>enabledRuleIds</code> list is the final gate; nothing outside the
 enabled set is evaluated.</p>
-<h3 id="ui-for-cm-rule-editing-v1.x">6.4 UI for CM rule editing
-(v1.x)</h3>
-<p>Out of MVP. For v1, the rule engine ships with a fixed set of
-built-in rules. CM-custom rules and a rule-builder UI are v1.x. The data
-model and engine support them from day one; only the UI is deferred.</p>
+<h3 id="ui-for-cm-rule-editing-v1-in-scope">6.4 UI for CM rule editing
+(v1 IN SCOPE)</h3>
+<p>CM-definable rules ship in v1. <strong>Built-in rule types
+only</strong> for v1; no custom DSL or sandboxed JS. Same data model +
+engine; the UI is the v1 addition.</p>
+<p><strong>v1 built-in rule types (the “rule pack
+gallery”):</strong></p>
+<table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 38%" />
+<col style="width: 44%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Description</th>
+<th>Config fields</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>max-n-of-type</code></td>
+<td>No more than N units with the same canonical name</td>
+<td><code>n: integer</code></td>
+</tr>
+<tr class="even">
+<td><code>max-x-pct-of-role</code></td>
+<td>Role can have at most X% of total points</td>
+<td><code>role: enum(HQ, Troops, Elites, Fast Attack, Heavy Support, Flyer, Dedicated Transport)</code>,
+<code>max_pct: number 0-100</code></td>
+</tr>
+<tr class="odd">
+<td><code>max-points-per-unit</code></td>
+<td>Any single unit can be at most N points</td>
+<td><code>n: integer</code></td>
+</tr>
+<tr class="even">
+<td><code>wargear-restriction</code></td>
+<td>Wargear only allowed in specific unit names</td>
+<td><code>wargear: string</code>, <code>allowed_in: string[]</code>
+(unit names)</td>
+</tr>
+<tr class="odd">
+<td><code>unit-whitelist</code></td>
+<td>Only these units may be in the roster</td>
+<td><code>units: string[]</code> (catalog names)</td>
+</tr>
+<tr class="even">
+<td><code>unit-blacklist</code></td>
+<td>These units may not be in the roster</td>
+<td><code>units: string[]</code> (catalog names)</td>
+</tr>
+<tr class="odd">
+<td><code>custom-name-pattern</code></td>
+<td>Custom unit names must match a regex</td>
+<td><code>pattern: string</code> (regex), <code>flags: string</code>
+(e.g. ‘i’)</td>
+</tr>
+<tr class="even">
+<td><code>total-xp-cap</code></td>
+<td>No unit may have more than N XP at approval time</td>
+<td><code>n: integer</code></td>
+</tr>
+<tr class="odd">
+<td><code>crusade-rp-floor</code></td>
+<td>Player must have at least N RP at approval time</td>
+<td><code>n: integer</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Adding a custom rule (CM flow):</strong></p>
+<pre class="mermaid"><code>flowchart TD
+    A[CM opens Campaign Settings → Rules tab] --&gt; B[Click &#39;Add Rule&#39;]
+    B --&gt; C[Pick rule type from gallery]
+    C --&gt; D[Fill config form auto-generated from configSchema]
+    D --&gt; E[Live preview: &#39;this will check 12 units in the current approved roster&#39;]
+    E --&gt; F[Test against last RosterApproved: shows pass/warn/fail breakdown]
+    F --&gt; G{Accept test result?}
+    G --&gt;|No| H[Tweak config]
+    H --&gt; D
+    G --&gt;|Yes| I[Name + describe the rule]
+    I --&gt; J[Set severity: pass / warn / fail]
+    J --&gt; K[Save]
+    K --&gt; L[Rule attached to campaign; runs on every new RosterDraft]</code></pre>
+<p><strong>UI requirements:</strong></p>
+<ul>
+<li>The rule gallery shows each type with a one-line description and a
+sample config (so CMs understand what they’re picking without reading
+docs)</li>
+<li>The config form is auto-generated from <code>configSchema</code>
+(JSON Schema → form fields) — same engine regardless of which rule
+type</li>
+<li>Live preview shows the count of units/changes the rule will inspect
+against the most recent <code>RosterApproved</code> (“this rule would
+inspect 12 units, 1 requisition”)</li>
+<li>Test mode runs the rule against the actual current data and shows
+the result without persisting — so CMs can iterate without affecting
+players</li>
+<li>Naming + describing is required (the rule shows up in the player’s
+rule check report; needs a human-readable name)</li>
+<li>Severity override is per-instance (the rule’s default severity comes
+from its pack, but a CM can dial it up or down per their campaign)</li>
+<li>Drag-to-reorder rules in the campaign’s rule list (order matters
+when multiple rules produce different verdicts on the same data)</li>
+</ul>
+<p><strong>Where the rule-builder UI lives:</strong></p>
+<ul>
+<li>PRD-1 (CM dashboard): new “Rules” tab in Campaign Settings</li>
+<li>The rule pack gallery is also accessible from the Roster Approval
+detail view (CM can add a rule on the fly while reviewing a roster that
+triggered no rule but they want to enforce going forward)</li>
+</ul>
+<p><strong>Future (v2+):</strong> custom rule logic via a sandboxed JS
+expression language, or uploaded rule packs. Data model and engine
+already support it (the <code>RuleDefinition</code> could carry an
+<code>expression</code> field); v1 just doesn’t expose it.</p>
 <hr />
 <h2 id="the-diff-player-first">7. The Diff (Player-First)</h2>
 <p>The diff is <strong>for the player, not just the CM</strong>. The
@@ -631,13 +743,13 @@ scars, requisitions, supply limit</p>
 <p>The diff runs in the worker (TS) against two
 <code>RosterSummary</code> objects + the
 <code>AppParseOutput</code>:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">diffRosters</span>(prev<span class="op">:</span> RosterSummary <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> next<span class="op">:</span> RosterSummary<span class="op">,</span> prevApp<span class="op">:</span> AppParseOutput <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> nextApp<span class="op">:</span> AppParseOutput)<span class="op">:</span> Delta[] {</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> deltas<span class="op">:</span> Delta[] <span class="op">=</span> []<span class="op">;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... unit-level match by canonical name or entry id</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... wargear-level match per model variant</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... crusade state diff (RP, supply, honours, scars)</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> deltas<span class="op">;</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">diffRosters</span>(prev<span class="op">:</span> RosterSummary <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> next<span class="op">:</span> RosterSummary<span class="op">,</span> prevApp<span class="op">:</span> AppParseOutput <span class="op">|</span> <span class="dt">null</span><span class="op">,</span> nextApp<span class="op">:</span> AppParseOutput)<span class="op">:</span> Delta[] {</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> deltas<span class="op">:</span> Delta[] <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... unit-level match by canonical name or entry id</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... wargear-level match per model variant</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... crusade state diff (RP, supply, honours, scars)</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> deltas<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>Key detail: unit matching across two rosters must handle: - Same
 unit, different number of models (e.g., 5 → 10 Intercessors) - Custom
 name changes - Entry-id changes (e.g., player re-imported a fresh NR
@@ -697,8 +809,11 @@ Import</h2>
 <li>NR URL fetch / scraping</li>
 <li>Manual unit editing in the UI (JSON import is the canonical path;
 CMs have an override tool per PRD-1)</li>
-<li>Rule builder UI for CMs (data model + engine ready; UI deferred to
-v1.x)</li>
+<li><del>Rule builder UI for CMs (data model + engine ready; UI deferred
+to v1.x)</del> <strong>MOVED INTO SCOPE for v1: built-in rule types
+only, see §6.4</strong></li>
+<li>Custom DSL or sandboxed JS for rule logic (data model supports;
+v2+)</li>
 <li>Diff in real-time while player edits (diff runs at parse-job time
 only)</li>
 </ul>

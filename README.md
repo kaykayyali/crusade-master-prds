@@ -20,7 +20,16 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3 (current) — Hapi + BullMQ + parser subprocess
+### v3.1 (current) — Rule builder in scope + critical user flows
+
+- **Rule builder UI moved into v1 scope** (was v1.x). Built-in rule types only, no custom DSL. 9 rule types ship: `max-n-of-type`, `max-x-pct-of-role`, `max-points-per-unit`, `wargear-restriction`, `unit-whitelist`, `unit-blacklist`, `custom-name-pattern`, `total-xp-cap`, `crusade-rp-floor`. Auto-generated config forms from JSON Schema. Live preview + test-against-existing-data before save.
+- **PRD-1: added CM critical user flows** with persona (Mike, IT pro, runs Wednesday night campaign, 3 hours/week on admin). 5 flows detailed: campaign setup, inbox triage day, roster approval with rule override, narrative event triggering, campaign health monitoring. Each flow has: trigger, why it matters, specific UI requirements, critical moment, edge case.
+- **PRD-2: added player critical user flows** with persona (Sarah, software engineer, plays Astra Militarum, 2 games/week). 4 flows detailed: first roster import + approval, post-battle update filing, requisition purchase, per-unit timeline view.
+- **PRD-1 inbox clarified**: shows approvals + deltas + battle reports. Does not compute every detail; per user direction. Different from the campaign's narrative log (storytelling surface).
+- **Custom factions**: schema-ready (`Faction` table, not enum), UI for creating custom factions deferred to v1.x. PRD-1 §5b.
+- **Discord integration**: noted as v2 future in PRD-1 §5c. Webhook-based forwarding of events.
+
+### v3 — Hapi + BullMQ + parser subprocess
 
 Major rewrite driven by the user's real stack and existing code:
 

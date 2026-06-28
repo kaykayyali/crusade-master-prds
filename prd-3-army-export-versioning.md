@@ -257,9 +257,58 @@ RuleDefinition {
 
 **Evaluation order**: builtin rules → crusade rules (if supplement ships them) → CM rules (per-campaign). The campaign's `enabledRuleIds` list is the final gate; nothing outside the enabled set is evaluated.
 
-### 6.4 UI for CM rule editing (v1.x)
+### 6.4 UI for CM rule editing (v1 IN SCOPE)
 
-Out of MVP. For v1, the rule engine ships with a fixed set of built-in rules. CM-custom rules and a rule-builder UI are v1.x. The data model and engine support them from day one; only the UI is deferred.
+CM-definable rules ship in v1. **Built-in rule types only** for v1; no custom DSL or sandboxed JS. Same data model + engine; the UI is the v1 addition.
+
+**v1 built-in rule types (the "rule pack gallery"):**
+
+| Type | Description | Config fields |
+|------|-------------|---------------|
+| `max-n-of-type` | No more than N units with the same canonical name | `n: integer` |
+| `max-x-pct-of-role` | Role can have at most X% of total points | `role: enum(HQ, Troops, Elites, Fast Attack, Heavy Support, Flyer, Dedicated Transport)`, `max_pct: number 0-100` |
+| `max-points-per-unit` | Any single unit can be at most N points | `n: integer` |
+| `wargear-restriction` | Wargear only allowed in specific unit names | `wargear: string`, `allowed_in: string[]` (unit names) |
+| `unit-whitelist` | Only these units may be in the roster | `units: string[]` (catalog names) |
+| `unit-blacklist` | These units may not be in the roster | `units: string[]` (catalog names) |
+| `custom-name-pattern` | Custom unit names must match a regex | `pattern: string` (regex), `flags: string` (e.g. 'i') |
+| `total-xp-cap` | No unit may have more than N XP at approval time | `n: integer` |
+| `crusade-rp-floor` | Player must have at least N RP at approval time | `n: integer` |
+
+**Adding a custom rule (CM flow):**
+
+```mermaid
+flowchart TD
+    A[CM opens Campaign Settings → Rules tab] --> B[Click 'Add Rule']
+    B --> C[Pick rule type from gallery]
+    C --> D[Fill config form auto-generated from configSchema]
+    D --> E[Live preview: 'this will check 12 units in the current approved roster']
+    E --> F[Test against last RosterApproved: shows pass/warn/fail breakdown]
+    F --> G{Accept test result?}
+    G -->|No| H[Tweak config]
+    H --> D
+    G -->|Yes| I[Name + describe the rule]
+    I --> J[Set severity: pass / warn / fail]
+    J --> K[Save]
+    K --> L[Rule attached to campaign; runs on every new RosterDraft]
+```
+
+**UI requirements:**
+
+- The rule gallery shows each type with a one-line description and a sample config (so CMs understand what they're picking without reading docs)
+- The config form is auto-generated from `configSchema` (JSON Schema → form fields) — same engine regardless of which rule type
+- Live preview shows the count of units/changes the rule will inspect against the most recent `RosterApproved` ("this rule would inspect 12 units, 1 requisition")
+- Test mode runs the rule against the actual current data and shows the result without persisting — so CMs can iterate without affecting players
+- Naming + describing is required (the rule shows up in the player's rule check report; needs a human-readable name)
+- Severity override is per-instance (the rule's default severity comes from its pack, but a CM can dial it up or down per their campaign)
+- Drag-to-reorder rules in the campaign's rule list (order matters when multiple rules produce different verdicts on the same data)
+
+**Where the rule-builder UI lives:**
+
+- PRD-1 (CM dashboard): new "Rules" tab in Campaign Settings
+- The rule pack gallery is also accessible from the Roster Approval detail view (CM can add a rule on the fly while reviewing a roster that triggered no rule but they want to enforce going forward)
+
+**Future (v2+):** custom rule logic via a sandboxed JS expression language, or uploaded rule packs. Data model and engine already support it (the `RuleDefinition` could carry an `expression` field); v1 just doesn't expose it.
 
 ---
 
@@ -361,7 +410,8 @@ flowchart TD
 
 - NR URL fetch / scraping
 - Manual unit editing in the UI (JSON import is the canonical path; CMs have an override tool per PRD-1)
-- Rule builder UI for CMs (data model + engine ready; UI deferred to v1.x)
+- ~~Rule builder UI for CMs (data model + engine ready; UI deferred to v1.x)~~ **MOVED INTO SCOPE for v1: built-in rule types only, see §6.4**
+- Custom DSL or sandboxed JS for rule logic (data model supports; v2+)
 - Diff in real-time while player edits (diff runs at parse-job time only)
 
 ---
