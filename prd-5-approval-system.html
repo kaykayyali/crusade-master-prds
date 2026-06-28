@@ -463,48 +463,256 @@ themselves (auto-routes to co-CM or self-approves with audit if no
 co-CM)</p>
 <hr />
 <h2 id="approvalrequest-schema">3. ApprovalRequest Schema</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> ApprovalKind <span class="op">=</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_approval&#39;</span>                <span class="co">// most common</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;post_battle_update&#39;</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_manual_edit&#39;</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_purchase&#39;</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_revert&#39;</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;faction_switch&#39;</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;custom&#39;</span><span class="op">;</span></span>
+<p>The <code>kind</code> enum is the canonical contract for
+narrative-affecting actions routed through the approval queue. Each kind
+maps to one of the categories in §2.2; new categories extend this enum
+(per PRD-0 §4b).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// v3.5 — canonical ApprovalKind enum. New categories extend this list;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">// every addition MUST include a corresponding payload type below.</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> ApprovalKind <span class="op">=</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === Army roster changes ===</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_approval&#39;</span>              <span class="co">// player submits a RosterDraft for CM approval (most common)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_manual_edit&#39;</span>            <span class="co">// CM-initiated ad-hoc change to a player&#39;s roster (e.g., dispute resolution)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_purchase&#39;</span>         <span class="co">// player buys a requisition (replace destroyed unit, gain wargear, etc.)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;roster_revert&#39;</span>                <span class="co">// player requests revert of a RosterApproved to a prior version</span></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> ApprovalRequest {</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> ApprovalKind<span class="op">;</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  submittedByUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  submittedAt<span class="op">:</span> timestamp<span class="op">;</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;changes_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;withdrawn&#39;</span><span class="op">;</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  reviewerUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  decidedAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  decisionReason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                <span class="co">// drift detection</span></span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>            <span class="co">// v3: rule checks attached at submission</span></span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// gating context</span></span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === Team / faction changes ===</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;team_switch&#39;</span>                  <span class="co">// player requests to switch campaign teams</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;faction_switch&#39;</span>               <span class="co">// player requests to switch their 40K faction mid-campaign</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === Battle updates ===</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;post_battle_update&#39;</span>           <span class="co">// per-unit XP, honours, scars, OoA tests, agenda ticks</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === Crusade points ===</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;rp_adjustment&#39;</span>                <span class="co">// CM-initiated manual RP grant/deduct (e.g., narrative reward, dispute resolution)</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;requisition_rp_override&#39;</span>      <span class="co">// CM waives the RP cost of a requisition (narrative gift)</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === All-player effects (require co-CM approval) ===</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;mass_reban&#39;</span>                   <span class="co">// CM bans/unbans a unit catalog-wide mid-campaign</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;campaign_announcement&#39;</span>        <span class="co">// CM posts a campaign-wide narrative announcement that persists in the timeline</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;point_cap_change&#39;</span>             <span class="co">// CM changes the campaign&#39;s point cap mid-campaign</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="co">// === Extension point ===</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> <span class="st">&#39;custom&#39;</span><span class="op">;</span>                      <span class="co">// v2+ — for campaign-defined ad-hoc approval categories</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> ApprovalRequest {</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> ApprovalKind<span class="op">;</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  submittedByUserId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  submittedAt<span class="op">:</span> timestamp<span class="op">;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;;</span>  <span class="co">// typed per-kind via §3.1</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;approved&#39;</span> <span class="op">|</span> <span class="st">&#39;rejected&#39;</span> <span class="op">|</span> <span class="st">&#39;changes_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;withdrawn&#39;</span><span class="op">;</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>  reviewerUserId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>  decidedAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>  decisionReason<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>  contextHash<span class="op">:</span> <span class="dt">string</span><span class="op">;</span>                <span class="co">// drift detection</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span>            <span class="co">// v3: rule checks attached at submission</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span> <span class="co">// gating context</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
-<p><strong><code>roster_approval</code></strong>:</p>
+<p>Every <code>ApprovalKind</code> has a typed payload. The payload is
+the <em>contract</em> — the inbox UI and the application logic both
+consume it.</p>
+<h4 id="roster_approval-army-roster-changes"><code>roster_approval</code>
+(Army roster changes)</h4>
 <div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  rosterId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  draftId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  previousApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  diffSummary<span class="op">:</span> { added<span class="op">:</span> int<span class="op">,</span> removed<span class="op">:</span> int<span class="op">,</span> wargearChanged<span class="op">:</span> int<span class="op">,</span> crusadeChanged<span class="op">:</span> int }<span class="op">,</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span>            <span class="co">// from PRD-3 parse pipeline</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  playerNote<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
-<p><strong><code>post_battle_update</code></strong>:</p>
+<h4 id="roster_manual_edit-army-roster-changes-cm-initiated"><code>roster_manual_edit</code>
+(Army roster changes — CM-initiated)</h4>
 <div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>{</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  battleId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  battleUpdateId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="op">...,</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  rosterId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  newCrusadeForceState<span class="op">:</span> <span class="dt">object</span><span class="op">,</span>      <span class="co">// the new state after edit</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  previousCrusadeForceState<span class="op">:</span> <span class="dt">object</span><span class="op">,</span> <span class="co">// for the diff view</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                    <span class="co">// mandatory; visible to the player</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="requisition_purchase-army-roster-changes-costs-rp"><code>requisition_purchase</code>
+(Army roster changes — costs RP)</h4>
+<div class="sourceCode" id="cb4"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  requisitionRuleKey<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>        <span class="co">// e.g., &#39;replace_destroyed_unit&#39;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  currentRP<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  cost<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  affectedRosterId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  previewDelta<span class="op">:</span> <span class="dt">object</span><span class="op">,</span>              <span class="co">// what the roster will look like after purchase</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="roster_revert-army-roster-changes"><code>roster_revert</code>
+(Army roster changes)</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  rosterId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  targetRosterApprovedId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>    <span class="co">// the prior version to revert to</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                    <span class="co">// why revert</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="team_switch-teamfaction-changes"><code>team_switch</code>
+(Team/faction changes)</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  fromTeamId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  toTeamId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  rosterDisposition<span class="op">:</span> <span class="st">&#39;follow&#39;</span> <span class="op">|</span> <span class="st">&#39;freeze_old&#39;</span> <span class="op">|</span> <span class="st">&#39;create_new&#39;</span><span class="op">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                    <span class="co">// narrative justification</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="faction_switch-teamfaction-changes"><code>faction_switch</code>
+(Team/faction changes)</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  fromFactionId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  toFactionId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  newRosterDraftId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span>   <span class="co">// if a new draft is being imported for the new faction</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="post_battle_update-battle-updates"><code>post_battle_update</code>
+(Battle updates)</h4>
+<div class="sourceCode" id="cb8"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  battleId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  battleUpdateId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  perUnitChanges<span class="op">:</span> <span class="bu">Array</span><span class="op">&lt;</span>{</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    unitId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    xpDelta<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    honourGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    scarGained<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    rankChange<span class="op">:</span> { from<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> to<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    ooATest<span class="op">:</span> { roll<span class="op">:</span> int<span class="op">,</span> result<span class="op">:</span> <span class="st">&#39;passed&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span><span class="op">,</span> effect<span class="op">:</span> <span class="dt">string</span> } <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  }<span class="op">&gt;,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  agendasAttempted<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  agendasAchieved<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  battleReport<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>              <span class="co">// markdown</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  ruleCheckIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="rp_adjustment-crusade-points-cm-initiated"><code>rp_adjustment</code>
+(Crusade points — CM-initiated)</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  targetUserId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  amount<span class="op">:</span> int<span class="op">,</span>                       <span class="co">// positive = grant, negative = deduct</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                    <span class="co">// mandatory; visible to the player and the team&#39;s narrative log</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="requisition_rp_override-crusade-points-cm-gift"><code>requisition_rp_override</code>
+(Crusade points — CM gift)</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  requisitionPurchaseApprovalId<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>  <span class="co">// the related requisition_purchase</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  waiveFullCost<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="mass_reban-all-player-effects-co-cm-approval-mandatory"><code>mass_reban</code>
+(All-player effects — co-CM approval mandatory)</h4>
+<div class="sourceCode" id="cb11"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  catalogUnitIds<span class="op">:</span> <span class="dt">string</span>[]<span class="op">,</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  action<span class="op">:</span> <span class="st">&#39;ban&#39;</span> <span class="op">|</span> <span class="st">&#39;unban&#39;</span><span class="op">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  effectiveImmediately<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span>     <span class="co">// if false, applies to future roster approvals only</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="campaign_announcement-all-player-effects-co-cm-approval"><code>campaign_announcement</code>
+(All-player effects — co-CM approval)</h4>
+<div class="sourceCode" id="cb12"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  message<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                   <span class="co">// markdown, ≤ 2 KB</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  pinnedToTimeline<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  visibility<span class="op">:</span> <span class="st">&#39;all&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;private_to_cm&#39;</span><span class="op">,</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  targetTeamId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span>       <span class="co">// when visibility = &#39;team&#39;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="point_cap_change-all-player-effects-co-cm-approval"><code>point_cap_change</code>
+(All-player effects — co-CM approval)</h4>
+<div class="sourceCode" id="cb13"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  fromCap<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  toCap<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  effectiveAt<span class="op">:</span> timestamp<span class="op">,</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h4 id="custom-extension-point"><code>custom</code> (Extension
+point)</h4>
+<div class="sourceCode" id="cb14"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  schemaRef<span class="op">:</span> <span class="dt">string</span><span class="op">,</span>                 <span class="co">// URI to a JSON Schema describing the rest of the payload</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  data<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span><span class="dt">string</span><span class="op">,</span> <span class="dt">unknown</span><span class="op">&gt;,</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="routing-per-kind">3.2 Routing Per Kind</h3>
+<p>Each kind has a default approver and (for high-impact kinds) a
+co-approval rule:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Kind</th>
+<th>Approver</th>
+<th>Co-approval</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>roster_approval</code></td>
+<td>CM</td>
+<td>Optional (campaign setting)</td>
+</tr>
+<tr class="even">
+<td><code>roster_manual_edit</code></td>
+<td>Co-CM (since the CM is the actor)</td>
+<td>Mandatory — prevents CM self-edit abuse</td>
+</tr>
+<tr class="odd">
+<td><code>requisition_purchase</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="even">
+<td><code>roster_revert</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="odd">
+<td><code>team_switch</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="even">
+<td><code>faction_switch</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="odd">
+<td><code>post_battle_update</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="even">
+<td><code>rp_adjustment</code></td>
+<td>CM</td>
+<td>Optional</td>
+</tr>
+<tr class="odd">
+<td><code>requisition_rp_override</code></td>
+<td>Co-CM</td>
+<td>Mandatory</td>
+</tr>
+<tr class="even">
+<td><code>mass_reban</code></td>
+<td>Co-CM</td>
+<td><strong>Mandatory</strong> (per PRD-5 §2.4)</td>
+</tr>
+<tr class="odd">
+<td><code>campaign_announcement</code></td>
+<td>CM</td>
+<td>Optional (campaign setting — default off for routine, on for
+high-impact)</td>
+</tr>
+<tr class="even">
+<td><code>point_cap_change</code></td>
+<td>Co-CM</td>
+<td><strong>Mandatory</strong></td>
+</tr>
+<tr class="odd">
+<td><code>custom</code></td>
+<td>Per <code>schemaRef</code></td>
+<td>Per <code>schemaRef</code></td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="roster-approval-specifics">4. Roster Approval Specifics</h2>
 <p>The most-used approval. Special handling:</p>

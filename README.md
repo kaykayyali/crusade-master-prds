@@ -20,7 +20,16 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.5 (current) — Approval-gating as a unifying principle
+### v3.6 (current) — ApprovalKind enum as canonical contract
+
+Per user direction: expand the `ApprovalRequest.kind` enum to be the canonical contract for all narrative-affecting actions routed through the approval queue.
+
+- **PRD-5 §3**: full enum rewrite with 13 kinds grouped by category (Army roster / Team-faction / Battle updates / Crusade points / All-player effects / Extension point).
+- **PRD-5 §3.1**: every kind has a typed payload schema (roster_approval, roster_manual_edit, requisition_purchase, roster_revert, team_switch, faction_switch, post_battle_update, rp_adjustment, requisition_rp_override, mass_reban, campaign_announcement, point_cap_change, custom).
+- **PRD-5 §3.2 (new)**: routing table per kind — default approver + co-approval rule. High-impact kinds (`roster_manual_edit`, `requisition_rp_override`, `mass_reban`, `point_cap_change`) require co-CM approval mandatory; others make it optional via campaign setting.
+- The `custom` kind is the v2+ extension point: future categories extend via the enum, with `schemaRef` pointing to a JSON Schema for the payload.
+
+### v3.5 — Approval-gating as a unifying principle
 
 Per user: any operation that mutates shared campaign state or affects the narrative should be gateable by CM approval. Codified as PRD-0 §4b "Approval-Gating for Narrative Integrity" — the load-bearing mechanism for narrative integrity.
 

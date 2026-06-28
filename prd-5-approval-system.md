@@ -78,15 +78,36 @@ A campaign setting `auto_approve_routine_battle_updates: bool` (default false) a
 
 ## 3. ApprovalRequest Schema
 
+The `kind` enum is the canonical contract for narrative-affecting actions routed through the approval queue. Each kind maps to one of the categories in §2.2; new categories extend this enum (per PRD-0 §4b).
+
 ```ts
+// v3.5 — canonical ApprovalKind enum. New categories extend this list;
+// every addition MUST include a corresponding payload type below.
 type ApprovalKind =
-  | 'roster_approval'                // most common
-  | 'post_battle_update'
-  | 'roster_manual_edit'
-  | 'requisition_purchase'
-  | 'roster_revert'
-  | 'faction_switch'
-  | 'custom';
+  // === Army roster changes ===
+  | 'roster_approval'              // player submits a RosterDraft for CM approval (most common)
+  | 'roster_manual_edit'            // CM-initiated ad-hoc change to a player's roster (e.g., dispute resolution)
+  | 'requisition_purchase'         // player buys a requisition (replace destroyed unit, gain wargear, etc.)
+  | 'roster_revert'                // player requests revert of a RosterApproved to a prior version
+
+  // === Team / faction changes ===
+  | 'team_switch'                  // player requests to switch campaign teams
+  | 'faction_switch'               // player requests to switch their 40K faction mid-campaign
+
+  // === Battle updates ===
+  | 'post_battle_update'           // per-unit XP, honours, scars, OoA tests, agenda ticks
+
+  // === Crusade points ===
+  | 'rp_adjustment'                // CM-initiated manual RP grant/deduct (e.g., narrative reward, dispute resolution)
+  | 'requisition_rp_override'      // CM waives the RP cost of a requisition (narrative gift)
+
+  // === All-player effects (require co-CM approval) ===
+  | 'mass_reban'                   // CM bans/unbans a unit catalog-wide mid-campaign
+  | 'campaign_announcement'        // CM posts a campaign-wide narrative announcement that persists in the timeline
+  | 'point_cap_change'             // CM changes the campaign's point cap mid-campaign
+
+  // === Extension point ===
+  | 'custom';                      // v2+ — for campaign-defined ad-hoc approval categories
 
 interface ApprovalRequest {
   id: string;
@@ -95,7 +116,7 @@ interface ApprovalRequest {
   kind: ApprovalKind;
   submittedByUserId: string;
   submittedAt: timestamp;
-  payload: Record<string, unknown>;
+  payload: Record<string, unknown>;  // typed per-kind via §3.1
   status: 'pending' | 'approved' | 'rejected' | 'changes_requested' | 'withdrawn';
   reviewerUserId: string | null;
   decidedAt: timestamp | null;
@@ -108,27 +129,166 @@ interface ApprovalRequest {
 
 ### 3.1 Per-Kind Payloads
 
-**`roster_approval`**:
+Every `ApprovalKind` has a typed payload. The payload is the *contract* — the inbox UI and the application logic both consume it.
+
+#### `roster_approval` (Army roster changes)
 ```ts
 {
   rosterId: string,
   draftId: string,
   previousApprovedId: string | null,
   diffSummary: { added: int, removed: int, wargearChanged: int, crusadeChanged: int },
-  ruleCheckIds: string[],
+  ruleCheckIds: string[],            // from PRD-3 parse pipeline
   playerNote: string | null,
 }
 ```
 
-**`post_battle_update`**:
+#### `roster_manual_edit` (Army roster changes — CM-initiated)
+```ts
+{
+  rosterId: string,
+  newCrusadeForceState: object,      // the new state after edit
+  previousCrusadeForceState: object, // for the diff view
+  reason: string,                    // mandatory; visible to the player
+}
+```
+
+#### `requisition_purchase` (Army roster changes — costs RP)
+```ts
+{
+  requisitionRuleKey: string,        // e.g., 'replace_destroyed_unit'
+  currentRP: int,
+  cost: int,
+  affectedRosterId: string,
+  previewDelta: object,              // what the roster will look like after purchase
+}
+```
+
+#### `roster_revert` (Army roster changes)
+```ts
+{
+  rosterId: string,
+  targetRosterApprovedId: string,    // the prior version to revert to
+  reason: string,                    // why revert
+}
+```
+
+#### `team_switch` (Team/faction changes)
+```ts
+{
+  fromTeamId: string,
+  toTeamId: string,
+  rosterDisposition: 'follow' | 'freeze_old' | 'create_new',
+  reason: string,                    // narrative justification
+}
+```
+
+#### `faction_switch` (Team/faction changes)
+```ts
+{
+  fromFactionId: string,
+  toFactionId: string,
+  newRosterDraftId: string | null,   // if a new draft is being imported for the new faction
+  reason: string,
+}
+```
+
+#### `post_battle_update` (Battle updates)
 ```ts
 {
   battleId: string,
   battleUpdateId: string,
-  perUnitChanges: ...,
+  perUnitChanges: Array<{
+    unitId: string,
+    xpDelta: int,
+    honourGained: string | null,
+    scarGained: string | null,
+    rankChange: { from: string, to: string } | null,
+    ooATest: { roll: int, result: 'passed' | 'failed', effect: string } | null,
+  }>,
+  agendasAttempted: string[],
+  agendasAchieved: string[],
+  battleReport: string,              // markdown
   ruleCheckIds: string[],
 }
 ```
+
+#### `rp_adjustment` (Crusade points — CM-initiated)
+```ts
+{
+  targetUserId: string,
+  amount: int,                       // positive = grant, negative = deduct
+  reason: string,                    // mandatory; visible to the player and the team's narrative log
+}
+```
+
+#### `requisition_rp_override` (Crusade points — CM gift)
+```ts
+{
+  requisitionPurchaseApprovalId: string,  // the related requisition_purchase
+  waiveFullCost: boolean,
+  reason: string,
+}
+```
+
+#### `mass_reban` (All-player effects — co-CM approval mandatory)
+```ts
+{
+  catalogUnitIds: string[],
+  action: 'ban' | 'unban',
+  reason: string,
+  effectiveImmediately: boolean,     // if false, applies to future roster approvals only
+}
+```
+
+#### `campaign_announcement` (All-player effects — co-CM approval)
+```ts
+{
+  message: string,                   // markdown, ≤ 2 KB
+  pinnedToTimeline: boolean,
+  visibility: 'all' | 'team' | 'private_to_cm',
+  targetTeamId: string | null,       // when visibility = 'team'
+}
+```
+
+#### `point_cap_change` (All-player effects — co-CM approval)
+```ts
+{
+  fromCap: int,
+  toCap: int,
+  effectiveAt: timestamp,
+  reason: string,
+}
+```
+
+#### `custom` (Extension point)
+```ts
+{
+  schemaRef: string,                 // URI to a JSON Schema describing the rest of the payload
+  data: Record<string, unknown>,
+  reason: string,
+}
+```
+
+### 3.2 Routing Per Kind
+
+Each kind has a default approver and (for high-impact kinds) a co-approval rule:
+
+| Kind | Approver | Co-approval |
+|---|---|---|
+| `roster_approval` | CM | Optional (campaign setting) |
+| `roster_manual_edit` | Co-CM (since the CM is the actor) | Mandatory — prevents CM self-edit abuse |
+| `requisition_purchase` | CM | Optional |
+| `roster_revert` | CM | Optional |
+| `team_switch` | CM | Optional |
+| `faction_switch` | CM | Optional |
+| `post_battle_update` | CM | Optional |
+| `rp_adjustment` | CM | Optional |
+| `requisition_rp_override` | Co-CM | Mandatory |
+| `mass_reban` | Co-CM | **Mandatory** (per PRD-5 §2.4) |
+| `campaign_announcement` | CM | Optional (campaign setting — default off for routine, on for high-impact) |
+| `point_cap_change` | Co-CM | **Mandatory** |
+| `custom` | Per `schemaRef` | Per `schemaRef` |
 
 ---
 
