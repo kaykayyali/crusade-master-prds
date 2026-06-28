@@ -99,17 +99,26 @@ The `kind` enum is the canonical contract for narrative-affecting actions routed
 // v3.5 — canonical ApprovalKind enum. New categories extend this list;
 // every addition MUST include a corresponding payload type below.
 type ApprovalKind =
-  // === Army roster changes ===
-  | 'roster_approval'              // player submits a RosterDraft for CM approval (most common)
-  | 'roster_manual_edit'            // CM-initiated ad-hoc change to a player's roster (e.g., dispute resolution)
-  | 'requisition_purchase'         // CM-gifted or narrative-driven requisition (per PRD-4 §7b.2, routine player requisitions happen in NR + show up in history)
-  | 'roster_revert'                // player requests revert of a RosterApproved to a prior version
-  | 'roster_rollback'              // player or CM requests rollback of a specific RosterApproved (per PRD-4 §7b.4); all linked HistoryEntry rows tombstoned on approval
+  // === Army roster changes (v3.28 — data model overhaul) ===
+  // v3.28 renames `roster_approval` → `crusade_force_update` and adds
+  // `crusade_force_creation`. The data model is now CrusadeForce/CrusadeForceVersion
+  // (see PRD-0 §4); `roster_*` kinds refer to those entities. v3.28 also splits
+  // revert and rollback into distinct kinds (different semantics, see §3.1):
+  //   - `crusade_force_revert` — player has a draft pending approval and wants to
+  //     replace it with another draft (i.e., abort the pending one, file a new one)
+  //   - `crusade_force_rollback` — player wants to go from one existing approved
+  //     version to another previously approved version (e.g., v3 → v1)
+  | 'crusade_force_creation'       // player creates a new CrusadeForce (subject to Campaign.requireApprovalForNewForce)
+  | 'crusade_force_update'         // player submits a new CrusadeForceVersion for CM approval (most common)
+  | 'crusade_force_manual_edit'    // CM-initiated ad-hoc change to a player's force (e.g., dispute resolution)
+  | 'crusade_force_revert'         // replace a pending-approval draft with a new one
+  | 'crusade_force_rollback'       // roll the active version back to a previously approved one
   | 'history_rollback'             // finer-grained rollback targeting specific HistoryEntry rows (per PRD-4 §7b.4)
 
-  // === Team / faction changes ===
+  // === Team changes (v3.28: faction_switch removed — see §3.1 note) ===
   | 'team_switch'                  // player requests to switch campaign teams
-  | 'faction_switch'               // player requests to switch their 40K faction mid-campaign
+  // faction_switch: REMOVED in v3.28. Faction change is achieved by creating a new
+  // CrusadeForce on the desired team (see PRD-0 §4, PRD-2 §5e flow).
 
   // === Battle updates ===
   | 'post_battle_update'           // per-unit XP, honours, scars, OoA tests, agenda ticks
@@ -161,27 +170,63 @@ interface ApprovalRequest {
 
 Every `ApprovalKind` has a typed payload. The payload is the *contract* — the inbox UI and the application logic both consume it.
 
-#### `roster_approval` (Army roster changes)
+#### `crusade_force_creation` (v3.28 — new CrusadeForce)
 ```ts
 {
-  rosterId: string,
-  draftId: string,
-  previousApprovedId: string | null,
+  crusadeForceId: string,            // the new force row (created at filing time)
+  crusadeForceVersionId: string,     // initial version pending approval
+  factionId: string,
+  teamId: string,
+  name: string,
   diffSummary: { added: int, removed: int, wargearChanged: int, crusadeChanged: int },
   ruleCheckIds: string[],            // from PRD-3 parse pipeline
   playerNote: string | null,
 }
 ```
+Filed when a player creates a new force via import (subject to `Campaign.requireApprovalForNewForce`).
 
-#### `roster_manual_edit` (Army roster changes — CM-initiated)
+#### `crusade_force_update` (v3.28 — new CrusadeForceVersion on existing force)
 ```ts
 {
-  rosterId: string,
+  crusadeForceId: string,
+  crusadeForceVersionId: string,     // the new version pending approval
+  previousVersionId: string | null,  // for the diff view
+  diffSummary: { added: int, removed: int, wargearChanged: int, crusadeChanged: int },
+  ruleCheckIds: string[],
+  playerNote: string | null,
+}
+```
+
+#### `crusade_force_manual_edit` (v3.28 — CM-initiated force change)
+```ts
+{
+  crusadeForceId: string,
   newCrusadeForceState: object,      // the new state after edit
   previousCrusadeForceState: object, // for the diff view
   reason: string,                    // mandatory; visible to the player
 }
 ```
+
+#### `crusade_force_revert` (v3.28 — replace pending draft with new draft)
+```ts
+{
+  crusadeForceId: string,
+  newCrusadeForceVersionId: string,  // the new draft replacing the pending one
+  previousPendingVersionId: string,  // the pending draft being replaced
+  reason: string,
+}
+```
+Player files this when they have a `crusade_force_update` pending approval and want to abort it and file a different draft instead. The previously pending version is auto-rejected with reason `superseded_by_revert`.
+
+#### `crusade_force_rollback` (v3.28 — roll active version back to a prior approved one)
+```ts
+{
+  crusadeForceId: string,
+  targetCrusadeForceVersionId: string, // the previously approved version to restore
+  reason: string,
+}
+```
+Player or CM files this to roll the force's `currentVersionId` back to a previously approved version. The rolled-back intervening versions are tombstoned. A compensating `HistoryEntry` is created recording the rollback.
 
 #### `requisition_purchase` (Army roster changes — costs RP)
 ```ts
@@ -230,15 +275,12 @@ Every `ApprovalKind` has a typed payload. The payload is the *contract* — the 
 }
 ```
 
-#### `faction_switch` (Team/faction changes)
-```ts
-{
-  fromFactionId: string,
-  toFactionId: string,
-  newRosterDraftId: string | null,   // if a new draft is being imported for the new faction
-  reason: string,
-}
-```
+// v3.28: `faction_switch` removed from the enum. There is no in-app mechanism
+// for a player to switch their 40K faction in place. To change faction, a player
+// creates a new `CrusadeForce` on the same or a different team with the new
+// faction (see PRD-0 §4 for the data model and PRD-2 §5e for the UX flow).
+// The old force retains its original faction forever; the player's identity
+// (`CampaignMember`) and history are preserved.
 
 #### `post_battle_update` (Battle updates)
 ```ts
@@ -369,14 +411,14 @@ The CM can also delegate any kind to team leaders via `Campaign.teamLeaderAuthor
 
 | Kind | Primary CM | Team Leader (default) | Notes |
 |---|---|---|---|
-| `roster_approval` | ✅ | ✅ enabled by default — TL can approve for their team | |
-| `roster_manual_edit` | ✅ (CM is the actor) | ❌ disabled by default — CM-only | CM can edit any player's roster directly |
+| `crusade_force_creation` | ✅ | ✅ enabled by default — TL can approve for their team | Subject to `Campaign.requireApprovalForNewForce` |
+| `crusade_force_update` | ✅ | ✅ enabled by default — TL can approve for their team | Most common kind |
+| `crusade_force_manual_edit` | ✅ (CM is the actor) | ❌ disabled by default — CM-only | CM can edit any player's force directly |
 | `requisition_purchase` | ✅ (CM-gifted or narrative) | ❌ disabled — routine player requisitions are NR-side per PRD-4 §7b.2 | |
-| `roster_revert` | ✅ | ✅ enabled — TL can approve for their team | |
-| `roster_rollback` | ✅ | ✅ enabled — TL can approve for their team (per user's v3.11 confirmation) | |
+| `crusade_force_revert` | ✅ | ✅ enabled by default — TL can approve for their team | Replace pending draft with a new one |
+| `crusade_force_rollback` | ✅ | ✅ enabled by default — TL can approve for their team (per user's v3.11 confirmation) | Roll back to a previously approved version |
 | `history_rollback` | ✅ | ✅ enabled — TL can approve for their team | |
 | `team_switch` | ✅ | ❌ disabled — TL cannot approve cross-team changes | |
-| `faction_switch` | ✅ | ✅ enabled — the player's own faction change | |
 | `post_battle_update` | ✅ | ✅ enabled — TL can approve for their team | |
 | `rp_adjustment` | ✅ | ✅ enabled — TL can approve for their team | |
 | `requisition_rp_override` | ✅ | ❌ disabled by default — CM-only | |
@@ -829,7 +871,7 @@ Per user direction: **there is no concept of "intent at filing time."** All open
 
 **Approvals are campaign-owned, not user-owned (v3.17).** Per user: "Approvals are never 'owned' by user. They are owned by the campaign. Changing the rules for who can approve just drives the ui and api rules, it doesn't mutate each approval object." The API enforces the ruleset; the UI abides. The `Event` for an approval records the `actorUserId` at decision time, but the `ApprovalRequest` row itself has no "owner" field — it's a campaign-level entity. When TL A approves, leaves, and TL B wants to rollback, TL B files a NEW `roster_rollback` approval request. The original approval is untouched; TL B's rollback is a separate, traceable decision.
 
-**No live updates in v1 (v3.17).** Per user: "browser refresh is fine." When the CM saves a ruleset change, affected users (e.g., Alice with a detail view open) see the new state on their next page load or manual refresh. No WebSocket / Server-Sent Events / polling infrastructure. v1.x may add real-time updates; v1 ships with refresh-based UI.
+**Real-time strategy (v3.28): polling, not refresh-based or live-streamed.** v3.17 declared "browser refresh is fine" but the inbox UX requires better-than-refresh. v3.28 introduces polling via the `useInboxPoller` composable (documented in PRD-6 §3) — 20s interval, cursor-based incremental fetch (`?since=<timestamp>`), pauses when tab hidden or user actively viewing inbox detail. No WebSocket / SSE infrastructure. When the CM saves a ruleset change, affected users see the new state on the next poll cycle (≤20s lag).
 
 **The limitation on visibility:** the ruleset change affects "who can see" which approvals (some are team-contextual, some are CM-only — e.g., starting/ending the campaign). The query in PRD-0 §3.4 enforces RLS at the data layer; the API applies the authority filter at the application layer. A user without authority doesn't even see the item in their inbox, let alone approve it.
 

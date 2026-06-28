@@ -217,6 +217,15 @@ Campaign {
   teamLeaderApprovalMode: 'any' | 'all',
   // Per-kind rule-pack enforcement settings (PRD-1 §4.4; CM-configurable).
   rulePackEnforcement: { [kind: string]: { ruleKeys: string[] } },
+  // v3.28: maximum CrusadeForces a single player may have in this campaign.
+  // Default 2 (per Change 6 — supports common case of one force per team in
+  // multi-team campaigns; CM can raise if a player wants more). 0 disallows
+  // forces entirely (campaign is read-only / observation-only).
+  maxCrusadeForcesPerPlayer: int,
+  // v3.28: whether creating a new CrusadeForce requires CM/TL approval.
+  // Default true. If false, the force goes straight to 'deployed' status on
+  // creation (still gated by the file-import pipeline; just no human review).
+  requireApprovalForNewForce: bool,
 
   // State (lifecycle): internal, tracks campaign progression.
   //   'created'  — initial; CM created the campaign; not yet started; no players yet
@@ -281,34 +290,58 @@ CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: Ca
 //   A user can be a player on a team (CampaignMember) AND a team leader
 //   for that team (TeamLeader) — the roles stack.
 
-// === Roster (state machine) ===
-Roster {
-  id, campaignId, ownerUserId, factionId, name,
-  teamId,                                  // snapshotted from CampaignMember at creation;
-                                          // re-associating to a new team requires CM action
-  currentDraftId, currentApprovedId
-}
-RosterDraft {
-  id, rosterId,
-  sourceJsonBlobId,                  // MinIO key
-  sourceParserVersion,               // e.g. 'bs-roster-parser@1.0.0'
-  parserOutputJson,                  // the RosterSummary.to_dict() snapshot
-  appParseOutputJson,                // app-side extraction (Order of Battle, requisitions, honours)
-  status: 'parsing' | 'pending_review' | 'pending_approval' | 'rejected' | 'failed',
+// === Crusade Force (v3.28: replaces Roster/RosterDraft/RosterApproved) ===
+// A player's Crusade Force is their entire Order of Battle — every unit they own
+// and have registered for the campaign. This is distinct from a mustered Army
+// (the subset they take to a specific battle). A player may have multiple forces
+// per campaign (controlled by Campaign.maxCrusadeForcesPerPlayer); each force is
+// bound to a single team and a single faction. v3.28 also removes faction_switch
+// as an in-place mutation: faction change is achieved by withdrawing the old force
+// and creating a new one on the desired team.
+CrusadeForce {
+  id, campaignMemberId, teamId,
+  name,                              // player-given, e.g. "Cadian 67th"
+  factionId,                         // FK to Faction table; immutable for the force's lifetime
+  status: 'pending_approval' | 'deployed' | 'withdrawn',
   createdAt,
-  parseError?: string,
+  withdrawnAt?,
+  currentVersionId?                  // FK to the latest approved CrusadeForceVersion
 }
-RosterApproved {
-  id, rosterId, sourceDraftId, approvedAt, approvedByUserId,
-  snapshot, pointLimit,
-  // Snapshotted at approval time so the historical record keeps the team/faction
-  // alignment even if the player later switches teams or factions.
-  factionId, teamId,
-  activeRosterApprovedId?
+CrusadeForceVersion {
+  id, crusadeForceId,
+  versionNumber,                     // monotonic integer per force (1, 2, 3, ...)
+  blobId,                            // MinIO: raw NR "Export Crusade Force" JSON
+  sourceParserVersion,               // e.g. 'bs-roster-parser@1.0.0'
+  parserOutputJson,                  // output of the Python parser subprocess
+  appParseOutputJson,                // output of the TS app-side parser pass
+  totalSupplyLimit,                  // force-level supply limit (per NR data)
+  totalRp,                           // requisition points at this version
+  approvedAt?, approvedByUserId?,
+  rejectedAt?, rejectionReason?,
+  createdAt
 }
-RosterApprovalHistory { rosterId, approvedId, approvedAt, approvedByUserId }  // chron. list
+CrusadeArmy {
+  id, crusadeForceVersionId,         // which approved OoB this was mustered from
+  battleId?,                         // linked battle (null if ad-hoc / saved muster)
+  name?,                             // optional player-given name, e.g. "Strike Force Alpha"
+  selectedUnitIds: string[],         // subset of unit IDs from the force version
+  totalPoints,
+  createdAt
+}
 
-// === Crusade state (lives on RosterApproved or on app-extracted draft data) ===
+// === Data retention (v3.28 — explicit rules) ===
+// A CrusadeForce is never deleted. Status transitions: pending_approval → deployed
+// (on first version approval), deployed → withdrawn (player or CM-initiated).
+// Withdrawal does NOT destroy:
+// - The CrusadeForce row
+// - Any CrusadeForceVersion rows (history preserved)
+// - Any CrusadeArmy rows (muster history preserved)
+// - Any HistoryEntry or Battle records tied to this force
+// All historical queries reference the specific CrusadeForceVersion that was
+// active at the time of the event — never the current version. The retrospective
+// view (v3.28: Change 11) requires this immutability to render correctly.
+
+// === Crusade state (lives on CrusadeForce or extracted from app-side parser output) ===
 CrusadeForceState { supplementId, supplyLimit?, logisticsPoints?, battleTally, victories, requisitions, alignment?, ... }
 
 // === Battles ===
@@ -430,12 +463,13 @@ erDiagram
     CampaignMember }o--|| CampaignTeam : "on team"
     CampaignMember }o--|| Faction : "plays 40K faction"
 
-    Roster ||--|| CampaignMember : "owned by"
-    Roster ||--|| Faction : "plays"
-    Roster ||--o{ RosterDraft : "drafts (history)"
-    Roster ||--o{ RosterApproved : "approved snapshots"
-    Roster ||--|| RosterApproved : "currently approved"
-    RosterApprovalHistory }o--|| Roster : "chronological"
+    CampaignMember ||--o{ CrusadeForce : "owns (up to maxCrusadeForcesPerPlayer)"
+    CrusadeForce ||--|| Faction : "plays one faction"
+    CrusadeForce ||--|| CampaignTeam : "bound to one team"
+    CrusadeForce ||--o{ CrusadeForceVersion : "versioned snapshots"
+    CrusadeForce ||--o| CrusadeForceVersion : "currentVersionId"
+    CrusadeForceVersion ||--o{ CrusadeArmy : "musters for battles"
+    CrusadeArmy ||--o| Battle : "deployed in"
 
     RosterDraft ||--o{ RuleCheck : "ran rules"
     RosterDraft ||--o{ Delta : "diff vs last approved"

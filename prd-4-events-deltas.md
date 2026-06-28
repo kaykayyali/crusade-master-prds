@@ -469,6 +469,8 @@ This is the data path the v1.x **team view page** will use: a per-team dashboard
 
 Per the user's clarification: every approved changeset generates **history objects** that surface as a **timeline over the campaign**. Multiple grouping dimensions are supported on the same data so different views (per-unit, per-battle, per-requisition) all read from one underlying event store.
 
+**Data retention (v3.28):** `HistoryEntry` rows reference the specific `CrusadeForceVersionId` that was active at the time the event was recorded. When a force is withdrawn, version rolled back, or the player changes teams, prior `HistoryEntry` rows are **never re-linked or destroyed** — they retain their original `CrusadeForceVersionId` reference. This is required for the archived-campaign Retrospective View (PRD-1 §4.1, PRD-2 §5c.6) to render an accurate historical record.
+
 ### 7b.1 History generation
 
 When an `ApprovalRequest` is approved (by CM, by self-approval per PRD-1 §5, or by auto-approve per PRD-5 §9), the system materializes `HistoryEntry` rows:

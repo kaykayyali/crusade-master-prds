@@ -480,31 +480,45 @@ fails)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Step 2: Teams</strong> (mandatory, v3.12)</p>
+<p><strong>Step 2: Teams</strong> (mandatory, v3.12; gate moved to
+pre-flight in v3.28)</p>
 <p>The CM creates the campaign’s teams. For Armageddon, the system
 pre-fills the 4 template teams (Helsreach Defenders, Hades Defenders,
 Gorgutz’s WAAAGH!, Skari’s Kult) with their
 <code>expectedFactionIds</code> seeded from the book (PRD-1 §5b). The CM
 can use as-is, edit, delete, or add custom teams.</p>
-<p><strong>Within Step 2 — Team leader assignment is required.</strong>
-For each team, the CM must assign at least one player as a team leader
-before the wizard proceeds. The UI:</p>
-<ul>
-<li>Shows the team’s player list (initially empty since no players have
-joined yet — players invite happens in Step 5)</li>
-<li><strong>However</strong>, the CM can pre-assign players by email:
-the CM types a player’s email, the system creates a
-<code>PendingTeamLeaderInvite</code> row tied to the team, and when the
-player accepts their campaign invite, they automatically become a team
-leader.</li>
-<li>A team cannot proceed to Step 3 without at least one
-<strong>active</strong> team leader OR at least one pending team leader
-invite.</li>
-<li>The UI surfaces a clear warning: “This team has no team leader.
-Assign one now, or invite a player to be team leader.”</li>
-<li>This is a hard block — the wizard’s “Next” button is disabled until
-every team has a leader or pending invite.</li>
-</ul>
+<p><strong>Within Step 2 — Team leader assignment is optional during
+creation.</strong> The CM can assign team leaders here if they want
+(selecting from existing campaign members), but it is NOT a hard block.
+Players haven’t been invited yet (Step 5), so there are typically no
+members to choose from. The team-leader requirement is enforced at the
+campaign-start pre-flight check (Step 6), not at Step 2. v3.28 removed
+<code>PendingTeamLeaderInvite</code> entirely — there’s no pre-assigning
+by email anymore.</p>
+<p>The team-leader requirement <em>is</em> enforced at
+<code>Campaign.start()</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Pre-flight validation when CM clicks &quot;Start Campaign&quot;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">validateCampaignStart</span>(campaign<span class="op">:</span> Campaign)<span class="op">:</span> ValidationResult {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> errors<span class="op">:</span> <span class="dt">string</span>[] <span class="op">=</span> []<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (<span class="kw">const</span> team <span class="kw">of</span> campaign<span class="op">.</span><span class="at">teams</span>) {</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">const</span> activeTLs <span class="op">=</span> teamLeaders<span class="op">.</span><span class="fu">filter</span>(tl <span class="kw">=&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      tl<span class="op">.</span><span class="at">teamId</span> <span class="op">===</span> team<span class="op">.</span><span class="at">id</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>      tl<span class="op">.</span><span class="at">revokedAt</span> <span class="op">===</span> <span class="kw">null</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    )<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (activeTLs<span class="op">.</span><span class="at">length</span> <span class="op">===</span> <span class="dv">0</span>) {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>      errors<span class="op">.</span><span class="fu">push</span>(<span class="vs">`Team &quot;</span><span class="sc">${</span>team<span class="op">.</span><span class="at">name</span><span class="sc">}</span><span class="vs">&quot; has no team leader. Assign one in the Crusade Administration panel before starting.`</span>)<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (campaign<span class="op">.</span><span class="at">status</span> <span class="op">!==</span> <span class="st">&#39;created&#39;</span>) {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    errors<span class="op">.</span><span class="fu">push</span>(<span class="vs">`Campaign must be in &#39;created&#39; state to start (currently &#39;</span><span class="sc">${</span>campaign<span class="op">.</span><span class="at">status</span><span class="sc">}</span><span class="vs">&#39;).`</span>)<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> { ok<span class="op">:</span> errors<span class="op">.</span><span class="at">length</span> <span class="op">===</span> <span class="dv">0</span><span class="op">,</span> errors }<span class="op">;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The Step 6 (Review &amp; Start) UI surfaces this validation as a
+pre-flight checklist. The “Start Campaign” button is disabled until
+every team has ≥1 active <code>TeamLeader</code> row. The CM assigns
+leaders via the Crusade Administration panel after inviting players
+(Step 5), then returns to Step 6 and clicks Start.</p>
 <p><strong>Step 3: Rules</strong> — enable/disable
 <code>RulePack</code>s per campaign (PRD-3 §6). Default packs:
 <code>builtin-core</code>, <code>armageddon-narrative</code>. CM can
@@ -523,10 +537,10 @@ shareable link. Each invite is a single use or multi-use
 settings. CM clicks “Start campaign” to flip
 <code>Campaign.status: &#39;created&#39; → &#39;started&#39;</code> (per PRD-0 §4 v3.18
 enum: <code>created</code> → <code>started</code> → <code>ended</code> →
-<code>archived</code>). <strong>Hard gate:</strong> if any team still
-has no team leader (the pending invites haven’t been accepted), the
-system blocks Start with: “Team X has no team leader. Either assign one
-or wait for invites to be accepted.”</p>
+<code>archived</code>). The Start button is enabled only when the
+pre-flight validation (above) passes — every team has ≥1 active
+<code>TeamLeader</code> row. If validation fails, the button is disabled
+with a tooltip listing the unmet requirements.</p>
 <p><strong>Pre-campaign state
 (<code>Campaign.status: &#39;created&#39;</code>):</strong> the campaign exists
 but is not yet active. Players can join via invite but cannot file
@@ -570,8 +584,43 @@ team-leader gate passes).</p>
 <code>archived</code>.</strong> Re-activating an archived campaign is
 not supported in v1 (a CM who wants to “restart” creates a new
 campaign). <code>archived → [*]</code> represents instance-level
-hard-delete after the retention window (not a UI action). | start_date |
-date | When battles can begin being filed |</p>
+hard-delete after the retention window (not a UI action).</p>
+<p><strong>Behavior on <code>started → ended</code> transition (v3.28 —
+Change 10):</strong></p>
+<p>When the CM clicks “End Campaign”: - <strong>No new
+<code>ApprovalRequest</code>s may be filed.</strong> API returns 409:
+<em>“This campaign has ended. No new approvals can be filed.”</em> -
+<strong>All in-flight <code>ApprovalRequest</code>s with status
+<code>pending_approval</code> or <code>pending_review</code> are
+auto-rejected</strong> with
+<code>rejectionReason: &#39;campaign_ended&#39;</code>. A
+<code>Notification</code> fires to each submitter. - <strong>Team leader
+approval authority is suspended.</strong> No new approval actions. The
+CM retains read access and can still use the audit log and override tool
+(override tool is read-only). - <strong>Phase activation is
+blocked</strong> (requires <code>started</code> status). Any active
+phase is auto-deactivated. - <strong>The Timeline and narrative log
+remain readable</strong>, still team-scoped (team isolation is not
+relaxed until <code>archived</code>). -
+<strong><code>CrusadeForce</code> statuses remain unchanged</strong>
+(<code>deployed</code> / <code>withdrawn</code>). No automatic
+withdrawal on end. - <strong>In-flight battles can still be
+filed</strong> (battle updates for games already played). This is by
+design — the end transition doesn’t invalidate games that happened.</p>
+<p><strong>Behavior on <code>ended → archived</code> transition
+(v3.28):</strong></p>
+<p>When the CM clicks “Archive Campaign”: - <strong>RLS team-isolation
+predicate is dropped.</strong> All players across all teams gain
+read-only access to all campaign data. Implemented as a single predicate
+change in Postgres RLS policies; application-layer code does not change.
+- <strong>The UI shell changes to Retrospective View</strong> (PRD-2
+§5c.6, Change 11). Navigation swaps to Timeline / All Forces / All Teams
+/ Narrative Log. - <strong>No new approvals, battles, uploads, or
+events.</strong> All write paths return 409. - <strong>CM override tool
+becomes read-only.</strong> - <strong>Audit log remains CM-only</strong>
+even in retrospective view. - <strong>This transition is irreversible in
+v1</strong> (no <code>archived → started</code>). To restart, the CM
+creates a new campaign.</p>
 <p><strong>Output</strong>: campaign record, unique 8-char invite code,
 tenant-scoped shareable URL.</p>
 <h3 id="member-management">4.2 Member Management</h3>
@@ -652,9 +701,9 @@ team.</li>
 <p>CM dashboard surfaces: 1. <strong>Pending approvals count</strong>
 (clickable → PRD-5 inbox) 2. <strong>Active campaigns</strong> (cards: #
 players, # battles, # pending updates, # pending roster approvals) 3.
-<strong>Recent activity feed</strong> (last 20 events) 4. <strong>Roster
-health overview</strong> — per player: “last approved roster date”,
-“draft pending review”, “no roster yet”, “parse failed” 5.
+<strong>Recent activity feed</strong> (last 20 events) 4. <strong>Force
+health overview (v3.28)</strong> — per player: “last approved force
+version date”, “draft pending review”, “no force yet”, “parse failed” 5.
 <strong>BullMQ health</strong> — queue depth, recent failures (so the CM
 knows if a stuck import is a real player issue vs. infra) 6.
 <strong>Narrative log preview</strong> 7. <strong>Errata alert</strong>
@@ -918,44 +967,44 @@ requests in their team’s scope. Defaults:</li>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>roster_approval</code></td>
+<td><code>crusade_force_creation</code></td>
 <td>✅ enabled</td>
 </tr>
 <tr class="even">
-<td><code>roster_revert</code></td>
+<td><code>crusade_force_update</code></td>
 <td>✅ enabled</td>
 </tr>
 <tr class="odd">
+<td><code>crusade_force_revert</code></td>
+<td>✅ enabled</td>
+</tr>
+<tr class="even">
 <td><code>requisition_purchase</code> (CM-gifted)</td>
 <td>❌ disabled (CM-only; routine player requisitions are NR-side per
 PRD-4 §7b.2)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>post_battle_update</code></td>
 <td>✅ enabled</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>rp_adjustment</code></td>
 <td>✅ enabled</td>
 </tr>
-<tr class="even">
-<td><code>roster_rollback</code></td>
+<tr class="odd">
+<td><code>crusade_force_rollback</code></td>
 <td>✅ enabled (per user’s v3.11 confirmation)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>history_rollback</code></td>
 <td>✅ enabled</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>team_switch</code></td>
 <td>❌ disabled (cross-team, CM-only)</td>
 </tr>
-<tr class="odd">
-<td><code>faction_switch</code></td>
-<td>✅ enabled (the player’s own faction)</td>
-</tr>
 <tr class="even">
-<td><code>roster_manual_edit</code></td>
+<td><code>crusade_force_manual_edit</code></td>
 <td>❌ disabled (CM-only)</td>
 </tr>
 <tr class="odd">
@@ -980,6 +1029,12 @@ PRD-4 §7b.2)</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>v3.28 note:</strong> <code>faction_switch</code> is removed
+from this table (no longer an ApprovalKind; see PRD-5 §3). All
+<code>roster_*</code> kinds are renamed to <code>crusade_force_*</code>
+per the data model overhaul (PRD-0 §4).</p>
+</blockquote>
 <p>The CM can flip any of these on/off per campaign. The reasoning for
 defaults: actions affecting only the player’s own team and not
 cross-team-broad are team-leader-eligible; actions that affect the
@@ -1136,6 +1191,29 @@ at player level</td>
 Crusade Team Leader is by definition a player on their team</strong>
 (per PRD-0 §3b). The CM-as-player and Team-Leader-as-player patterns
 share most of this behavior.</p>
+<p><strong>CM-as-Team-Leader auto-promotion (v3.28 — answer A to the
+solo-campaign edge case):</strong></p>
+<p>When a CM joins a campaign as a player on a team
+(<code>CampaignMember</code> row inserted with
+<code>userId = cm.userId, teamId = X</code>), the system
+<strong>automatically inserts a corresponding <code>TeamLeader</code>
+row</strong> for that team with <code>grantedByUserId = cm.userId</code>
+(self-grant) and <code>grantedAt = now()</code>. This is the v3.28
+answer to the question “how does a solo campaign satisfy the team-leader
+pre-flight gate?” — the CM-as-player is automatically a TL of every team
+they’re a player on.</p>
+<p>The auto-promotion is reversible: if the CM later grants TL authority
+to another player and wants to step back from TL duties, they can
+self-revoke (PRD-1 §4.2). The CM retains <code>cm</code> authority
+regardless of TL status; TL authority is just a delegable, scoped
+subset.</p>
+<p><strong>Why auto-promote vs solo-team exception:</strong>
+auto-promotion is consistent with the v3.27 “CM has full authority”
+principle — the CM’s TL role is a redundant grant that exists to satisfy
+the data-model gate. Solo-team exception (rule “1-player teams don’t
+need TLs”) would require special-casing in the gate logic and would
+block the v2+ ability to have multiple players on a team without TLs in
+edge cases. Auto-promotion is more uniform.</p>
 <p><strong>No second approver exists for any kind (v3.27).</strong> The
 CM unilaterally approves anything they file, including kinds where
 they’re the actor (<code>roster_manual_edit</code> of their own roster,
@@ -1393,7 +1471,7 @@ dispute)</li>
 per-player:</p>
 <ul>
 <li>Team leaderboard by total victories (inter-team only)</li>
-<li>Per-team aggregate roster health (last approved roster date, %
+<li>Per-team aggregate force health (last approved force version date, %
 active)</li>
 <li>Per-team RP totals (visible to all players; CMs can hide if they
 prefer)</li>
@@ -1507,9 +1585,15 @@ skipped (manual review needed): see details.”</li>
 <li><strong>Click into a row to expand</strong> — does NOT navigate. The
 detail view is inline (right pane or modal). Mike can decide without
 leaving the inbox list.</li>
-<li><strong>Live updates</strong> — if a player files a new approval
-while Mike is reviewing, the new row appears at the bottom with a subtle
-animation. No full reload.</li>
+<li><strong>Polling-based updates (v3.28 — replaces v3.17 “browser
+refresh is fine”)</strong> — the inbox polls
+<code>GET /campaigns/:id/inbox?since=&lt;cursor&gt;</code> every 20s.
+New items merge into the Pinia store and appear with a fade-in
+animation. See PRD-6 §3 for the <code>useInboxPoller</code> composable
+contract. No SSE/WebSocket infrastructure required. Polling pauses when
+the tab is hidden (<code>document.visibilityState === &#39;hidden&#39;</code>)
+and when the user is actively viewing the inbox detail pane (no point
+redrawing under their cursor).</li>
 <li><strong>Recently-decided items stay visible for 24 hours</strong>
 under a “Recently decided” tab, so Mike can undo if needed.</li>
 </ul>

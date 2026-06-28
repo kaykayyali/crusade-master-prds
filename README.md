@@ -22,7 +22,76 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.27 (current) — Authority hierarchy simplification: remove co-CM concept
+### v3.28 (current) — Big changeset from review pass: data model overhaul, polling, retrospective view
+
+Per a review changeset passed in by the user, this version applies 10 of 11 proposed changes (Change 1 was based on a misread of v3.26 — skipped).
+
+**Skipped:**
+- **Change 1** (`co_cm_review` removal) — based on a misread; v3.27 already correct.
+
+**Applied:**
+
+**Change 2 — Polling replaces live-updates:**
+- `useInboxPoller` composable added to PRD-6 §3.1 with full contract (interval, cursor, pause-on-hidden, pause-on-active-view, immediate-refresh-on-focus).
+- PRD-1 §6b Flow 2 updated: "Live updates" replaced with polling description.
+- PRD-5 §5.4 "browser refresh is fine" replaced with polling reference.
+- Polling at 20s with `?since=<cursor>` is zero additional infra vs SSE/WebSocket.
+
+**Change 3 — `faction_switch` ApprovalKind removed:**
+- Removed from PRD-5 §3 enum + payload schema.
+- Faction change is now "withdraw old force + create new force on desired team."
+- Player identity (`CampaignMember`) and history preserved across the change.
+- Cleaner data model; removes ambiguity about what happens to existing force on faction change.
+
+**Change 4 — Explicit data retention rules:**
+- PRD-0 §4: data retention block added to `CrusadeForce` schema. Withdrawal does NOT destroy force, versions, armies, history, or battles.
+- PRD-4 §7b: explicit "HistoryEntry rows reference the specific `CrusadeForceVersionId` that was active at the time. Never re-linked or destroyed."
+- Required for Retrospective View (Change 11) to render accurately.
+
+**Change 5 — Team Leader gate moved to campaign-start pre-flight:**
+- Removed `PendingTeamLeaderInvite` (no more pre-assigning by email).
+- Removed hard block at wizard Step 2 (the logical deadlock the user identified).
+- Step 6 (Review & Start) shows pre-flight checklist; Start button disabled until every team has ≥1 active `TeamLeader` row.
+- CM-as-Team-Leader auto-promotion: when CM joins a campaign as player, automatically gets TL of that team (answer A). Solo campaigns now satisfy the gate cleanly.
+
+**Change 6 — Data model overhaul (CrusadeForce / Version / Army):**
+- `Roster / RosterDraft / RosterApproved` replaced with `CrusadeForce / CrusadeForceVersion / CrusadeArmy`.
+- `CrusadeForceVersion` is monotonically-numbered; replaces the implicit versioning in `RosterApproved`.
+- `CrusadeArmy` first-class entity: subset of units mustered from a version for a specific battle.
+- Multiple forces per player controlled by `Campaign.maxCrusadeForcesPerPlayer` (default 2).
+- `Campaign.requireApprovalForNewForce: bool` (default true) added.
+- All `roster_*` ApprovalKinds renamed to `crusade_force_*`.
+- New ApprovalKind: `crusade_force_creation`.
+- `roster_revert` and `roster_rollback` kept distinct (per user clarification in #9): revert = replace pending draft with new one; rollback = roll active version back to a previously approved version.
+- PRD-0 §4 ERD diagram updated.
+- PRD-3 §2 state machine rewritten: separate `CrusadeForce` lifecycle + `CrusadeForceVersion` lifecycle.
+- PRD-3 terminology note updated.
+- PRD-1 dashboard "Roster health" → "Force health"; nav "Roster" → "Forces".
+
+**Change 7 — Point cap warn-only, renamed to `supply-exceeded`:**
+- `point-cap` (severity fail) renamed to `supply-exceeded` (severity warn).
+- Rule checks force's own supply limit (NR-derived), not campaign point cap.
+- Campaign `point_cap` field remains in schema, displayed on dashboard, NOT enforced by any rule.
+- Players manage muster-time point cap via NR (which already enforces it).
+- CM gets a warning when supply limit exceeded; can choose to act or not.
+
+**Change 8 — NR export validation gate at parse-job step 0:**
+- New PRD-3 §3.0: before any parsing, worker validates the upload is an NR "Crusade Force" export.
+- Failure: `parseError: 'NOT_CRUSADE_FORCE_EXPORT'`, actionable error message: "In New Recruit, use the 'Export Crusade Force' option from your Order of Battle screen."
+- One NR Crusade Force export = one `CrusadeForceVersion` update.
+- **Awaiting reference files from user**: 2 known-good Crusade exports + 1 known non-Crusade export. Detection logic will be added in a follow-up v3.28.x commit.
+
+**Change 10 — `ended` and `archived` state behavior specified:**
+- `started → ended`: no new approvals; in-flight auto-rejected with `campaign_ended`; TL authority suspended; phase activation blocked; team isolation preserved; in-flight battles still fileable.
+- `ended → archived`: RLS team-isolation predicate dropped; UI swaps to Retrospective View; all write paths return 409; audit log remains CM-only; transition irreversible in v1.
+
+**Change 11 — Retrospective View; Timeline always present from start:**
+- Archived campaign UI shell: `[Timeline] [All Forces] [All Teams] [Narrative Log]`.
+- Timeline tab is always present from `started` (team-scoped); scope expands to cross-team on archive.
+- Same Timeline component, different RLS predicate. No new surface to build.
+- All Forces surface shows every player's full force history across all teams.
+
+### v3.27 — Authority hierarchy simplification: remove co-CM concept
 
 Per user: "There should be no actions which require a 'co_CM'. The heirarchy is:
 1. CM - Campaign Master, able to make all changes for a campaign they own. Able to update and approve any change set, able to turn off approvals for any changeset

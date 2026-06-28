@@ -1,13 +1,14 @@
-# PRD-3: Roster Import, Approval, & Rule Compliance (v3)
+# PRD-3: CrusadeForce Import, Approval, & Rule Compliance (v3)
 
-> BullMQ-driven async parsing pipeline, integration with the user's `bs-roster-parser` Python library, and a configurable rule engine that CMs and crusade settings can extend.
+> BullMQ-driven async parsing pipeline, integration with the user's `bs-roster-parser` Python library, and a configurable rule engine that CMs and crusade settings can extend. **v3.28** overhauls the data model to use `CrusadeForce / CrusadeForceVersion / CrusadeArmy` instead of `Roster / RosterDraft / RosterApproved`.
 
-**Terminology note (avoids conflation):** this PRD uses three closely-related concepts:
-- **`Roster`** — a player's army in this campaign. Each `Roster` has metadata (campaignMemberId, factionId, name) and pointers to its current approved snapshot and history of drafts.
-- **`RosterDraft`** — a single candidate version of a `Roster` at one moment in time. Created from a player upload or a manual edit; goes through `parsing → pending_review → pending_approval → approved | rejected | failed`. Many drafts can exist per roster (one per import attempt).
-- **`RosterApproved`** — an immutable snapshot that has been approved by an authority. Becomes the roster's `currentApprovedId`. Battles and other events diff against this.
+**Terminology note (v3.28 — avoids conflation):** this PRD uses four related concepts:
+- **`CrusadeForce`** — a player's army in this campaign. Each force has metadata (campaignMemberId, teamId, factionId, name), a status (`pending_approval` | `deployed` | `withdrawn`), and a pointer to its current approved version. A player may have multiple forces per campaign (up to `Campaign.maxCrusadeForcesPerPlayer`).
+- **`CrusadeForceVersion`** — an immutable, monotonically-numbered snapshot of a force's Order of Battle at a moment in time. Created from a player upload; goes through `parsing → pending_review → pending_approval → approved | rejected | failed`. Many versions can exist per force (one per import attempt).
+- **`CrusadeArmy`** — the subset of units mustered from a `CrusadeForceVersion` for a specific battle (or saved for later). Distinct from the force itself: a 3000pt force can muster 2000pt armies.
+- **`Battle`** — a single match between two armies. References the `CrusadeArmy` (or `CrusadeForceVersion` if no specific muster was filed) used.
 
-The relationship: `Roster` is the parent entity; `RosterApproved` is what the player is using right now; `RosterDraft` is work-in-progress. Don't say "the roster is in pending_approval" — say "the RosterDraft is in pending_approval; the Roster's current approved version is unchanged." This distinction matters for battle-update gating (PRD-4 §6: a battle update requires the *Roster* to have a current `RosterApproved`).
+The relationship: `CrusadeForce` is the parent; `CrusadeForceVersion` is what was approved and when; `CrusadeArmy` is what was actually taken to a battle. Don't say "the force is in pending_approval" — say "the latest CrusadeForceVersion is in pending_approval; the force's current approved version is unchanged." This distinction matters for battle-update gating (PRD-4 §6: a battle update requires a current approved `CrusadeForceVersion` on the relevant force).
 
 ---
 
@@ -22,85 +23,88 @@ Get a player from "uploaded JSON" to "RosterDraft ready for review" in under 30 
 
 ---
 
-## 2. The Roster State Machine
+## 2. The CrusadeForce / Version State Machine (v3.28)
+
+There are two intertwined state machines: the **CrusadeForce** lifecycle (the parent entity) and the **CrusadeForceVersion** lifecycle (each imported snapshot).
+
+### 2a. CrusadeForce lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> parsing : player uploads JSON
-    parsing --> pending_review : parse-job OK
-    parsing --> failed : parse-job error
-    failed --> parsing : player retries (re-uses MinIO blob)
+    [*] --> pending_approval : player files new force<br/>(if Campaign.requireApprovalForNewForce = true)
+    [*] --> deployed : player files new force<br/>(if Campaign.requireApprovalForNewForce = false)
+    pending_approval --> deployed : first CrusadeForceVersion approved
+    pending_approval --> [*] : player withdraws before approval
+    deployed --> withdrawn : player or CM withdraws
+    withdrawn --> [*] : terminal (history preserved)
+    deployed --> deployed : player files additional CrusadeForceVersions<br/>(creates v2, v3, ...; currentVersionId advances)
+    pending_approval --> pending_approval : player files a newer version<br/>while old is still pending (replaces it)
+
+    note right of pending_approval
+        Force is created but no version yet approved
+        Cannot be mustered for battles
+        Force becomes deployed only on first approval
+    end note
+
+    note right of deployed
+        At least one approved CrusadeForceVersion
+        currentVersionId points to latest
+        Eligible for mustering CrusadeArmies
+    end note
+
+    note right of withdrawn
+        Historical record intact
+        Cannot muster new armies
+        Visible in retrospective view
+    end note
+```
+
+### 2b. CrusadeForceVersion lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> parsing : player uploads NR Crusade Force export
+    parsing --> pending_review : parse-job OK (includes v3.28 export-type validation)
+    parsing --> failed : parse-job error (bad export type, malformed JSON, etc.)
+    failed --> parsing : player retries (re-uses MinIO blob if valid)
     pending_review --> pending_approval : player submits
     pending_review --> failed : rule-check-job error (terminal; player re-uploads)
     pending_approval --> pending_review : CM requests changes
     pending_approval --> rejected : CM rejects
     pending_approval --> approved : CM approves
-    approved --> parsing : player uploads newer roster
+    approved --> [*] : immutable; CrusadeForce.currentVersionId advances
     rejected --> parsing : player fixes issues, re-uploads
-
-    note right of pending_review
-        Player sees diff vs last approved
-        Rule check results visible
-        No CM action required yet
-    end note
-
-    note right of pending_approval
-        CM reviews in inbox (PRD-5)
-        May request changes
-        Or approve (creates RosterApproved)
-    end note
 
     note right of approved
         Immutable snapshot
-        RosterApproved becomes "active"
-        Battle updates gated on this
+        versionNumber is monotonic per force
+        Battle updates gate on currentVersionId
     end note
 ```
 
-**ASCII version (legacy, kept for printability):**
-
-```
-                        ┌──────────────────────┐
-                        │   (no Roster yet)    │
-                        └──────────┬───────────┘
-                                   │ player uploads JSON
-                                   ▼
-                        ┌──────────────────────┐
-                        │  RosterDraft         │
-                        │  status: 'parsing'   │   (BullMQ job running)
-                        └──────────┬───────────┘
-                          parse OK │  parse fail
-                                   ▼                  ▼
-                        ┌──────────────────────┐  ┌─────────────────────┐
-                        │  RosterDraft         │  │  RosterDraft         │
-                        │  status:             │  │  status: 'failed'    │
-                        │  'pending_review'    │  │  with parse error    │
-                        └──────────┬───────────┘  └─────────────────────┘
-                          ack by   │
-                          player   │   player submits for approval
-                                   ▼
-                        ┌──────────────────────┐
-                        │  RosterDraft         │
-                        │  status:             │
-                        │  'pending_approval'  │
-                        └──────────┬───────────┘
-                          approved │  rejected
-                          by CM    │
-                                   ▼                  ▼
-                        ┌──────────────────────┐  ┌─────────────────────┐
-                        │  RosterApproved      │  │  RosterDraft         │
-                        │  (immutable)         │  │  status: 'rejected'  │
-                        │  becomes "active"    │  │  with CM feedback    │
-                        └──────────────────────┘  └─────────────────────┘
-```
-
-**Hard rule**: a player can only file a battle update, requisition, or any other event (PRD-4) if the most recent state of their Roster is `RosterApproved` at the relevant timestamp.
-
----
+**Hard rule (v3.28)**: a player can only file a battle update, requisition, or any other event (PRD-4) if their relevant `CrusadeForce` has a `currentVersionId` at the relevant timestamp, AND the force is in `deployed` status (not `pending_approval` or `withdrawn`).
 
 ## 3. The Parser Integration Contract
 
 The user's existing `bs-roster-parser` Python library does BattleScribe / New Recruit JSON parsing. We invoke it as a subprocess from a Node/TS worker. The contract is the boundary.
+
+### 3.0 Export type validation (v3.28 — Change 8)
+
+**Before any parsing begins**, the worker validates that the uploaded JSON is a New Recruit **Crusade Force export** (not a matched-play list, a points-optimized list, or any other NR export type).
+
+Validation runs at the very start of `parse-job`, before the blob is stored in MinIO. If validation fails, the job fails immediately with `parseError: 'NOT_CRUSADE_FORCE_EXPORT'` and a user-facing message:
+
+> "This doesn't look like a Crusade Force export. In New Recruit, use the 'Export Crusade Force' option from your Order of Battle screen."
+
+**Detection approach (v3.28 — awaiting reference files from the user):** the system looks for markers specific to a Crusade Force export. The user has offered to supply 2 known-good Crusade exports and 1 known non-Crusade export to develop a robust detection signature. Until then, this PRD documents the *contract* (validation is mandatory, error message is fixed) but not the *detection logic* (which markers to check). The detection logic will be added in a follow-up v3.28.x commit.
+
+**One NR Crusade Force export = one `CrusadeForceVersion` update.** The parser does not need to handle multiple lists in a single file.
+
+**After validation passes, the parser produces:**
+1. **Force-level delta** — changes to the Order of Battle (units added/removed, XP/rank/honour/scar changes, supply limit, RP)
+2. **Army-level data** — any named mustered armies present in the export, extracted as `CrusadeArmy` records
+
+Both are surfaced in the CM's approval inbox as a unified changeset.
 
 ### 3.1 What's in scope of the Python parser
 
@@ -264,16 +268,26 @@ interface RuleResult {
 
 ### 6.2 Built-in rules (v1 ship list)
 
-All built-in rules are **campaign-level only** (per PRD-3 §6 + PRD-0 §4b.2). The v3.21 audit removed three unit-level rules that violated the principle (see §6.5).
+All built-in rules are **campaign-level only** (per PRD-3 §6 + PRD-0 §4b.2). The v3.21 audit removed three unit-level rules that violated the principle (see §6.5). The v3.28 audit renamed `point-cap` → `supply-exceeded` and changed it from `fail` to `warn` (see Change 7).
 
 | Rule key | Default severity | Description |
 |----------|------------------|-------------|
-| `point-cap` | fail | Roster total > `campaign.point_cap` |
+| `supply-exceeded` | warn | Force's total points exceed the force's own supply limit (an OoB concept from NR). The campaign `point_cap` is informational only — players manage their mustered armies within the cap at muster time, which NR enforces natively. The CM gets a warning so they're informed, but the OoB approval is not blocked. |
 | `faction-lock` | fail | Unit has a faction keyword not in player's faction |
 | `unit-cap-universal` | warn | More than 3 of the same datasheet (universal Crusade rule) |
-| `unit-provenance` | warn | Unit in roster not in prior RosterApproved AND no requisition event since |
+| `unit-provenance` | warn | Unit in roster not in prior `CrusadeForceVersion` AND no requisition event since |
 | `legends-unit` | warn | Unit flagged as Legend in Wahapedia |
 | `removed-unit` | warn | Unit in prior approved but not in new draft (could be intentional) |
+
+**Why `supply-exceeded` is warn-only (v3.28):**
+
+A player's Crusade Force can legitimately exceed the campaign point cap as it grows — that's expected and intended by the GW Crusade rules. The point cap applies to the *mustered army* for a specific battle (a 2000pt army from a 3000pt force), not to the full OoB. NR already enforces this at muster time. Strict enforcement at OoB approval creates friction for a legitimate play pattern: a player maintaining a 3000pt force that always musters 2000pt armies would have every OoB update fail rule checks even though their actual battle mustering is always legal.
+
+The warning message reads:
+
+> "This force's supply limit is exceeded. New Recruit will also flag this. The CM has been notified but no action is required."
+
+The campaign `point_cap` field remains in the schema and is displayed on the campaign dashboard as a reference value. It is not enforced by any rule.
 
 ### 6.3 Configurable rules (per-CM, per-crusade)
 

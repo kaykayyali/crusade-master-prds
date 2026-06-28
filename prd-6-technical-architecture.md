@@ -158,6 +158,83 @@ When a field or endpoint is deprecated:
 3. The Swagger UI renders it as struck-through with a warning
 4. Keep deprecated fields for ≥6 months before removal
 
+### 3.1 Real-time Strategy: Polling (v3.28)
+
+**Decision (v3.28): polling, not SSE/WebSocket, not refresh-only.**
+
+v3.17 said "browser refresh is fine." The inbox UX (PRD-1 §6b Flow 2, PRD-5 §5.4) requires better-than-refresh — the CM needs to see newly-filed approvals appear without manual reload. v3.28 introduces polling as the simplest viable approach.
+
+**Polling contract:**
+
+```ts
+// apps/web/src/composables/useInboxPoller.ts
+export function useInboxPoller(options: {
+  campaignId: string;
+  intervalMs?: number;        // default 20000
+  onUpdate: (items: ApprovalRequest[]) => void;
+}) {
+  let cursor: string | null = null;
+  let timer: number | null = null;
+  let paused = false;
+
+  async function tick() {
+    if (paused) return;
+    if (document.visibilityState === 'hidden') return;
+    const params = cursor ? `?since=${encodeURIComponent(cursor)}` : '';
+    const res = await fetch(`/api/campaigns/${options.campaignId}/inbox${params}`);
+    if (res.ok) {
+      const { items, nextCursor } = await res.json();
+      if (items.length > 0) options.onUpdate(items);
+      cursor = nextCursor;
+    }
+  }
+
+  function start() {
+    tick();  // initial fetch
+    timer = window.setInterval(tick, options.intervalMs ?? 20000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') tick();  // immediate refresh on focus
+    });
+  }
+
+  function pause() { paused = true; }
+  function resume() { paused = false; tick(); }
+
+  return { start, pause, resume };
+}
+```
+
+**API contract:**
+
+```ts
+// GET /api/campaigns/:campaignId/inbox?since=<ISO8601 timestamp>
+{
+  items: ApprovalRequest[],   // only items created or updated since `since`
+  nextCursor: string,         // ISO8601 timestamp to use for the next request
+}
+```
+
+**Performance characteristics:**
+- 8-16 peak users × 3 reqs/min/user = trivial load on Hapi/Postgres
+- The query `SELECT * FROM approval_requests WHERE campaign_id = $1 AND updated_at > $2` is index-friendly on `(campaign_id, updated_at)`
+- Cursor is per-campaign; each user's cursor is independent
+
+**Why not SSE/WebSocket:**
+- SSE requires sticky sessions or a Redis pub/sub fanout — additional infra
+- WebSocket adds auth-on-connection complexity (token refresh, reconnect storms)
+- Polling at 20s is good enough UX for a campaign-management tool with low concurrent user count
+- v1.x may upgrade to SSE if user feedback demands sub-second latency
+
+**Pause conditions (saves requests):**
+- `document.visibilityState === 'hidden'` (backgrounded tab)
+- User is actively in the inbox detail view (no point redrawing under their cursor)
+- User has explicitly paused via a UI control
+
+**Resume conditions:**
+- `visibilitychange` to visible → immediate tick
+- User navigates back to inbox view → immediate tick
+- Pause control released → immediate tick
+
 ---
 
 ## 4. Generated TypeScript Types for Frontend

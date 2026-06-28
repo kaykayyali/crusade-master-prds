@@ -796,17 +796,51 @@ ensure the data is correct; the UI uses the same components with
 role-aware data fetching.</p>
 <h3 id="c.6-per-role-campaign-home-navigation">5c.6 Per-role campaign
 home navigation</h3>
-<p>The bottom navigation differs by role:</p>
+<p>The bottom navigation differs by role (v3.28: Timeline tab is always
+present from <code>started</code>, team-scoped during active states,
+cross-team in archived state):</p>
 <ul>
-<li><strong>Player</strong>: [Roster] [Battles] [Requisitions]
+<li><strong>Player</strong>: [Forces] [Battles] [Requisitions]
 [Timeline] [Narrative Log] [Settings]</li>
-<li><strong>Team Leader</strong>: [Roster] [Battles] [Requisitions]
+<li><strong>Team Leader</strong>: [Forces] [Battles] [Requisitions]
 [Timeline] [Narrative Log] [Team Inbox] [Settings]</li>
-<li><strong>Primary CM</strong>: [Roster] [Battles] [Requisitions]
+<li><strong>Primary CM</strong>: [Forces] [Battles] [Requisitions]
 [Timeline] [Narrative Log] [CM Inbox] [Crusade Admin] [Settings]</li>
 </ul>
 <p>The “CM Inbox” item is CM-only. The “Team Inbox” item is
 team-leader-only. The “Crusade Admin” item is CM-only.</p>
+<p><strong>v3.28 renames “Roster” to “Forces”</strong> to reflect the
+CrusadeForce model (multiple forces per player, each with versions and
+musterable armies).</p>
+<p><strong>Archived campaign — Retrospective View (v3.28 — Change
+11):</strong></p>
+<p>When <code>Campaign.status = &#39;archived&#39;</code>, the entire UI shell
+changes. The campaign no longer renders as the active dashboard. It
+opens into a <strong>Retrospective View</strong> with its own
+navigation:</p>
+<pre><code>[Timeline]  [All Forces]  [All Teams]  [Narrative Log]</code></pre>
+<ul>
+<li><strong>Timeline</strong> (default): every public event across all
+teams, chronological from campaign start to end. Filters: All / Battles
+/ Force Changes / Phases / Requisitions / Announcements. No
+team-scoping.</li>
+<li><strong>All Forces</strong>: every player’s full force history
+across all teams. Per-force version history with diff viewer. Named
+mustered armies per version.</li>
+<li><strong>All Teams</strong>: each team’s battle record, RP totals,
+force health summary. Per-team player roster with join/leave
+history.</li>
+<li><strong>Narrative Log</strong>: full campaign narrative with no
+team-scoping. CM-only events (audit entries) remain CM-only.</li>
+</ul>
+<p><strong>What stays locked in archived state:</strong> no new
+approvals, battles, uploads, or events. No team leader actions. CM
+override tool is read-only. Audit log is CM-only.</p>
+<p><strong>Why Timeline is always present (v3.28):</strong> it gives
+players value during the campaign (their own team’s timeline), and means
+the archived retrospective is the same surface with relaxed access — not
+a new feature to design. The RLS change on archive is a single predicate
+drop in Postgres; application-layer code doesn’t change.</p>
 <hr />
 <h2 id="d.-account-page-per-user-v3.14">5d. Account Page (per-user,
 v3.14)</h2>

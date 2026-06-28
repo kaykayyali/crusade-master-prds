@@ -149,17 +149,35 @@ flowchart TD
 | allow_manual_roster_edits | bool | Default false (JSON import is canonical) |
 | custom_house_rules | markdown | Free text |
 
-**Step 2: Teams** (mandatory, v3.12)
+**Step 2: Teams** (mandatory, v3.12; gate moved to pre-flight in v3.28)
 
 The CM creates the campaign's teams. For Armageddon, the system pre-fills the 4 template teams (Helsreach Defenders, Hades Defenders, Gorgutz's WAAAGH!, Skari's Kult) with their `expectedFactionIds` seeded from the book (PRD-1 §5b). The CM can use as-is, edit, delete, or add custom teams.
 
-**Within Step 2 — Team leader assignment is required.** For each team, the CM must assign at least one player as a team leader before the wizard proceeds. The UI:
+**Within Step 2 — Team leader assignment is optional during creation.** The CM can assign team leaders here if they want (selecting from existing campaign members), but it is NOT a hard block. Players haven't been invited yet (Step 5), so there are typically no members to choose from. The team-leader requirement is enforced at the campaign-start pre-flight check (Step 6), not at Step 2. v3.28 removed `PendingTeamLeaderInvite` entirely — there's no pre-assigning by email anymore.
 
-- Shows the team's player list (initially empty since no players have joined yet — players invite happens in Step 5)
-- **However**, the CM can pre-assign players by email: the CM types a player's email, the system creates a `PendingTeamLeaderInvite` row tied to the team, and when the player accepts their campaign invite, they automatically become a team leader.
-- A team cannot proceed to Step 3 without at least one **active** team leader OR at least one pending team leader invite.
-- The UI surfaces a clear warning: "This team has no team leader. Assign one now, or invite a player to be team leader."
-- This is a hard block — the wizard's "Next" button is disabled until every team has a leader or pending invite.
+The team-leader requirement *is* enforced at `Campaign.start()`:
+
+```ts
+// Pre-flight validation when CM clicks "Start Campaign"
+function validateCampaignStart(campaign: Campaign): ValidationResult {
+  const errors: string[] = [];
+  for (const team of campaign.teams) {
+    const activeTLs = teamLeaders.filter(tl =>
+      tl.teamId === team.id &&
+      tl.revokedAt === null
+    );
+    if (activeTLs.length === 0) {
+      errors.push(`Team "${team.name}" has no team leader. Assign one in the Crusade Administration panel before starting.`);
+    }
+  }
+  if (campaign.status !== 'created') {
+    errors.push(`Campaign must be in 'created' state to start (currently '${campaign.status}').`);
+  }
+  return { ok: errors.length === 0, errors };
+}
+```
+
+The Step 6 (Review & Start) UI surfaces this validation as a pre-flight checklist. The "Start Campaign" button is disabled until every team has ≥1 active `TeamLeader` row. The CM assigns leaders via the Crusade Administration panel after inviting players (Step 5), then returns to Step 6 and clicks Start.
 
 **Step 3: Rules** — enable/disable `RulePack`s per campaign (PRD-3 §6). Default packs: `builtin-core`, `armageddon-narrative`. CM can disable packs they don't want.
 
@@ -167,7 +185,7 @@ The CM creates the campaign's teams. For Armageddon, the system pre-fills the 4 
 
 **Step 5: Invite Players** — CM invites by email or shareable link. Each invite is a single use or multi-use (CM-configurable). The invite email includes the campaign name + CM name + a magic-link-style auth URL.
 
-**Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'created' → 'started'` (per PRD-0 §4 v3.18 enum: `created` → `started` → `ended` → `archived`). **Hard gate:** if any team still has no team leader (the pending invites haven't been accepted), the system blocks Start with: "Team X has no team leader. Either assign one or wait for invites to be accepted."
+**Step 6: Review & Start** — summary of all settings. CM clicks "Start campaign" to flip `Campaign.status: 'created' → 'started'` (per PRD-0 §4 v3.18 enum: `created` → `started` → `ended` → `archived`). The Start button is enabled only when the pre-flight validation (above) passes — every team has ≥1 active `TeamLeader` row. If validation fails, the button is disabled with a tooltip listing the unmet requirements.
 
 **Pre-campaign state (`Campaign.status: 'created'`):** the campaign exists but is not yet active. Players can join via invite but cannot file approvals or play in battles. The CM can still edit settings. The state transitions to `started` when the CM clicks Start (and the team-leader gate passes).
 
@@ -209,7 +227,27 @@ stateDiagram-v2
 ```
 
 **Transitions are one-way except `archived`.** Re-activating an archived campaign is not supported in v1 (a CM who wants to "restart" creates a new campaign). `archived → [*]` represents instance-level hard-delete after the retention window (not a UI action).
-| start_date | date | When battles can begin being filed |
+
+**Behavior on `started → ended` transition (v3.28 — Change 10):**
+
+When the CM clicks "End Campaign":
+- **No new `ApprovalRequest`s may be filed.** API returns 409: *"This campaign has ended. No new approvals can be filed."*
+- **All in-flight `ApprovalRequest`s with status `pending_approval` or `pending_review` are auto-rejected** with `rejectionReason: 'campaign_ended'`. A `Notification` fires to each submitter.
+- **Team leader approval authority is suspended.** No new approval actions. The CM retains read access and can still use the audit log and override tool (override tool is read-only).
+- **Phase activation is blocked** (requires `started` status). Any active phase is auto-deactivated.
+- **The Timeline and narrative log remain readable**, still team-scoped (team isolation is not relaxed until `archived`).
+- **`CrusadeForce` statuses remain unchanged** (`deployed` / `withdrawn`). No automatic withdrawal on end.
+- **In-flight battles can still be filed** (battle updates for games already played). This is by design — the end transition doesn't invalidate games that happened.
+
+**Behavior on `ended → archived` transition (v3.28):**
+
+When the CM clicks "Archive Campaign":
+- **RLS team-isolation predicate is dropped.** All players across all teams gain read-only access to all campaign data. Implemented as a single predicate change in Postgres RLS policies; application-layer code does not change.
+- **The UI shell changes to Retrospective View** (PRD-2 §5c.6, Change 11). Navigation swaps to Timeline / All Forces / All Teams / Narrative Log.
+- **No new approvals, battles, uploads, or events.** All write paths return 409.
+- **CM override tool becomes read-only.**
+- **Audit log remains CM-only** even in retrospective view.
+- **This transition is irreversible in v1** (no `archived → started`). To restart, the CM creates a new campaign.
 
 **Output**: campaign record, unique 8-char invite code, tenant-scoped shareable URL.
 
@@ -263,7 +301,7 @@ CM dashboard surfaces:
 1. **Pending approvals count** (clickable → PRD-5 inbox)
 2. **Active campaigns** (cards: # players, # battles, # pending updates, # pending roster approvals)
 3. **Recent activity feed** (last 20 events)
-4. **Roster health overview** — per player: "last approved roster date", "draft pending review", "no roster yet", "parse failed"
+4. **Force health overview (v3.28)** — per player: "last approved force version date", "draft pending review", "no force yet", "parse failed"
 5. **BullMQ health** — queue depth, recent failures (so the CM knows if a stuck import is a real player issue vs. infra)
 6. **Narrative log preview**
 7. **Errata alert** — banner when Wahapedia refresh affected units in this campaign
@@ -416,21 +454,23 @@ The CM opens the Approvals section to configure:
 
 | Kind | Default team-leader authority |
 |---|---|
-| `roster_approval` | ✅ enabled |
-| `roster_revert` | ✅ enabled |
+| `crusade_force_creation` | ✅ enabled |
+| `crusade_force_update` | ✅ enabled |
+| `crusade_force_revert` | ✅ enabled |
 | `requisition_purchase` (CM-gifted) | ❌ disabled (CM-only; routine player requisitions are NR-side per PRD-4 §7b.2) |
 | `post_battle_update` | ✅ enabled |
 | `rp_adjustment` | ✅ enabled |
-| `roster_rollback` | ✅ enabled (per user's v3.11 confirmation) |
+| `crusade_force_rollback` | ✅ enabled (per user's v3.11 confirmation) |
 | `history_rollback` | ✅ enabled |
 | `team_switch` | ❌ disabled (cross-team, CM-only) |
-| `faction_switch` | ✅ enabled (the player's own faction) |
-| `roster_manual_edit` | ❌ disabled (CM-only) |
+| `crusade_force_manual_edit` | ❌ disabled (CM-only) |
 | `requisition_rp_override` | ❌ disabled (CM-only) |
 | `mass_reban` | ❌ disabled (CM-only) |
 | `campaign_announcement` | ❌ disabled (cross-team, CM-only) |
 | `point_cap_change` | ❌ disabled (cross-team, CM-only) |
 | `custom` | ❌ disabled (CM-only) |
+
+> **v3.28 note:** `faction_switch` is removed from this table (no longer an ApprovalKind; see PRD-5 §3). All `roster_*` kinds are renamed to `crusade_force_*` per the data model overhaul (PRD-0 §4).
 
 The CM can flip any of these on/off per campaign. The reasoning for defaults: actions affecting only the player's own team and not cross-team-broad are team-leader-eligible; actions that affect the campaign as a whole or other teams are CM-only.
 
@@ -511,6 +551,14 @@ A dedicated surface for the CM to inspect the campaign's audit trail. Lives unde
 | **Player** | Self | Own actions only | None (no approval authority) | Auto-approves (`self_approved`); "approval = no approval" at player level |
 
 A CM is allowed to be a player in their own campaign. **A Crusade Team Leader is by definition a player on their team** (per PRD-0 §3b). The CM-as-player and Team-Leader-as-player patterns share most of this behavior.
+
+**CM-as-Team-Leader auto-promotion (v3.28 — answer A to the solo-campaign edge case):**
+
+When a CM joins a campaign as a player on a team (`CampaignMember` row inserted with `userId = cm.userId, teamId = X`), the system **automatically inserts a corresponding `TeamLeader` row** for that team with `grantedByUserId = cm.userId` (self-grant) and `grantedAt = now()`. This is the v3.28 answer to the question "how does a solo campaign satisfy the team-leader pre-flight gate?" — the CM-as-player is automatically a TL of every team they're a player on.
+
+The auto-promotion is reversible: if the CM later grants TL authority to another player and wants to step back from TL duties, they can self-revoke (PRD-1 §4.2). The CM retains `cm` authority regardless of TL status; TL authority is just a delegable, scoped subset.
+
+**Why auto-promote vs solo-team exception:** auto-promotion is consistent with the v3.27 "CM has full authority" principle — the CM's TL role is a redundant grant that exists to satisfy the data-model gate. Solo-team exception (rule "1-player teams don't need TLs") would require special-casing in the gate logic and would block the v2+ ability to have multiple players on a team without TLs in edge cases. Auto-promotion is more uniform.
 
 **No second approver exists for any kind (v3.27).** The CM unilaterally approves anything they file, including kinds where they're the actor (`roster_manual_edit` of their own roster, `mass_reban`, `point_cap_change`, etc.). The audit log records both submitter and approver as the same CM user; reversibility is via the standard rollback flow (PRD-5 §7), not via a second-approver requirement.
 
@@ -644,7 +692,7 @@ This keeps the "the books provide narrative reference, the CM has final approval
 The campaign dashboard shows team-level rollups alongside per-player:
 
 - Team leaderboard by total victories (inter-team only)
-- Per-team aggregate roster health (last approved roster date, % active)
+- Per-team aggregate force health (last approved force version date, % active)
 - Per-team RP totals (visible to all players; CMs can hide if they prefer)
 - Per-team requisition spend rate
 
@@ -725,7 +773,7 @@ Mike's success criteria for this app:
 - **Each row is scannable in <2 seconds**: submitter + kind + age + a 1-line summary of the diff ("+2 units, -1 unit, 3 wargear swaps") + rule check status (green/yellow/red dot).
 - **Bulk-approve routine battle updates**: a checkbox per row; "Approve 4 selected" is one click. Per the auto-approve rules in PRD-5, the bulk action refuses if any selected item is non-routine (a failed OoA, a requisition, etc.). Mike gets a clear refusal: "2 items skipped (manual review needed): see details."
 - **Click into a row to expand** — does NOT navigate. The detail view is inline (right pane or modal). Mike can decide without leaving the inbox list.
-- **Live updates** — if a player files a new approval while Mike is reviewing, the new row appears at the bottom with a subtle animation. No full reload.
+- **Polling-based updates (v3.28 — replaces v3.17 "browser refresh is fine")** — the inbox polls `GET /campaigns/:id/inbox?since=<cursor>` every 20s. New items merge into the Pinia store and appear with a fade-in animation. See PRD-6 §3 for the `useInboxPoller` composable contract. No SSE/WebSocket infrastructure required. Polling pauses when the tab is hidden (`document.visibilityState === 'hidden'`) and when the user is actively viewing the inbox detail pane (no point redrawing under their cursor).
 - **Recently-decided items stay visible for 24 hours** under a "Recently decided" tab, so Mike can undo if needed.
 
 **Critical moment:** The bulk-approve. If it accidentally approves something non-routine, Mike loses trust in the tool. The refusal-when-non-routine behavior is the safety net. The UI must make it obvious *why* an item is being skipped.

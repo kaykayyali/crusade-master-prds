@@ -426,13 +426,32 @@ The table makes explicit: the same URL accessed by different users shows differe
 
 ### 5c.6 Per-role campaign home navigation
 
-The bottom navigation differs by role:
+The bottom navigation differs by role (v3.28: Timeline tab is always present from `started`, team-scoped during active states, cross-team in archived state):
 
-- **Player**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [Settings]
-- **Team Leader**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [Team Inbox] [Settings]
-- **Primary CM**: [Roster] [Battles] [Requisitions] [Timeline] [Narrative Log] [CM Inbox] [Crusade Admin] [Settings]
+- **Player**: [Forces] [Battles] [Requisitions] [Timeline] [Narrative Log] [Settings]
+- **Team Leader**: [Forces] [Battles] [Requisitions] [Timeline] [Narrative Log] [Team Inbox] [Settings]
+- **Primary CM**: [Forces] [Battles] [Requisitions] [Timeline] [Narrative Log] [CM Inbox] [Crusade Admin] [Settings]
 
 The "CM Inbox" item is CM-only. The "Team Inbox" item is team-leader-only. The "Crusade Admin" item is CM-only.
+
+**v3.28 renames "Roster" to "Forces"** to reflect the CrusadeForce model (multiple forces per player, each with versions and musterable armies).
+
+**Archived campaign — Retrospective View (v3.28 — Change 11):**
+
+When `Campaign.status = 'archived'`, the entire UI shell changes. The campaign no longer renders as the active dashboard. It opens into a **Retrospective View** with its own navigation:
+
+```
+[Timeline]  [All Forces]  [All Teams]  [Narrative Log]
+```
+
+- **Timeline** (default): every public event across all teams, chronological from campaign start to end. Filters: All / Battles / Force Changes / Phases / Requisitions / Announcements. No team-scoping.
+- **All Forces**: every player's full force history across all teams. Per-force version history with diff viewer. Named mustered armies per version.
+- **All Teams**: each team's battle record, RP totals, force health summary. Per-team player roster with join/leave history.
+- **Narrative Log**: full campaign narrative with no team-scoping. CM-only events (audit entries) remain CM-only.
+
+**What stays locked in archived state:** no new approvals, battles, uploads, or events. No team leader actions. CM override tool is read-only. Audit log is CM-only.
+
+**Why Timeline is always present (v3.28):** it gives players value during the campaign (their own team's timeline), and means the archived retrospective is the same surface with relaxed access — not a new feature to design. The RLS change on archive is a single predicate drop in Postgres; application-layer code doesn't change.
 
 ---
 
