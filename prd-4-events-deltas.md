@@ -221,6 +221,31 @@ Per user: **campaign state and campaign phase are two distinct concepts.** Don't
 
 Mixing them would mean the CM's narrative choices accidentally gate functionality (e.g., "if I haven't defined a 'Phase 1' yet, players can't play"). Keeping them separate means the CM can run a `started` campaign with no phases (just defaults) or run a campaign with rich phase descriptions that players see.
 
+### 3.3 Event → Notification fanout (v3.26)
+
+When any system action creates an `Event`, the system also fans out `Notification` rows to the appropriate recipients. The fanout logic is identical regardless of where the event came from (UI button, BullMQ worker, scheduled job), which is why CM-as-player, system jobs, and player actions all flow through the same notification path.
+
+```mermaid
+flowchart LR
+    Src[Source of action<br/>player UI / CM UI /<br/>BullMQ worker / scheduled job]
+    Src --> Emit[Emit Event row]
+    Emit --> Bus[Event fanout logic<br/>pure function:<br/>event → recipients]
+    Bus --> Rec1{Recipient calculation<br/>per kind × visibility × role × team scope}
+    Rec1 --> N1[Notification row for recipient 1<br/>loudness per kind + user preference]
+    Rec1 --> N2[Notification row for recipient 2]
+    Rec1 --> Nn[Notification rows for N recipients]
+    N1 --> Del[Delivery workers<br/>in-app WebSocket + email]
+    N2 --> Del
+    Nn --> Del
+
+    Bus --> Hist[History writer<br/>only if event is a delta-producing action]
+    Hist --> HE[HistoryEntry + Delta rows]
+```
+
+**Why a pure function:** the fanout logic is testable in isolation (unit tests with event fixtures → expected recipients). The same function powers the live notification path AND the email summary path.
+
+**Loudness:** `loud | normal | quiet`. Defaults by kind (e.g., `approval.requested` = `loud`; `rule_check.run` = `quiet`). Users can override per kind in their account page (PRD-2 §5d).
+
 ---
 
 ## 4. Post-Battle Update Flow
@@ -623,7 +648,7 @@ When the primary CM archives a campaign (`Campaign.status = 'archived'`), the na
 - The narrative log is the central retrospective surface: full chronology, all teams, all events, in chronological order.
 - The UI adds an "End of crusade" header with the archival date.
 
-The campaign can be re-opened by the primary CM (status goes back to `active`) but that's a deliberate action and is logged.
+The campaign can be re-opened by the primary CM (status goes back to `started`) but that's a deliberate action and is logged.
 
 ---
 

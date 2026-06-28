@@ -133,9 +133,11 @@ Multi-tenant on a single Docker instance:
 Per-tenant auth via external identity providers. One `User` row per (tenant, person). One person can have multiple `User` rows across tenants. Each `User` has one or more `Identity` rows linking it to auth providers (Discord OAuth, email magic-link, etc.).
 
 ```ts
-User { id, tenantId, email, displayName, globalRoles }
+User { id, tenantId, email, displayName, createdAt }
 Identity { id, userId, provider: 'discord' | 'email' | 'google' | ..., providerSubjectId, providerData, linkedAt }
 ```
+
+Note: `User` is a thin identity record. Roles are not on `User`; they're per-campaign on `CampaignMember` (cm / crusade_team_leader / player / spectator) and global on a separate `InstanceAdmin` table (instance_admin). A user can hold different roles in different campaigns.
 
 - `User.email`: the primary verified email for the user in this tenant. Used for identity-linking across providers and for magic-link fallback.
 - `Identity.providerSubjectId`: e.g., Discord snowflake id, or the email address for magic-link identities.
@@ -169,8 +171,12 @@ See PRD-2 §3.1 for the full account-creation flow with diagrams and PRD-2 §5d.
 ```ts
 // === Tenancy ===
 Tenant { id, name, slug, createdAt, settings }
-User { id, tenantId, email, displayName, roles, createdAt }
-Roles = 'instance_admin' | 'cm' | 'crusade_team_leader' | 'player' | 'spectator'   // user can hold multiple
+User { id, tenantId, email, displayName, createdAt }
+// Roles model (from §3 below):
+// - `instance_admin` lives on a separate `InstanceAdmin` table (cross-tenant)
+// - `cm`, `crusade_team_leader`, `player`, `spectator` live on `CampaignMember` (per-campaign)
+// - team-scoped approval authority lives on `TeamLeader` (per-team, per-user)
+Roles = 'instance_admin' | 'cm' | 'crusade_team_leader' | 'player' | 'spectator'   // for documentation; not stored on User
 // A user with the `cm` role for a campaign has full authority on that campaign.
 // A user with the `crusade_team_leader` role for a team has scoped authority on that team only.
 // A user with the `player` role for a campaign is on exactly one team.
@@ -269,7 +275,6 @@ TeamLeader {
 }
 // Once a campaign is started, every team must have ≥1 active TeamLeader row.
 // CM is the only role that can grant or revoke TeamLeader rows (policy).
-CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: CampaignTeam['id'] }
 CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: CampaignTeam['id'] }
 // ^ Note: CampaignMember.teamId is the player's team membership.
 //   TeamLeader is a separate join for team-scoped approval authority.

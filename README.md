@@ -22,7 +22,45 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.25 (current) — PRD-6 (Technical Architecture) + PRD-7 (Testing Strategy)
+### v3.26 (current) — Final cleanup: terminology, diagrams, inconsistencies
+
+Per user: "Do one last cleanup. Plan to scan for inconsistencies, any complicated situations warranting a diagram, any logical place to break up into better sections, finally any concepts that are poorly worded, possibly confusing, easy to conflate."
+
+**Terminology clarifications (avoids conflation):**
+
+1. **`User` schema field cleanup** (PRD-0 §3.4.1 + §4): removed inconsistent `globalRoles` / `roles` fields. `User` is a thin identity record; per-campaign roles live on `CampaignMember`; `instance_admin` lives on a separate `InstanceAdmin` table.
+
+2. **Approval terminology note** (PRD-5 §3): added explicit glossary distinguishing `ApprovalRequest` (the record), `ApprovalKind` (the enum), `approvalSource` (the field), and "approval" (the act).
+
+3. **Roster terminology note** (PRD-3): added explicit glossary distinguishing `Roster` (parent), `RosterDraft` (work-in-progress), `RosterApproved` (immutable snapshot).
+
+4. **Wizard step vs campaign phase** (PRD-1 §4.1): added note that wizard "Steps" (UI navigation) are different from `CampaignPhase` (persistent narrative periods).
+
+**New diagrams (complicated situations):**
+
+5. **PRD-4 §3.3** — Event → Notification fanout flowchart (shows the pure-function fanout logic + recipient calculation).
+
+6. **PRD-5 §3.2** — Multi-team-leader approval sequence diagram (`'any'` vs `'all'` mode) + edge-case flowchart (TL removed mid-flight in `'all'` mode).
+
+7. **PRD-1 §4.2** — TeamLeader lifecycle state machine (active / removed / revoked-self / auto-abstain).
+
+**Inconsistency fixes:**
+
+8. **PRD-1 line 511**: changed "approved when a co-CM becomes available" → "approved when another CM becomes available" (matches new terminology).
+
+9. **PRD-4 line 651**: fixed stale `status: 'active'` → `'started'` (PRD-0 §4 v3.18 enum).
+
+10. **PRD-0 §4 schema dedup**: removed duplicate `CampaignMember` line that was a copy-paste artifact.
+
+11. **PRD-5 line 550 sequence + line 340 diagram**: invalid `approvalSource: 'pending'` replaced with `decision.approvalSource` and `'cm_review'` respectively (only the four enum values are valid).
+
+12. **PRD-5 approvalSource enum**: clarified that `cm_review` covers both pending (awaiting TL/CM) and approved (reviewed by TL/CM); `pending`/`approved` is `ApprovalRequest.status`, not `approvalSource`. Added inline comment.
+
+13. **PRD-5 line 844**: cleaned up "second CM" / "other CM" / "second approver" mixing → consistent "another approver" / "second approver".
+
+**Section structure:** scanned all PRDs for section lengths. Longest is PRD-3 §3 (event taxonomy, 150 lines) and PRD-5 §3.1 (per-kind payloads, 173 lines) — both are reference material that's necessarily large; not split. No restructuring needed.
+
+### v3.25 — PRD-6 (Technical Architecture) + PRD-7 (Testing Strategy)
 
 Per user: "we should include a general test plan PRD, that talks about enabling testing in a dev vs prod env, and how to go about e2e for apis, and ui. Finally, a swagger doc would be required. Thinking about how to keep it up to date is key."
 

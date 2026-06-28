@@ -119,6 +119,8 @@ The instance admin sees:
 
 The campaign-creation flow is a **multi-step wizard**, not a single form. Steps in order:
 
+**Terminology:** the wizard uses "Step" (UI navigation). Don't conflate with **CampaignPhase** (PRD-4 §3.2), which is a CM-authored narrative period within a `started` campaign. The wizard steps exist only during campaign creation and aren't persisted; phases are persistent and affect the live campaign.
+
 ```mermaid
 flowchart TD
     A[Step 1: Basics] --> B[Step 2: Teams]
@@ -231,6 +233,30 @@ stateDiagram-v2
 - Players can self-serve removal (leave the campaign entirely).
 - **Crusade Team Leaders** are scoped to their team: they see their team's data, can approve `ApprovalRequest`s affecting their team for kinds the primary CM has enabled, but **cannot see or approve anything for other teams**.
 - **Multiple CMs (rare):** if a campaign has more than one user with the `cm` role, they have full campaign authority each. Co-approval between them is configurable per kind (PRD-5 §3.2). This is **distinct** from Crusade Team Leaders, who are scoped to a team.
+
+**TeamLeader lifecycle (v3.26):**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active : CM grants (via Crusade Admin panel<br/>or PendingTeamLeaderInvite accepted)
+    Active --> Active : CM adds another TL to same team<br/>(multi-TL per v3.12)
+    Active --> Removed : CM removes TL<br/>(only if ≥1 other TL exists<br/>OR replacement specified atomically)
+    Active --> RevokedSelf : TL self-revokes (leave campaign)
+    Active --> AutoAbstain : TL removed mid-flight on 'all'-mode request<br/>(abstained, doesn't block approval)
+    Removed --> [*]
+    RevokedSelf --> [*]
+    AutoAbstain --> [*]
+
+    note right of Active
+        Has crusade_team_leader role<br/>for this team only
+        Sees team data, can approve<br/>kinds enabled by CM
+    end note
+
+    note right of Removed
+        Audit log row: "CM removed<br/>User X from team leadership;<br/>replaced by User Y"
+        In-flight approvals fall back<br/>to CM or remaining TLs
+    end note
+```
 
 ### 4.3 Dashboard
 
@@ -482,7 +508,7 @@ A CM is allowed to be a player in their own campaign. **A Crusade Team Leader is
 - **CM-as-player:**
   - "Playing in your own campaign" badge shown next to their name
   - **All CM-as-player's deltas auto-approve, but still go through the full pipeline.** PRD-0 §4b's approval-gating principle still applies — the system creates the `ApprovalRequest`, runs rule checks, persists the diff, fires events, and emits notifications. The only thing skipped is the wait for a human approver.
-  - **High-impact kinds with CM-only authority** (`mass_reban`, `point_cap_change`, `roster_manual_edit`, `requisition_rp_override`, `campaign_announcement`, `team_switch`): the primary CM cannot self-approve these even as a player. They go to another CM if one exists (multiple-CM campaigns), or stay pending with `approvalSource: 'co_cm_required_unavailable'` (audit-logged, must be approved when a co-CM becomes available or by CM at a later point). The CM can also configure team-leader authority for some of these per PRD-1 §4.4 — by default team leaders cannot approve high-impact kinds.
+  - **High-impact kinds with CM-only authority** (`mass_reban`, `point_cap_change`, `roster_manual_edit`, `requisition_rp_override`, `campaign_announcement`, `team_switch`): the primary CM cannot self-approve these even as a player. They go to another CM if one exists (multiple-CM campaigns), or stay pending with `approvalSource: 'co_cm_required_unavailable'` (audit-logged, must be approved when another CM becomes available or by another CM at a later point). The CM can also configure team-leader authority for some of these per PRD-1 §4.4 — by default team leaders cannot approve high-impact kinds.
   - Own battle filings, requisition purchases, team switches — auto-approve but go through the pipeline.
 
 - **Team Leader as player:**

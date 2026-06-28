@@ -487,6 +487,25 @@ requiring a second approver which stay pending until one is
 available)</p>
 <hr />
 <h2 id="approvalrequest-schema">3. ApprovalRequest Schema</h2>
+<p><strong>Terminology note (avoids conflation):</strong> this PRD uses
+several similar-sounding terms with distinct meanings: -
+<strong><code>ApprovalRequest</code></strong> (the table row) — a record
+representing one decision lifecycle. Created when a player files
+something requiring approval; transitions through
+<code>pending → approved | rejected | withdrawn</code>. -
+<strong><code>ApprovalKind</code></strong> (the enum value) — <em>what
+kind</em> of action is being approved (<code>roster_approval</code>,
+<code>post_battle_update</code>, <code>mass_reban</code>, etc.). -
+<strong><code>approvalSource</code></strong> (a field on
+<code>ApprovalRequest</code>) — <em>how</em> the request was decided
+(<code>cm_review</code>, <code>auto_approve_routine</code>,
+<code>self_approved</code>, <code>co_cm_required_unavailable</code>).
+This field distinguishes human-approved from auto-approved. -
+<strong>“approval”</strong> (the act) — a verb describing the decision;
+we say “Mike approved the request” or “Mike filed for approval.”</p>
+<p>Don’t conflate these. PRD-5 is about <code>ApprovalRequest</code>
+records; the kind comes from <code>ApprovalKind</code>; the audit trail
+records <code>approvalSource</code>.</p>
 <p>The <code>kind</code> enum is the canonical contract for
 narrative-affecting actions routed through the approval queue. Each kind
 maps to one of the categories in §2.2; new categories extend this enum
@@ -541,11 +560,14 @@ maps to one of the categories in §2.2; new categories extend this enum
 <span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>  <span class="co">// hooks (team view pages, Discord, narrative analytics) can filter or</span></span>
 <span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>  <span class="co">// count self-approved vs human-approved vs routine-auto-approved deltas.</span></span>
 <span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>  approvalSource<span class="op">:</span></span>
-<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// a Primary CM or a Crusade Team Leader (within team scope) reviewed and approved</span></span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;cm_review&#39;</span>                   <span class="co">// routed to a Primary CM or Crusade Team Leader (within team scope); covers both pending and approved</span></span>
 <span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;auto_approve_routine&#39;</span>        <span class="co">// campaign&#39;s auto-approve-routine-battle-updates setting fired</span></span>
 <span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;self_approved&#39;</span>               <span class="co">// CM-as-player or Team-Leader-as-player submitted and self-approved (PRD-1 §5)</span></span>
 <span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>    <span class="op">|</span> <span class="st">&#39;co_cm_required_unavailable&#39;</span><span class="op">;</span> <span class="co">// kind requires a second approver but none existed; stayed pending</span></span>
-<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a><span class="co">// Note: approvalSource is populated at creation based on routing (e.g., a request routed to</span></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a><span class="co">// a TL pool has approvalSource=&#39;cm_review&#39; from the start, even before the TL acts).</span></span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a><span class="co">// &#39;pending&#39;/&#39;approved&#39; is ApprovalRequest.status; approvalSource is the routing-decision lineage.</span></span></code></pre></div>
 <h3 id="per-kind-payloads">3.1 Per-Kind Payloads</h3>
 <p>Every <code>ApprovalKind</code> has a typed payload. The payload is
 the <em>contract</em> — the inbox UI and the application logic both
@@ -696,7 +718,7 @@ point)</h4>
     Q1 -- &quot;Team Leader&lt;br/&gt;(acting on self)&quot; --&gt; Auto1[Auto-approve&lt;br/&gt;approvalSource: self_approved&lt;br/&gt;Skip pipeline steps still emit events]
     Q1 -- &quot;Primary CM&lt;br/&gt;(as player)&quot; --&gt; Q2{High-impact kind?&lt;br/&gt;mass_reban, point_cap_change,&lt;br/&gt;roster_manual_edit,&lt;br/&gt;requisition_rp_override,&lt;br/&gt;campaign_announcement, team_switch}
     Q2 -- &quot;Yes&quot; --&gt; Q3{Is there another&lt;br/&gt;CM or TL&lt;br/&gt;allowed for this kind?}
-    Q3 -- &quot;Yes&quot; --&gt; Route2[Route to other approver&lt;br/&gt;approvalSource: pending]
+    Q3 -- &quot;Yes&quot; --&gt; Route2[Route to other approver&lt;br/&gt;approvalSource: cm_review]
     Q3 -- &quot;No&quot; --&gt; Stay[Stay pending&lt;br/&gt;approvalSource: co_cm_required_unavailable]
     Q2 -- &quot;No, routine kind&quot; --&gt; Auto2[Auto-approve&lt;br/&gt;approvalSource: self_approved]
     Q1 -- &quot;Player&lt;br/&gt;(not TL)&quot; --&gt; Q4{What team is affected?&lt;br/&gt;From Roster.teamId or&lt;br/&gt;CampaignMember.teamId}
@@ -860,6 +882,40 @@ remaining leaders suffice).</p>
 <p>The CM can switch modes at any time. Mid-flight requests follow the
 mode that was set when the request was filed, not when it was
 approved.</p>
+<p><strong>Multi-team-leader approval flow (v3.26):</strong></p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor P as Player
+    actor TL1 as TL Carol
+    actor TL2 as TL Dave
+    participant API as Hapi
+    participant DB as Postgres
+
+    P-&gt;&gt;API: POST /approval-requests&lt;br/&gt;(kind=roster_approval, team=Helsreach)
+    API-&gt;&gt;DB: insert ApprovalRequest&lt;br/&gt;(status=pending)
+    Note over API: RoutingEngine: route to TL pool&lt;br/&gt;(Helsreach has Carol + Dave)
+
+    alt teamLeaderApprovalMode = &#39;any&#39;
+        TL1-&gt;&gt;API: POST /approval-requests/:id/approve
+        API-&gt;&gt;DB: UPDATE status=approved&lt;br/&gt;reviewerUserId=Carol
+        API-&gt;&gt;DB: write HistoryEntry + Delta[]
+        API--&gt;&gt;TL2: inbox shows &quot;already approved by Carol&quot;
+    else teamLeaderApprovalMode = &#39;all&#39;
+        TL1-&gt;&gt;API: POST /approval-requests/:id/approve
+        API-&gt;&gt;DB: record Carol&#39;s approval&lt;br/&gt;(status still pending)
+        TL2-&gt;&gt;API: POST /approval-requests/:id/approve
+        API-&gt;&gt;DB: record Dave&#39;s approval&lt;br/&gt;all TLs approved → status=approved
+        API-&gt;&gt;DB: write HistoryEntry + Delta[]
+    end</code></pre>
+<p><strong>Edge case (TL removed mid-flight in ‘all’ mode):</strong></p>
+<pre class="mermaid"><code>flowchart TD
+    A[Request pending, awaiting 2 TLs: Carol + Dave] --&gt; B{Carol removed from team}
+    B --&gt; C[Auto-record Carol&#39;s pending approval as abstained]
+    C --&gt; D{Only Dave remains}
+    D --&gt; E[Request continues with Dave as sole TL]
+    E --&gt; F{Dave approves?}
+    F -- Yes --&gt; G[Approved]
+    F -- No --&gt; H[Still pending]</code></pre>
 <p><strong>Per-kind rule-pack enforcement (v3.11):</strong></p>
 <p>The CM’s configuration of which rules fire on which kinds (PRD-1
 §4.4) is enforced at approval time: when an <code>ApprovalRequest</code>
@@ -1015,7 +1071,7 @@ stays clean.</p>
         API-&gt;&gt;DB: write HistoryEntry[]
         API-&gt;&gt;Bus: emit approval.approved
     else
-        API-&gt;&gt;DB: insert ApprovalRequest (status=pending,&lt;br/&gt;approvalSource=pending)
+        API-&gt;&gt;DB: insert ApprovalRequest (status=pending,&lt;br/&gt;approvalSource=decision.approvalSource)
         API-&gt;&gt;Bus: emit approval.requested
         Bus-&gt;&gt;DB: insert Notification for targetApprovers
     end
@@ -1543,11 +1599,12 @@ settings.</p>
 principle:</strong></p>
 <p>If Mike (CM-as-player) files a high-impact kind like
 <code>mass_reban</code>, the auto-approval logic at PRD-5 §3.3 evaluates
-the current ruleset. If the kind requires a second CM and one exists,
-Mike’s request routes to them. If Mike later removes the other CM
-(leaving only himself), the request stays pending (no second CM
-available). If a second CM joins later, the request becomes actionable
-again. The current ruleset — applied at query time — always wins.</p>
+the current ruleset. If the kind requires a second approver and one
+exists, Mike’s request routes to them. If Mike later removes the other
+approver (leaving only himself), the request stays pending (no second
+approver available). If another approver joins later, the request
+becomes actionable again. The current ruleset — applied at query time —
+always wins.</p>
 <h3 id="re-assessment-warning-ui-v3.17-always-fires">Re-assessment
 warning UI (v3.17: always fires)</h3>
 <p>Per user (v3.17): when approval settings change, <strong>always show

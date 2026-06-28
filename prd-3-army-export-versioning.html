@@ -229,6 +229,27 @@ Import, Approval, &amp; Rule Compliance (v3)</h1>
 <code>bs-roster-parser</code> Python library, and a configurable rule
 engine that CMs and crusade settings can extend.</p>
 </blockquote>
+<p><strong>Terminology note (avoids conflation):</strong> this PRD uses
+three closely-related concepts: - <strong><code>Roster</code></strong> —
+a player’s army in this campaign. Each <code>Roster</code> has metadata
+(campaignMemberId, factionId, name) and pointers to its current approved
+snapshot and history of drafts. -
+<strong><code>RosterDraft</code></strong> — a single candidate version
+of a <code>Roster</code> at one moment in time. Created from a player
+upload or a manual edit; goes through
+<code>parsing → pending_review → pending_approval → approved | rejected | failed</code>.
+Many drafts can exist per roster (one per import attempt). -
+<strong><code>RosterApproved</code></strong> — an immutable snapshot
+that has been approved by an authority. Becomes the roster’s
+<code>currentApprovedId</code>. Battles and other events diff against
+this.</p>
+<p>The relationship: <code>Roster</code> is the parent entity;
+<code>RosterApproved</code> is what the player is using right now;
+<code>RosterDraft</code> is work-in-progress. Don’t say “the roster is
+in pending_approval” — say “the RosterDraft is in pending_approval; the
+Roster’s current approved version is unchanged.” This distinction
+matters for battle-update gating (PRD-4 §6: a battle update requires the
+<em>Roster</em> to have a current <code>RosterApproved</code>).</p>
 <hr />
 <h2 id="goals">1. Goals</h2>
 <p>Get a player from “uploaded JSON” to “RosterDraft ready for review”

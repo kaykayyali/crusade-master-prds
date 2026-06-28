@@ -409,6 +409,12 @@ retained</li>
 <h3 id="campaign-creation">4.1 Campaign Creation</h3>
 <p>The campaign-creation flow is a <strong>multi-step wizard</strong>,
 not a single form. Steps in order:</p>
+<p><strong>Terminology:</strong> the wizard uses “Step” (UI navigation).
+Don’t conflate with <strong>CampaignPhase</strong> (PRD-4 §3.2), which
+is a CM-authored narrative period within a <code>started</code>
+campaign. The wizard steps exist only during campaign creation and
+aren’t persisted; phases are persistent and affect the live
+campaign.</p>
 <pre class="mermaid"><code>flowchart TD
     A[Step 1: Basics] --&gt; B[Step 2: Teams]
     B --&gt; C[Step 3: Rules]
@@ -627,6 +633,26 @@ authority each. Co-approval between them is configurable per kind (PRD-5
 §3.2). This is <strong>distinct</strong> from Crusade Team Leaders, who
 are scoped to a team.</li>
 </ul>
+<p><strong>TeamLeader lifecycle (v3.26):</strong></p>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; Active : CM grants (via Crusade Admin panel&lt;br/&gt;or PendingTeamLeaderInvite accepted)
+    Active --&gt; Active : CM adds another TL to same team&lt;br/&gt;(multi-TL per v3.12)
+    Active --&gt; Removed : CM removes TL&lt;br/&gt;(only if ≥1 other TL exists&lt;br/&gt;OR replacement specified atomically)
+    Active --&gt; RevokedSelf : TL self-revokes (leave campaign)
+    Active --&gt; AutoAbstain : TL removed mid-flight on &#39;all&#39;-mode request&lt;br/&gt;(abstained, doesn&#39;t block approval)
+    Removed --&gt; [*]
+    RevokedSelf --&gt; [*]
+    AutoAbstain --&gt; [*]
+
+    note right of Active
+        Has crusade_team_leader role&lt;br/&gt;for this team only
+        Sees team data, can approve&lt;br/&gt;kinds enabled by CM
+    end note
+
+    note right of Removed
+        Audit log row: &quot;CM removed&lt;br/&gt;User X from team leadership;&lt;br/&gt;replaced by User Y&quot;
+        In-flight approvals fall back&lt;br/&gt;to CM or remaining TLs
+    end note</code></pre>
 <h3 id="dashboard">4.3 Dashboard</h3>
 <p>CM dashboard surfaces: 1. <strong>Pending approvals count</strong>
 (clickable → PRD-5 inbox) 2. <strong>Active campaigns</strong> (cards: #
@@ -1087,9 +1113,9 @@ only thing skipped is the wait for a human approver.</li>
 primary CM cannot self-approve these even as a player. They go to
 another CM if one exists (multiple-CM campaigns), or stay pending with
 <code>approvalSource: &#39;co_cm_required_unavailable&#39;</code> (audit-logged,
-must be approved when a co-CM becomes available or by CM at a later
-point). The CM can also configure team-leader authority for some of
-these per PRD-1 §4.4 — by default team leaders cannot approve
+must be approved when another CM becomes available or by another CM at a
+later point). The CM can also configure team-leader authority for some
+of these per PRD-1 §4.4 — by default team leaders cannot approve
 high-impact kinds.</li>
 <li>Own battle filings, requisition purchases, team switches —
 auto-approve but go through the pipeline.</li>

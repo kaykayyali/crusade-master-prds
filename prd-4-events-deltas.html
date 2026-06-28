@@ -538,6 +538,36 @@ functionality (e.g., “if I haven’t defined a ‘Phase 1’ yet, players
 can’t play”). Keeping them separate means the CM can run a
 <code>started</code> campaign with no phases (just defaults) or run a
 campaign with rich phase descriptions that players see.</p>
+<h3 id="event-notification-fanout-v3.26">3.3 Event → Notification fanout
+(v3.26)</h3>
+<p>When any system action creates an <code>Event</code>, the system also
+fans out <code>Notification</code> rows to the appropriate recipients.
+The fanout logic is identical regardless of where the event came from
+(UI button, BullMQ worker, scheduled job), which is why CM-as-player,
+system jobs, and player actions all flow through the same notification
+path.</p>
+<pre class="mermaid"><code>flowchart LR
+    Src[Source of action&lt;br/&gt;player UI / CM UI /&lt;br/&gt;BullMQ worker / scheduled job]
+    Src --&gt; Emit[Emit Event row]
+    Emit --&gt; Bus[Event fanout logic&lt;br/&gt;pure function:&lt;br/&gt;event → recipients]
+    Bus --&gt; Rec1{Recipient calculation&lt;br/&gt;per kind × visibility × role × team scope}
+    Rec1 --&gt; N1[Notification row for recipient 1&lt;br/&gt;loudness per kind + user preference]
+    Rec1 --&gt; N2[Notification row for recipient 2]
+    Rec1 --&gt; Nn[Notification rows for N recipients]
+    N1 --&gt; Del[Delivery workers&lt;br/&gt;in-app WebSocket + email]
+    N2 --&gt; Del
+    Nn --&gt; Del
+
+    Bus --&gt; Hist[History writer&lt;br/&gt;only if event is a delta-producing action]
+    Hist --&gt; HE[HistoryEntry + Delta rows]</code></pre>
+<p><strong>Why a pure function:</strong> the fanout logic is testable in
+isolation (unit tests with event fixtures → expected recipients). The
+same function powers the live notification path AND the email summary
+path.</p>
+<p><strong>Loudness:</strong> <code>loud | normal | quiet</code>.
+Defaults by kind (e.g., <code>approval.requested</code> =
+<code>loud</code>; <code>rule_check.run</code> = <code>quiet</code>).
+Users can override per kind in their account page (PRD-2 §5d).</p>
 <hr />
 <h2 id="post-battle-update-flow">4. Post-Battle Update Flow</h2>
 <pre class="mermaid"><code>flowchart TD
@@ -753,16 +783,16 @@ the UI just re-groups for display.</p>
 <h2 id="cm-triggered-narrative-events">7. CM-Triggered Narrative
 Events</h2>
 <p>Minimal v3 — focus is enforcement, not narrative flavor.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> NarrativeEventEffect <span class="op">=</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_deduct&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">// FilterExpr can match on:</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">//   - teamId:    affects only one campaign team (e.g., &quot;Helsreach Defenders&quot;)</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">//   - factionId: affects only one 40K faction (e.g., &quot;Orks&quot;)</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">//   - memberIds: explicit player list</span></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">//   - (combinations of the above with AND/OR)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> NarrativeEventEffect <span class="op">=</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_grant&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;rp_deduct&#39;</span><span class="op">,</span> amount<span class="op">:</span> <span class="dt">number</span><span class="op">,</span> filter<span class="op">?:</span> FilterExpr }</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">|</span> { type<span class="op">:</span> <span class="st">&#39;campaign_announcement&#39;</span><span class="op">,</span> message<span class="op">:</span> <span class="dt">string</span> }<span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">// FilterExpr can match on:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">//   - teamId:    affects only one campaign team (e.g., &quot;Helsreach Defenders&quot;)</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">//   - factionId: affects only one 40K faction (e.g., &quot;Orks&quot;)</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">//   - memberIds: explicit player list</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">//   - (combinations of the above with AND/OR)</span></span></code></pre></div>
 <p>Armageddon templates: - <strong>“Yarrick’s Broadcast”</strong> — all
 Imperial factions +1 RP (faction filter) - <strong>“Ork
 WAAAGH!”</strong> — all non-Ork factions −1 RP (faction filter,
@@ -1164,7 +1194,7 @@ blocked). - The narrative log is the central retrospective surface: full
 chronology, all teams, all events, in chronological order. - The UI adds
 an “End of crusade” header with the archival date.</p>
 <p>The campaign can be re-opened by the primary CM (status goes back to
-<code>active</code>) but that’s a deliberate action and is logged.</p>
+<code>started</code>) but that’s a deliberate action and is logged.</p>
 <hr />
 <h2 id="out-of-scope-prd-4">9. Out of Scope (PRD-4)</h2>
 <ul>

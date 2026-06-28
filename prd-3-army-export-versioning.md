@@ -2,6 +2,13 @@
 
 > BullMQ-driven async parsing pipeline, integration with the user's `bs-roster-parser` Python library, and a configurable rule engine that CMs and crusade settings can extend.
 
+**Terminology note (avoids conflation):** this PRD uses three closely-related concepts:
+- **`Roster`** — a player's army in this campaign. Each `Roster` has metadata (campaignMemberId, factionId, name) and pointers to its current approved snapshot and history of drafts.
+- **`RosterDraft`** — a single candidate version of a `Roster` at one moment in time. Created from a player upload or a manual edit; goes through `parsing → pending_review → pending_approval → approved | rejected | failed`. Many drafts can exist per roster (one per import attempt).
+- **`RosterApproved`** — an immutable snapshot that has been approved by an authority. Becomes the roster's `currentApprovedId`. Battles and other events diff against this.
+
+The relationship: `Roster` is the parent entity; `RosterApproved` is what the player is using right now; `RosterDraft` is work-in-progress. Don't say "the roster is in pending_approval" — say "the RosterDraft is in pending_approval; the Roster's current approved version is unchanged." This distinction matters for battle-update gating (PRD-4 §6: a battle update requires the *Roster* to have a current `RosterApproved`).
+
 ---
 
 ## 1. Goals
