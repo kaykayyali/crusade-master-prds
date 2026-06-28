@@ -1131,8 +1131,297 @@ indicator in inbox header</h3>
 campaign’s recent activity feed (PRD-5 §6). Clicking the bell opens a
 side panel with the recent activity; the inbox itself stays focused on
 approvals.</p>
+<h3 id="worked-example-team-leader-inbox-v3.14">5.4 Worked Example —
+Team Leader Inbox (v3.14)</h3>
+<p>Concrete walkthrough showing the kind-filter logic in action.</p>
+<p><strong>Setup:</strong></p>
+<ul>
+<li><strong>Campaign</strong>: Aurelian Crusade (Armageddon, primary CM
+Mike)</li>
+<li><strong>Teams</strong>:
+<ul>
+<li><strong>Helsreach Defenders</strong> — Alice is Team Leader (only
+one), 4 players</li>
+<li><strong>Hades Defenders</strong> — Bob is Team Leader, 4
+players</li>
+<li><strong>Gorgutz’s WAAAGH!</strong> — Carol is Team Leader (with one
+co-leader Dave), 2 players</li>
+<li><strong>Skari’s Kult of Speed</strong> — no team leader yet (pending
+invite)</li>
+</ul></li>
+<li><strong><code>Campaign.teamLeaderAuthority</code></strong> (per
+PRD-1 §4.4 defaults):
+<ul>
+<li>✅ enabled for TLs: <code>roster_approval</code>,
+<code>roster_revert</code>, <code>roster_rollback</code>,
+<code>history_rollback</code>, <code>faction_switch</code>,
+<code>post_battle_update</code>, <code>rp_adjustment</code></li>
+<li>❌ disabled for TLs: <code>requisition_purchase</code> (CM-gifted),
+<code>team_switch</code>, <code>roster_manual_edit</code>,
+<code>requisition_rp_override</code>, <code>mass_reban</code>,
+<code>campaign_announcement</code>, <code>point_cap_change</code>,
+<code>custom</code></li>
+</ul></li>
+<li><strong><code>Campaign.teamLeaderApprovalMode</code></strong>:
+<code>&#39;any&#39;</code> (default — any one team leader on a team can
+approve)</li>
+</ul>
+<p><strong>Inbox state — current pending approvals across the
+campaign:</strong></p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Kind</th>
+<th>Submitter</th>
+<th>Affected team</th>
+<th>Age</th>
+<th>Alice can act?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>roster_approval</code></td>
+<td>jake42 (Helsreach)</td>
+<td>Helsreach</td>
+<td>1h</td>
+<td>✅ Yes</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>roster_approval</code></td>
+<td>sarah_k (Helsreach)</td>
+<td>Helsreach</td>
+<td>2h</td>
+<td>✅ Yes</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>roster_approval</code></td>
+<td>tom_h (Helsreach)</td>
+<td>Helsreach</td>
+<td>4h</td>
+<td>✅ Yes</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>post_battle_update</code></td>
+<td>jake42 (Helsreach)</td>
+<td>Helsreach</td>
+<td>30m</td>
+<td>✅ Yes</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>post_battle_update</code></td>
+<td>sarah_k (Helsreach)</td>
+<td>Helsreach</td>
+<td>1h</td>
+<td>✅ Yes</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td><code>post_battle_update</code> (routine, no anomalies)</td>
+<td>jake42 (Helsreach)</td>
+<td>Helsreach</td>
+<td>6h</td>
+<td>✅ Yes (or auto-approved)</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td><code>requisition_purchase</code> (CM-gifted)</td>
+<td>sarah_k (Helsreach)</td>
+<td>Helsreach</td>
+<td>3h</td>
+<td>❌ No — routes to Mike</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td><code>team_switch</code> (Hades → Helsreach)</td>
+<td>mike_h (Hades)</td>
+<td>cross-team</td>
+<td>2h</td>
+<td>❌ No — routes to Mike</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td><code>roster_approval</code></td>
+<td>zara_b (Hades)</td>
+<td>Hades</td>
+<td>1h</td>
+<td>❌ No — Alice is on Helsreach only</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td><code>faction_switch</code></td>
+<td>zara_b (Hades)</td>
+<td>Hades</td>
+<td>3h</td>
+<td>❌ No — wrong team</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td><code>mass_reban</code></td>
+<td>Mike (CM-only kind)</td>
+<td>cross-team</td>
+<td>12h</td>
+<td>❌ No</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td><code>campaign_announcement</code></td>
+<td>Mike (CM-only kind)</td>
+<td>cross-team</td>
+<td>1d</td>
+<td>❌ No</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td><code>rp_adjustment</code></td>
+<td>tom_h (Helsreach)</td>
+<td>Helsreach</td>
+<td>5h</td>
+<td>✅ Yes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Alice’s “Actionable” tab (default):</strong></p>
+<pre><code>+--------------------------------------------------------+
+| Inbox (Team Leader — Helsreach Defenders)  [Actionable] |
+| Tabs: [Actionable (5)] [All team items (8)] [Archive] |
++--------------------------------------------------------+
+| 5 pending                                              |
++--------------------------------------------------------+
+| ☐ Roster approval — jake42                            |
+|   1h ago · Diff: +2 units, -1 unit, 3 wargear swaps   |
+|   [View] [Approve] [Reject]                           |
+|                                                        |
+| ☐ Roster approval — sarah_k                            |
+|   2h ago · Diff: +1 unit (Castellan), 1 warn          |
+|   [View] [Approve] [Reject] [Override &amp; Approve]       |
+|                                                        |
+| ☐ Roster approval — tom_h                              |
+|   4h ago · Diff: -1 unit (Leman Russ destroyed)        |
+|   [View] [Approve] [Reject]                           |
+|                                                        |
+| ☐ Post-battle update — jake42 (vs. mike_t)            |
+|   30m ago · Result: W · +3 XP, 1 OoA test             |
+|   [View] [Approve] [Reject]                           |
+|                                                        |
+| ☐ RP adjustment — tom_h                                |
+|   5h ago · -2 RP (Leman Russ destruction)             |
+|   [View] [Approve] [Reject]                           |
++--------------------------------------------------------+</code></pre>
+<p>5 items. All Helsreach players. All kinds Alice is authorized for.
+Action buttons enabled.</p>
+<p><strong>Alice’s “All team items” tab:</strong></p>
+<pre><code>+--------------------------------------------------------+
+| Inbox (Team Leader — Helsreach Defenders) [All items] |
++--------------------------------------------------------+
+| 8 pending (5 actionable + 3 read-only)                 |
++--------------------------------------------------------+
+| Actionable (5): see above                              |
+|                                                        |
+| Read-only (3):                                         |
+|                                                        |
+| ⓘ Requisition purchase — sarah_k (CM-gifted)           |
+|   3h ago · Helsreach · Mike is reviewing               |
+|   [View] (read-only — Mike&#39;s call)                     |
+|                                                        |
+| ⓘ Team switch — mike_h (Hades → Helsreach)            |
+|   2h ago · Cross-team · Mike is reviewing              |
+|   [View] (read-only — Mike&#39;s call)                     |
+|                                                        |
+| ⓘ Post-battle update — jake42 (routine, auto-approve) |
+|   6h ago · Helsreach · auto-approved 2h ago             |
+|   [View] (read-only — already decided)                 |
++--------------------------------------------------------+</code></pre>
+<p>3 read-only items. Alice sees them for transparency (“is anything
+stuck waiting for the CM?”) but can’t act. Items show who has them.</p>
+<p><strong>What Alice does NOT see (in her inbox at all):</strong></p>
+<ul>
+<li>Items 9–10 (Hades Defenders’ players) — wrong team</li>
+<li>Items 11–12 (CM-only kinds) — <code>mass_reban</code>,
+<code>campaign_announcement</code></li>
+</ul>
+<p>These don’t appear in Alice’s inbox at all. They go directly to
+Mike.</p>
+<p><strong>Mid-flight authority change scenario:</strong></p>
+<p>If Mike disables <code>roster_approval</code> for TLs while Alice has
+item #2 (sarah_k’s roster) open in her detail view:</p>
+<ol type="1">
+<li>Alice still sees item #2 with “Approve” enabled (the policy in
+effect at filing time still applies per Q2 default).</li>
+<li>If Alice approves, the approval stands;
+<code>approvalSource: &#39;cm_review&#39;</code>,
+<code>reviewerUserId: alice</code>.</li>
+<li>If Alice refreshes, her “Actionable” tab count drops to 4 (item #2
+was the last; new <code>roster_approval</code> requests now route
+directly to Mike).</li>
+<li>Mike’s inbox gets all new <code>roster_approval</code> requests
+going forward.</li>
+</ol>
+<p>If Mike ENABLES <code>roster_manual_edit</code> for TLs (it was off
+by default):</p>
+<ol type="1">
+<li>New <code>roster_manual_edit</code> requests on Helsreach now appear
+in Alice’s “Actionable” tab.</li>
+<li>In-flight <code>roster_manual_edit</code> requests that were already
+filed before the change are NOT retroactively routed to Alice — they
+stay with Mike (intent at filing time).</li>
+</ol>
+<p><strong>Bob’s view (Team Leader of Hades Defenders):</strong></p>
+<p>Bob’s actionable tab shows only items affecting Hades Defenders (item
+#9, item #10). He doesn’t see Helsreach items at all (per RLS +
+team-isolation policies).</p>
+<p><strong>Carol’s view (Team Leader of Gorgutz’s WAAAGH!):</strong></p>
+<p>Carol’s actionable tab shows only items affecting Gorgutz’s WAAAGH!
+(none currently in this example). Her team has co-leader Dave — with
+<code>teamLeaderApprovalMode: &#39;any&#39;</code>, either can approve. If Carol
+picks up an item and Dave also approves, the second approval is recorded
+but the request is already decided.</p>
+<p><strong>Mike’s view (Primary CM):</strong></p>
+<p>Mike’s inbox shows ALL 13 items across all teams. He can approve any
+of them. His tab counts: - All: 13 - Roster approvals: 5 (3 Helsreach +
+1 Hades + 1 already-decided-but-recent) - Battle: 3 (2 Helsreach routine
++ 1 Helsreach pending) - Requisition: 1 - Rollback: 0 - Settings
+(mass_reban, campaign_announcement, etc.): 2 - Cross-team: 1
+(team_switch) - Recently decided: 0</p>
+<p>Mike can also see Alice’s actions (audit log records
+<code>reviewerUserId: alice</code> when Alice approves something).</p>
+<h3 id="inbox-sortfilter-details-v3.13">5.5 Inbox sort/filter details
+(v3.13)</h3>
+<p>When the CM clicks the sort dropdown, options are:</p>
+<ul>
+<li><strong>Oldest first</strong> (default, FIFO)</li>
+<li><strong>Newest first</strong></li>
+<li><strong>By submitter</strong> (alphabetical)</li>
+<li><strong>By team</strong> (then by age within team)</li>
+<li><strong>By kind</strong> (then by age within kind)</li>
+</ul>
+<p>Filter chips at the top of the inbox are additive (multiple filters
+AND together):</p>
+<ul>
+<li>Campaign (when CM has multiple)</li>
+<li>Team</li>
+<li>Kind</li>
+<li>Submitter</li>
+<li>Age: Today / This week / Older</li>
+<li>Status: Pending / Recently decided (last 24h)</li>
+<li>Authority: Actionable for me / All items (TL inbox only)</li>
+</ul>
 <hr />
 <h2 id="drift-detection">6. Drift Detection</h2>
+<h2 id="drift-detection-1">6. Drift Detection</h2>
 <p>If the current state has changed since submission (e.g., the player
 imported a new RosterDraft while approval was pending), the CM sees a
 “Drift detected” warning. Side-by-side: original vs. recomputed.</p>

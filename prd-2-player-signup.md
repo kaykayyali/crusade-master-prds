@@ -295,6 +295,330 @@ The "CM Inbox" item is CM-only. The "Team Inbox" item is team-leader-only. The "
 
 ---
 
+## 5d. Account Page (per-user, v3.14)
+
+Per-user settings that travel with the user across campaigns and tenants. Lives at `/account`. **Settings here apply to the user's experience everywhere**, not per-campaign.
+
+```
++---------------------------------------------------+
+| Account                                          |
+| Sarah Kim <sarah@example.com>                    |
+| Member since 2026-07-15                          |
++---------------------------------------------------+
+| PROFILE                                          |
+|   Display name: [Sarah Kim          ] [Save]    |
+|   Avatar: [upload]                               |
+|   Email: sarah@example.com                       |
+|   [Change email]                                 |
++---------------------------------------------------+
+| NOTIFICATIONS                                    |
+|   Default loudness: ( ) loud (•) normal ( ) quiet |
+|   Channels: [✓] In-app toast                     |
+|             [✓] In-app notification list         |
+|             [✓] Email (loud only)                |
+|   Quiet hours: [22:00] to [08:00]                |
+|     (suppresses loud notifications; queueing for after) |
+|   [Save]                                         |
++---------------------------------------------------+
+| SECURITY                                         |
+|   Authentication: Magic link only                |
+|   Active sessions:                               |
+|     - Chrome / macOS · 2h ago                    |
+|     - Safari / iOS · 3d ago           [Revoke]   |
+|   MFA: [Enable TOTP]                             |
+|   [Change password] (not applicable, magic link) |
++---------------------------------------------------+
+| TENANTS & CAMPAIGNS                              |
+|   You're a member of:                            |
+|     - Aurelian Crusade (Helsreach Defenders)    |
+|       [Open campaign] [Leave campaign]           |
+|     - Baal Incursion (Wrecked Skulls)           |
+|       [Open campaign] [Leave campaign]           |
+|     - Internal Test Campaign (CM)               |
+|       [Open campaign]                            |
++---------------------------------------------------+
+| DANGER ZONE                                      |
+|   [Export all my data]   (per PRD-0 §3 GDPR)     |
+|   [Delete account]   (requires email confirmation)|
++---------------------------------------------------+
+```
+
+### 5d.1 Account page sections in detail
+
+**PROFILE** — display name (the only required user-level field), avatar (optional, uploaded to MinIO per PRD-0), email (locked once verified; change requires re-verification per Q4).
+
+**NOTIFICATIONS** — per-user notification loudness defaults. Three channels: in-app toast, in-app notification list, email. Email is loud-only (you only get emails for `loud` notifications; this prevents email spam for routine events).
+
+**Quiet hours** — suppresses `loud` notifications during a window (e.g., 22:00–08:00). `normal` and `quiet` notifications still arrive. `loud` notifications fired during quiet hours queue for delivery at the end of the window. The user can override per-campaign (per §5e).
+
+**SECURITY** — session management (revoke active sessions), MFA enrollment (TOTP), recent login activity. v1 ships session list + MFA opt-in; **MFA enforcement** (mandatory for CM roles) is v1.x.
+
+**TENANTS & CAMPAIGNS** — list of all campaigns the user is a member of, across all tenants they're a member of. Each row shows the campaign name, role, team (if applicable), and the join date. Actions: open campaign, leave campaign.
+
+**DANGER ZONE** — data export (JSON dump of all the user's data) and account deletion. Account deletion requires email confirmation and CM approval (per PRD-1 §4.2: when a user requests deletion, all their `CampaignMember` rows are removed; pending approvals they filed are auto-withdrawn; their rosters are archived for 30 days then hard-deleted).
+
+### 5d.2 Per-role settings visibility
+
+- **Player** sees all sections above.
+- **Crusade Team Leader** sees all sections PLUS a "Team Leader preferences" section (e.g., "receive notifications when a player on my team files a roster approval" — on by default).
+- **Primary CM** sees all sections PLUS "CM preferences" (e.g., "default bulk-approve cap," "default team-leader authority for new campaigns").
+
+These role-specific sections are sub-pages, not sections crammed into the main account page — they live at `/account/team-leader` and `/account/cm` respectively.
+
+### 5d.3 Settings hierarchy (per-user vs per-campaign)
+
+| Setting | Scope | Lives in |
+|---|---|---|
+| Display name, avatar | Per-user | Account page |
+| Email + verification | Per-user | Account page |
+| Authentication, MFA, sessions | Per-user | Account page |
+| Default notification loudness + channels | Per-user | Account page |
+| Quiet hours (default) | Per-user | Account page |
+| **Campaign quiet hours override** | Per-campaign | Campaign player page (§5e) |
+| **Default team-leader authority (CM-only)** | Per-user (CM default) | Account page CM section |
+| **Bulk-approve cap default (CM-only)** | Per-user (CM default) | Account page CM section |
+| **Notification subscription to specific campaigns** | Per-user | Account page |
+| **Role display preference** | Per-campaign | Campaign player page |
+
+Per-campaign overrides live on the campaign-scoped player page, not the account page. This avoids "I changed my account setting and now every campaign behaves differently" surprises.
+
+---
+
+## 5e. Campaign-Scoped Player Page (v3.14)
+
+Per-campaign context. The player's profile within this specific campaign — their role, team, faction, and per-campaign prefs. Lives at `/campaigns/{id}/me`.
+
+```
++-----------------------------------------------------+
+| Aurelian Crusade — Your Role                        |
+| You're a Player on Helsreach Defenders             |
+| Joined 2026-07-15 · Last active 2h ago              |
++-----------------------------------------------------+
+| YOUR IDENTITY                                      |
+|   Display name in this campaign: Sarah Kim         |
+|   Team: Helsreach Defenders (color: blue)          |
+|     [Switch team] (requires CM approval)            |
+|   Faction: Astra Militarum (Cadian)                 |
+|     [Switch faction] (requires CM approval)        |
++-----------------------------------------------------+
+| YOUR CRUSADE STATS                                 |
+|   Active roster: v17 (approved 2026-08-29)         |
+|   Battles played: 8  Victories: 5  Losses: 3       |
+|   RP balance: 3                                    |
+|   Requisitions purchased: 2                        |
++-----------------------------------------------------+
+| NOTIFICATIONS (this campaign)                      |
+|   (•) Loud  ( ) Normal  ( ) Quiet   (overrides account default) |
+|   Quiet hours override: [none]                     |
+|     (When set, suppresses loud notifications during window)   |
++-----------------------------------------------------+
+| DISPLAY                                            |
+|   Show handle publicly in narrative log: [✓]       |
+|   Show on team leaderboard: [✓]                    |
+|     (Anonymous toggle for shy players)             |
++-----------------------------------------------------+
+| DANGER ZONE                                        |
+|   [Leave this campaign]                            |
+|     (auto-withdraws pending approvals; archives rosters)       |
++-----------------------------------------------------+
+```
+
+### 5e.1 Sections
+
+**YOUR IDENTITY** — current role + team + faction. The role is shown but not editable (CM controls role assignment). Team and faction have "switch" actions that create `team_switch` / `faction_switch` `ApprovalRequest`s (PRD-5).
+
+**YOUR CRUSADE STATS** — at-a-glance: active roster version, battles tally, RP balance, requisitions count. Derived from current `RosterApproved` + history. Read-only display; if numbers look wrong, the player can click through to the timeline view to see the events.
+
+**NOTIFICATIONS (this campaign)** — per-campaign override of the user's default notification loudness. If a player wants `normal` instead of `loud` for this campaign specifically, they set it here. Quiet hours can also be overridden per-campaign.
+
+**DISPLAY** — visibility toggles within this campaign. The "show handle publicly" toggle controls whether the player's name appears in the narrative log or as "anonymous." The "show on team leaderboard" controls whether they appear in the team's roster health overview. Both default to visible.
+
+**DANGER ZONE** — leave campaign. Requires confirmation. Triggers: auto-withdraw pending approvals the player filed, archive rosters (per PRD-1 §4.2 retention), send notifications to the CM.
+
+### 5e.2 Role badges
+
+Top of the page shows the role badge:
+- **Player**: no badge
+- **Crusade Team Leader of Helsreach Defenders**: a "Team Leader" badge with team color
+- **Primary CM**: a "Campaign Master" badge
+
+The role badge is read-only here; it's set by the CM via the Crusade Administration panel → Members section.
+
+### 5e.3 Permissions matrix
+
+| Action | Player | Team Leader | Primary CM |
+|---|---|---|---|
+| View this page | ✅ own | ✅ own | ✅ own |
+| Switch team (creates approval) | ✅ | ✅ | ✅ |
+| Switch faction (creates approval) | ✅ | ✅ | ✅ |
+| Change per-campaign notification loudness | ✅ | ✅ | ✅ |
+| Change quiet hours override | ✅ | ✅ | ✅ |
+| Show/hide handle publicly | ✅ | ✅ | ✅ |
+| Show/hide on team leaderboard | ✅ | ✅ | ✅ |
+| Leave campaign | ✅ | ✅ (with handoff prompt — see §5e.4) | ❌ (CM cannot leave own campaign; must transfer or archive) |
+
+### 5e.4 Team Leader leave-campaign flow
+
+When a Team Leader attempts to leave, they get a warning: "You are the only team leader on Helsreach Defenders. The CM must promote a replacement before you can leave." If the team has other team leaders, the warning is gentler: "Other team leaders will continue your team's approval queue."
+
+---
+
+## 5f. Roster Page (per-roster, v3.14)
+
+The army view. Lives at `/campaigns/{id}/rosters/{rosterId}`. **The roster page is one of the load-bearing surfaces** — players spend a lot of time here. The user said "specialized views for their generated crusade cards" — that's what comes next (§5g), but first the parent surface.
+
+```
++----------------------------------------------------------+
+| Cadian 67th Legion (Astra Militarum) · v17 · Approved  |
+| Owner: Sarah Kim · Helsreach Defenders · 2026-08-29    |
++----------------------------------------------------------+
+| HEADER STATS                                            |
+|   Points: 1980 / 2000  |  Battles: 8  |  RP: 3         |
+|   [Upload new NR JSON]  [Print Order of Battle]         |
++----------------------------------------------------------+
+| UNITS (13)                                              |
+|   [+ Add unit]  (CM-gifted requisition only — see §5g)  |
+|   Filter: [All] [HQ] [Troops] [Elites] [FA] [HS] [Flyer] |
+|                                                          |
+|   ★ Castellan (Character, HQ, Battle-hardened)         |
+|      XP 18/50  · 2 Battle Honours · 1 Battle Scar      |
+|      [View crusade card →]                              |
+|                                                          |
+|   Cadian Shock Troops × 3 (Battle-line, Troops)         |
+|      XP 12/50  · 0 Battle Honours · 2 Battle Scars      |
+|      [View crusade card →]                              |
+|                                                          |
+|   ... 10 more units ...                                 |
++----------------------------------------------------------+
+| REQUISITIONS (3 available, 2 used)                     |
+|   [Replace Destroyed Unit: 1 RP] — 1 slot available    |
+|   [Add Wargear: 2 RP]                                  |
+|   [Reinforce Unit: 2 RP]                               |
+|   (These are NR-side actions per PRD-4 §7b.2; the      |
+|    roster updates when you re-import your NR list.)    |
++----------------------------------------------------------+
+| HISTORY (this roster)                                   |
+|   Timeline view of all changes — see PRD-4 §6           |
+|   [Open timeline →]                                     |
++----------------------------------------------------------+
+```
+
+### 5f.1 Sections
+
+**HEADER STATS** — points (current / cap), battles tally, RP balance. Computed from the active `RosterApproved`.
+
+**Upload CTA** — the most important button on the page. When the player has an approved roster and wants to update it, they upload a new NR JSON. The async parse flow (PRD-3) starts here.
+
+**UNITS table** — the army list. Each row is a unit summary; click → crusade card view (§5g). Filter chips for role.
+
+**REQUISITIONS** — for v3.14 these are an NR-side history view (per PRD-4 §7b.2: player does requisitions in NR, re-imports). The roster page shows what requisitions are available and how many she's used. The "purchase" action lives in NR, not here.
+
+**HISTORY** — a link to the per-roster timeline view (PRD-4 §6). PRD-4 §7b has the 6-grouping model; the roster page links into the per-roster-version view (G2 grouping).
+
+### 5f.2 State variants
+
+| Roster state | What the page shows |
+|---|---|
+| **Approved** (current) | Full content as above |
+| **Pending approval** (a draft was submitted) | "Mike is reviewing your new roster v18. You'll be notified when approved." with [View pending draft] |
+| **Superseded** (a newer draft is pending) | "This roster (v17) is no longer active. The newer v18 is pending review. [View v18]" |
+| **Rolled back** | "This roster was rolled back on YYYY-MM-DD by Mike. [View reason] [Re-import your NR list]" |
+| **Empty** (just joined) | "Welcome. Upload your first New Recruit JSON to get started." with prominent upload CTA |
+
+### 5f.3 Empty states
+
+Already covered in §5c.3 (Player Dashboard empty states) for the dashboard card. The roster page itself has the "empty" variant as above.
+
+### 5f.4 Print Order of Battle
+
+The roster page has a "Print Order of Battle" button that generates a printable view of the army — name, points, units table, supply, RP. This is what players bring to the table. The output is a printable HTML page (and a "Save as PDF" via browser print). It mirrors the `ArmageddonBlankOrderOfBattle.pdf` template the user provided (PRD-4 §4.1 disambiguation), auto-generated from the active `RosterApproved`.
+
+---
+
+## 5g. Crusade Card View (per-unit, v3.14)
+
+The specialized per-unit view. Lives at `/campaigns/{id}/rosters/{rosterId}/units/{unitId}`. This is the **army card view** — derived from the unit's state in NR (read-only display per PRD-0 §4b.2).
+
+```
++----------------------------------------------------------+
+| Castellan (Character, HQ)                               |
+| Custom name: Captain Jurgen · Battle-hardened          |
+| XP 18/50 · 2 Battle Honours · 1 Battle Scar            |
+| Owner: Sarah Kim · Helsreach Defenders                 |
++----------------------------------------------------------+
+| MODEL COUNT              | POINTS                       |
+| Current: 1/1             | 75 (base) + 0 (wargear) = 75 |
+| Battles survived: 6/8    |                              |
++----------------------------------------------------------+
+| WARGEAR                                                |
+|   • Laspistol            • Power sword                  |
+|   • Frag grenades                                         |
++----------------------------------------------------------+
+| BATTLE HONOURS (2)                                      |
+|   ★ Slayer of Monsters                                  |
+|     Gained 2026-08-22, Battle 14 vs. mike_t             |
+|     [View battle report]                                |
+|   ★ Skilled Rider                                       |
+|     Gained 2026-07-30, Battle 9 vs. jake42              |
+|     [View battle report]                                |
++----------------------------------------------------------+
+| BATTLE SCARS (1)                                        |
+|   ✗ Lost in the Fog                                      |
+|     Acquired 2026-08-22, Battle 14 OoA test failed      |
+|     [View battle report]                                |
++----------------------------------------------------------+
+| BATTLE TALLY                                           |
+|   Battles played: 8                                     |
+|   Battles survived: 6                                   |
+|   Enemy units destroyed: 11                             |
++----------------------------------------------------------+
+| UNIT TIMELINE (PRD-4 §6)                               |
+|   2026-08-01 added (Battle-ready)                       |
+|   2026-07-15 +3 XP · Battle 1                           |
+|   2026-07-22 +3 XP · Battle 3 · Promotion to Blooded    |
+|   2026-07-30 +3 XP, gained honour "Skilled Rider" · Battle 9 |
+|   2026-08-15 +3 XP, +1 kill, Promotion to Battle-hardened · Battle 12 |
+|   2026-08-22 +3 XP, gained honour "Slayer of Monsters", |
+|              gained scar "Lost in the Fog" · Battle 14   |
+|   ...                                                    |
++----------------------------------------------------------+
+| (Read-only display. To edit unit state, update in NR    |
+|  and re-import your roster.)                           |
++----------------------------------------------------------+
+```
+
+### 5g.1 Sections (mirroring the ArmageddonCrusadeCards.pdf template)
+
+The user provided this template as reference (PRD-4 §4.1). The crusade card view is the in-app equivalent — auto-generated from the unit's state in NR.
+
+- **Header**: unit name, role, custom name (if any), current rank, XP counter, battle honour + scar counts
+- **Model count + points**: current vs starting, points breakdown
+- **Wargear**: list from NR
+- **Battle honours**: list with provenance (battle + date), expandable to view the originating battle report
+- **Battle scars**: list with provenance (OoA test + date), expandable to view the originating battle report
+- **Battle tally**: cumulative stats across the campaign
+- **Unit timeline**: chronological events for this unit (PRD-4 §6)
+
+### 5g.2 Read-only contract
+
+Per PRD-0 §4b.2, this view is **read-only display data** sourced from NR. The page surfaces a clear notice at the bottom: "To edit unit state (XP, honours, scars, wargear), update in New Recruit and re-import your roster." No in-app edit surface for unit state.
+
+### 5g.3 Per-unit timeline link
+
+The "Unit timeline" section is the same surface as PRD-4 §6 (per-unit timeline view). It's embedded here for context; clicking events takes you to the full timeline with all 6 groupings (PRD-4 §7b).
+
+### 5g.4 When state diverges from NR
+
+If the player has an older roster version approved but a newer NR list they've been editing locally, the crusade card view shows what the **approved** version has. The "Pending upload" badge on the roster page (§5f.2) signals there's a newer draft in flight.
+
+### 5g.5 Multi-unit display for shared wargear
+
+Some players run "Cadian Shock Troops × 3" — three units of the same type with different custom names. The roster page (§5f) shows them as separate rows. The crusade card view is one unit at a time, so each gets its own page. The unit's custom name disambiguates them.
+
+---
+
+---
+
 ## 6. Critical User Flows — Player (Sarah)
 
 **Persona — Sarah, the player:**

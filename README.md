@@ -20,7 +20,45 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.13 (current) — UI critical pass + campaign-creation team-leader gate
+### v3.14 (current) — 4 page surfaces + TL inbox worked example
+
+Per user direction: users need an **account page** + a **campaign-scoped player page** + a **roster page** + **specialized views for their generated crusade cards**. Added all four as PRD-2 §5d–§5g.
+
+**1. Account page (PRD-2 §5d, per-user).**
+Settings that travel with the user across campaigns and tenants. Sections: PROFILE / NOTIFICATIONS / SECURITY / TENANTS & CAMPAIGNS / DANGER ZONE. Per-role sub-pages at `/account/team-leader` and `/account/cm` for role-specific settings. Quiet hours, MFA opt-in, session management, account deletion (with email confirmation).
+
+**2. Campaign-scoped player page (PRD-2 §5e, per-campaign).**
+The player's profile within a specific campaign. Sections: YOUR IDENTITY (role/team/faction + switch buttons that create `team_switch` / `faction_switch` approvals) / YOUR CRUSADE STATS / NOTIFICATIONS (per-campaign loudness override) / DISPLAY (handle visibility, leaderboard visibility) / DANGER ZONE (leave campaign). Team Leader leave-campaign flow forces a replacement per PRD-1 §4.2.
+
+**3. Roster page (PRD-2 §5f, per-roster).**
+The army view. Header stats (points / battles / RP), units table with role filters, requisitions history (NR-side per PRD-4 §7b.2), history link. State variants: Approved / Pending approval / Superseded / Rolled back / Empty. "Print Order of Battle" button auto-generates a printable HTML/PDF view mirroring the `ArmageddonBlankOrderOfBattle.pdf` template the user provided.
+
+**4. Crusade card view (PRD-2 §5g, per-unit).**
+The unit's auto-generated card. Mirrors the `ArmageddonCrusadeCards.pdf` template: model count / points / wargear / battle honours (with provenance) / battle scars (with provenance) / battle tally / unit timeline. **Read-only display per PRD-0 §4b.2** — the page surfaces "To edit unit state, update in NR and re-import."
+
+**5. Settings hierarchy (per-user vs per-campaign).**
+Documented in PRD-2 §5d.3. Per-user: name, avatar, auth, default loudness, sessions. Per-campaign: notification overrides, display preferences. The CM has additional settings: default team-leader authority, bulk-approve cap defaults, per-tenant defaults.
+
+**6. TL inbox worked example (PRD-5 §5.4).**
+Concrete walkthrough:
+- **Campaign**: Aurelian Crusade, 4 teams (Helsreach / Hades / Gorgutz / Skari), Alice is Helsreach TL, Bob is Hades TL, Carol + Dave are co-leaders of Gorgutz, Skari has no TL yet.
+- **13 pending items** in the campaign's queue.
+- **Alice's "Actionable" tab** shows 5 items (all Helsreach players, kinds she's authorized for).
+- **Alice's "All team items" tab** shows 8 items (5 actionable + 3 read-only: CM-gifted requisition, cross-team team_switch, auto-approved battle).
+- **Alice doesn't see** Hades / Gorgutz / Skari items at all (RLS + team isolation).
+- **Mid-flight authority change** worked through: Alice keeps approval rights on in-flight requests when CM disables her kind-authority (intent at filing time wins, per the question I asked earlier).
+
+**7. Sort + filter details (PRD-5 §5.5).**
+- Sort: oldest first (default FIFO), newest first, by submitter, by team, by kind.
+- Filters are additive: campaign / team / kind / submitter / age / status / authority (TL inbox only).
+- Recently decided items shown for 24h with undo banner.
+
+**Defaults used where the user didn't answer my earlier questions:**
+- **Q1 (settings scope)**: per-user for personal prefs + small per-campaign override surface. Documented in §5d.3 hierarchy table.
+- **Q2 (mid-flight authority)**: intent at filing time wins. Worked through in §5.4.
+- **Q3 (TL inbox scope)**: default tab = Actionable (authorized kinds only); secondary tab = All team items (read-only).
+
+### v3.13 — UI critical pass + campaign-creation team-leader gate
 
 Critical pass through the UI surfaces. Six additions / expansions:
 
