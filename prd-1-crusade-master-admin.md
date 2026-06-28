@@ -193,10 +193,11 @@ Battles are scheduled both *intra-team* (rare, for narrative beat-battles betwee
 
 **Schema (in PRD-0 §4):**
 
-- `Campaign.teamsEnabled: boolean` — when false, free-for-all (no teams); when true, players must pick a team
+- Teams are **mandatory** for every campaign in v1. Free-for-all mode is out of scope.
 - `CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }` — the `narrativeLogFilter` controls which events the team's players see (e.g., Defenders see all events; Invaders see only Inter-team battles + Inter-team events)
-- `CampaignMember.teamId?: CampaignTeam['id']` — nullable when `teamsEnabled = false`
-- `Roster` itself does NOT carry team info (a player's team is a member-level concept, not a roster-level concept; a player on Helsreach Defenders who switches to Hades Defenders keeps their army)
+- `CampaignMember.teamId: CampaignTeam['id']` — required; every player belongs to exactly one team
+- `Roster.teamId` — the roster is bound to the team directly; if the player switches teams, the CM decides whether the roster follows, freezes on the old team, or is replaced (per the team-switch approval flow below)
+- A campaign must have at least one team at creation time. The minimum viable campaign is 1 team with 1 player (legal but pointless); the system doesn't prevent this but the UI nudges toward ≥2 teams.
 
 **Armageddon team templates (v1):**
 

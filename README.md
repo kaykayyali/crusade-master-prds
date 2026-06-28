@@ -20,7 +20,16 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 
 ## CHANGELOG
 
-### v3.3 (current) — Narrative intent vs enforcement
+### v3.4 (current) — Teams are mandatory
+
+Per user direction: free-for-all mode is out of scope. Every campaign uses teams.
+
+- **PRD-0**: removed `Campaign.teamsEnabled`. `CampaignMember.teamId` is now required (not optional). Comment in the schema block explicitly notes teams are mandatory in v1.
+- **PRD-1 §5b**: removed the "free-for-all" branch. Schema notes that ≥1 team is required at creation; minimum viable (1 team, 1 player) is legal but pointless, UI nudges toward ≥2 teams.
+- **PRD-2**: removed the "if `teamsEnabled`" conditional. Team picker is always shown. Signup diagram simplified to a single faction+team sequence.
+- All other v3.3 narrative-intent / CM-approval logic unchanged.
+
+### v3.3 — Narrative intent vs enforcement
 
 The user clarified the team's relationship to factions: a campaign team has *narrative intent* (which 40K factions fit its story), but the **CM has final approval** — the app does not enforce. The Armageddon book (and other Crusade supplements) provide narrative reference; the CM's approval is the actual gate.
 
@@ -35,7 +44,7 @@ The user clarified the team's relationship to factions: a campaign team has *nar
 - **Distinction surfaced**: 40K `Faction` (seeded from Wahapedia) is now clearly separate from `CampaignTeam` (CM-defined per-campaign grouping of players). v3.1's "Custom Factions" note was conflating these.
 - **PRD-0**: schema adds `Campaign.teamsEnabled`, `CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }`, and `CampaignMember.teamId`. `Faction` is global; `CampaignTeam` is per-campaign; `Roster` does NOT carry team info (member-level concept).
 - **PRD-1 §5b**: rewritten. Teams are not factions — they are narrative sides within a campaign. Armageddon ships 4 template teams (Helsreach Defenders, Hades Defenders, Gorgutz's WAAAGH!, Skari's Kult of Speed); CMs can rename/edit. Battle pairing filters on team. Per-team dashboard rollups added.
-- **PRD-2**: player signup now has a two-step picker — 40K faction (always) + campaign team (only if `teamsEnabled = true`). Free-for-all campaigns skip the team step. Team switch mid-campaign requires CM approval (creates a `team_switch` `ApprovalRequest`).
+- **PRD-2**: player signup now has a two-step picker — 40K faction + campaign team. Free-for-all campaigns skip the team step. Team switch mid-campaign requires CM approval (creates a `team_switch` `ApprovalRequest`).
 - **PRD-4**: `NarrativeEventEffect.FilterExpr` supports `teamId` as a first-class axis alongside `factionId`. The two are distinct dimensions; CM can target events to a specific team.
 
 ### v3.1 — Rule builder in scope + critical user flows

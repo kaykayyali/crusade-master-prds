@@ -47,7 +47,7 @@ Get a player from "I have an invite code" to "I'm a member of the campaign with 
 
 ### 3.3 Faction + Team Picker (two distinct picks)
 
-When a player joins a campaign, they pick two things — a 40K faction and a campaign team (if the campaign has teams).
+When a player joins a campaign, they pick two things — a 40K faction and a campaign team (always; every campaign has teams in v1).
 
 **Faction picker:**
 - Searchable dropdown of all 26 Wahapedia factions. Each option shows:
@@ -56,12 +56,13 @@ When a player joins a campaign, they pick two things — a 40K faction and a cam
   - Linked Armageddon-specific content flag (if any)
 - Sets `CampaignMember.factionId`
 
-**Team picker (only if `Campaign.teamsEnabled = true`):**
+**Team picker (always shown):**
 - List of `CampaignTeam` rows for the campaign
 - Each team shown with: name, color, description, current player count
 - Each team shows its `expectedFactionIds` as a hint: "typically plays Imperial factions" or "typically plays Orks" (derived from the count of expected factions; details behind a tooltip)
 - Sets `CampaignMember.teamId`
 - The picker does NOT filter the 40K faction picker — any player can pick any team regardless of faction
+- Teams are mandatory in v1; there is no teamless mode (free-for-all is out of scope)
 
 **Narrative-fit hint (when faction and team don't match expectedFactionIds):**
 
@@ -74,9 +75,6 @@ The player can click "Continue anyway" or "Pick a different team." The app does 
 If `expectedFactionIds` is null (CM hasn't set any), no hint is shown.
 
 If `CampaignTeam.expectedFactionIds` is set and the player's faction IS in the list, a green check is shown: "✓ fits Helsreach Defenders' Imperial narrative."
-
-**Free-for-all campaigns (`teamsEnabled = false`):**
-- Only the faction picker shows. Team picker step is skipped.
 
 After both picks complete:
 - Create empty `Roster` (no draft, no approved)
@@ -110,11 +108,8 @@ flowchart TD
     H --> I{Invite valid?}
     I -->|No| J[Show error]
     I -->|Yes| K{Pick faction (always)}
-    K --> L{Campaign has teams?}
-    L -->|Yes| M[Pick team]
-    L -->|No| N[Skip]
-    M --> O[Create Roster shell]
-    N --> O
+    K --> L[Pick team]
+    L --> M[Create Roster shell]
     L --> M[Redirected to /campaigns/{id}]
     M --> N{First time in this campaign?}
     N -->|Yes| O[Onboarding tour]
@@ -148,7 +143,7 @@ If a player is already in tenant A and gets an invite to tenant B, they must sig
 
 **Team:**
 - Teams are CM-defined per campaign (see PRD-1 §5b)
-- Team picker is shown only when `Campaign.teamsEnabled = true`
+- Team picker is always shown — every campaign has teams in v1; free-for-all is out of scope
 - Team picker never restricts 40K faction choice (multi-faction teams are the norm)
 - Team switch mid-campaign requires CM approval (creates a "team_switch" `ApprovalRequest` per PRD-5)
 

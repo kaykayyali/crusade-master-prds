@@ -218,20 +218,21 @@ already used”, “Wrong tenant”)</li>
 <h3 id="faction-team-picker-two-distinct-picks">3.3 Faction + Team
 Picker (two distinct picks)</h3>
 <p>When a player joins a campaign, they pick two things — a 40K faction
-and a campaign team (if the campaign has teams).</p>
+and a campaign team (always; every campaign has teams in v1).</p>
 <p><strong>Faction picker:</strong> - Searchable dropdown of all 26
 Wahapedia factions. Each option shows: - Faction logo (from Wahapedia) -
 One-line description - Linked Armageddon-specific content flag (if any)
 - Sets <code>CampaignMember.factionId</code></p>
-<p><strong>Team picker (only if
-<code>Campaign.teamsEnabled = true</code>):</strong> - List of
+<p><strong>Team picker (always shown):</strong> - List of
 <code>CampaignTeam</code> rows for the campaign - Each team shown with:
 name, color, description, current player count - Each team shows its
 <code>expectedFactionIds</code> as a hint: “typically plays Imperial
 factions” or “typically plays Orks” (derived from the count of expected
 factions; details behind a tooltip) - Sets
 <code>CampaignMember.teamId</code> - The picker does NOT filter the 40K
-faction picker — any player can pick any team regardless of faction</p>
+faction picker — any player can pick any team regardless of faction -
+Teams are mandatory in v1; there is no teamless mode (free-for-all is
+out of scope)</p>
 <p><strong>Narrative-fit hint (when faction and team don’t match
 expectedFactionIds):</strong></p>
 <p>If a player picks a faction that’s NOT in their chosen team’s
@@ -250,9 +251,6 @@ hint is shown.</p>
 <p>If <code>CampaignTeam.expectedFactionIds</code> is set and the
 player’s faction IS in the list, a green check is shown: “✓ fits
 Helsreach Defenders’ Imperial narrative.”</p>
-<p><strong>Free-for-all campaigns
-(<code>teamsEnabled = false</code>):</strong> - Only the faction picker
-shows. Team picker step is skipped.</p>
 <p>After both picks complete: - Create empty <code>Roster</code> (no
 draft, no approved) - Player is redirected to “Import your first roster”
 CTA</p>
@@ -284,11 +282,8 @@ importer</li>
     H --&gt; I{Invite valid?}
     I --&gt;|No| J[Show error]
     I --&gt;|Yes| K{Pick faction (always)}
-    K --&gt; L{Campaign has teams?}
-    L --&gt;|Yes| M[Pick team]
-    L --&gt;|No| N[Skip]
-    M --&gt; O[Create Roster shell]
-    N --&gt; O
+    K --&gt; L[Pick team]
+    L --&gt; M[Create Roster shell]
     L --&gt; M[Redirected to /campaigns/{id}]
     M --&gt; N{First time in this campaign?}
     N --&gt;|Yes| O[Onboarding tour]
@@ -320,10 +315,10 @@ factions - Soft highlight: factions with documented Armageddon content
 get a small badge - Legends / Forge World units are not in the picker;
 they’re added during NR import</p>
 <p><strong>Team:</strong> - Teams are CM-defined per campaign (see PRD-1
-§5b) - Team picker is shown only when
-<code>Campaign.teamsEnabled = true</code> - Team picker never restricts
-40K faction choice (multi-faction teams are the norm) - Team switch
-mid-campaign requires CM approval (creates a “team_switch”
+§5b) - Team picker is always shown — every campaign has teams in v1;
+free-for-all is out of scope - Team picker never restricts 40K faction
+choice (multi-faction teams are the norm) - Team switch mid-campaign
+requires CM approval (creates a “team_switch”
 <code>ApprovalRequest</code> per PRD-5)</p>
 <hr />
 <h2 id="critical-user-flows-player-sarah">6. Critical User Flows —

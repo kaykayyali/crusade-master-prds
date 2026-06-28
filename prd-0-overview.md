@@ -143,7 +143,9 @@ User { id, tenantId, email, displayName, roles, createdAt }
 Roles = 'instance_admin' | 'cm' | 'player' | 'spectator'   // user can hold multiple
 
 // === Campaign ===
-Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt, teamsEnabled: boolean }
+// Teams are MANDATORY in v1: every campaign has at least one team. Free-for-all
+// mode is out of scope.
+Campaign { id, tenantId, name, supplementId, cmUserId, status, settings, createdAt }
 CampaignTeam {
   id, campaignId, name, description, color, narrativeLogFilter,
   // Narrative intent: which 40K factions fit this team's story. NOT enforced
@@ -151,7 +153,7 @@ CampaignTeam {
   // approval on every roster. Books (e.g., Armageddon) ship with these pre-filled.
   expectedFactionIds: string[] | null
 }
-CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId?: CampaignTeam['id'] }
+CampaignMember { id, campaignId, userId, joinedAt, status, factionId, teamId: CampaignTeam['id'] }
 
 // === Roster (state machine) ===
 Roster {

@@ -509,18 +509,21 @@ beat-battles between teammates) and <em>inter-team</em> (the main driver
 of campaign progress).</p>
 <p><strong>Schema (in PRD-0 §4):</strong></p>
 <ul>
-<li><code>Campaign.teamsEnabled: boolean</code> — when false,
-free-for-all (no teams); when true, players must pick a team</li>
+<li>Teams are <strong>mandatory</strong> for every campaign in v1.
+Free-for-all mode is out of scope.</li>
 <li><code>CampaignTeam { id, campaignId, name, description, color, narrativeLogFilter }</code>
 — the <code>narrativeLogFilter</code> controls which events the team’s
 players see (e.g., Defenders see all events; Invaders see only
 Inter-team battles + Inter-team events)</li>
-<li><code>CampaignMember.teamId?: CampaignTeam[&#39;id&#39;]</code> — nullable
-when <code>teamsEnabled = false</code></li>
-<li><code>Roster</code> itself does NOT carry team info (a player’s team
-is a member-level concept, not a roster-level concept; a player on
-Helsreach Defenders who switches to Hades Defenders keeps their
-army)</li>
+<li><code>CampaignMember.teamId: CampaignTeam[&#39;id&#39;]</code> — required;
+every player belongs to exactly one team</li>
+<li><code>Roster.teamId</code> — the roster is bound to the team
+directly; if the player switches teams, the CM decides whether the
+roster follows, freezes on the old team, or is replaced (per the
+team-switch approval flow below)</li>
+<li>A campaign must have at least one team at creation time. The minimum
+viable campaign is 1 team with 1 player (legal but pointless); the
+system doesn’t prevent this but the UI nudges toward ≥2 teams.</li>
 </ul>
 <p><strong>Armageddon team templates (v1):</strong></p>
 <p>When the CM picks the Armageddon supplement during campaign creation,
