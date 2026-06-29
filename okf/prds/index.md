@@ -9,4 +9,5 @@ All product requirements documents for the Crusade Master app, one concept per P
 * [Events, Submissions, & Timeline (v3.28)](/prds/prd-4-events-deltas.md) — Comprehensive event taxonomy (v3.17). State vs Phase (v3.18). BattleUpdates, HistoryEntry, Rollback, Event→Notification fanout (v3.26).
 * [Approval System (v3.28)](/prds/prd-5-approval-system.md) — ApprovalKind enum, `approvalSource` field, team-leader authority, always-fire re-assessment warning (v3.17), authority hierarchy simplified (v3.27).
 * [Technical Architecture & API Surface (v3.28)](/prds/prd-6-technical-architecture.md) — Hapi API contract, OpenAPI/Swagger (code-first, v3.25), `useInboxPoller` real-time strategy (v3.28).
-* [Testing Strategy (v3.28)](/prds/prd-7-testing-strategy.md) — Vitest + pytest + Playwright + testcontainers + GitHub Actions (v3.24+).
+* [Testing Strategy (v3.28)](/prds/prd-7-testing-strategy.md) — Vitest + pytest + Playwright + testcontainers + GitHub Actions (v3.24+). Mock Discord receiver + `discord-webhook-delivery-job` added in v4.0 (PRD-8).
+* [Discord Integration via Webhooks (v4.0, NEW)](/prds/prd-8-discord-webhooks.md) — Per-team Discord webhook forwarding. Outgoing only; no bot. Team Leader (or CM) configures URL + event subscriptions. Team-isolation enforced at the fanout step.

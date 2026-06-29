@@ -700,9 +700,13 @@ These are aggregated views; the underlying events are per-player.
 
 ---
 
-## 5c. Discord Integration (future, not in v1)
+## 5c. Discord Integration (PRD-8 / v4.0)
 
-Webhook-based Discord integration is a high-value v2 feature (community runs most 40K conversation in Discord). The system will emit events that can be forwarded to Discord channels; the wiring lives in v2.
+Webhook-based Discord integration is implemented in PRD-8 (v4.0). Per-team Discord webhook forwarding — each `CampaignTeam` registers at most one Discord webhook URL; the team's Crusade Team Leader (or the primary CM) configures which `EventKind` values fire it. Outgoing webhooks only; no bot, no DMs, no bidirectional sync. See [PRD-8](/prds/prd-8-discord-webhooks.md) for the full specification.
+
+---
+
+**Note (historical):** before PRD-8, this section was a 2-line placeholder noting Discord as a v2 feature. The placeholder is now implemented; this section exists only as a forward-pointer.
 
 ---
 

@@ -32,4 +32,5 @@ Synced to upstream **v3.28** (commits `6cd2490` → `a916708`). See [`log.md`](.
 * [Crusade Team Leader](/concepts/crusade-team-leader.md) — Player with delegated team-scoped approval authority. Multi-leader (v3.12); TL gate at campaign start (v3.28).
 * [BattleReportForm](/concepts/battle-report-form.md) — Per-Campaign JSON Schema for the post-battle update form.
 * [BattleUpdate](/concepts/battle-update.md) — Per-player post-battle submission; references a `CrusadeArmy` or `CrusadeForceVersion` (v3.28).
-* [Notification](/concepts/notification.md) — User-facing materialization of an `Event`; fanout function determines recipients (v3.26 / v3.28).
+* [Notification](/concepts/notification.md) — User-facing materialization of an `Event`; fanout function determines recipients (v3.26 / v3.28). Discord delivery added in v4.0 (PRD-8).
+* [DiscordWebhook](/concepts/discord-webhook.md) — Per-team Discord webhook registration + delivery log schema (v4.0, PRD-8).

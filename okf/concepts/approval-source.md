@@ -39,7 +39,7 @@ The `pending | approved | rejected` lifecycle is `ApprovalRequest.status`. The r
 
 - Audit filtering: "show me all approvals the CM did unilaterally" → `approvalSource = 'self_approved' AND submittedByUserId = cmId`
 - Analytics: "show me auto-approved routine battle updates" → `approvalSource = 'auto_approve_routine'`
-- Future hooks (Discord, narrative analytics): count by `approvalSource` for metrics without special-casing CM-as-player
+- Future hooks (narrative analytics, future audit surfaces): count by `approvalSource` for metrics without special-casing CM-as-player. Discord webhook delivery (PRD-8) consumes this field to attach approver metadata to embeds.
 
 # Cross-references
 

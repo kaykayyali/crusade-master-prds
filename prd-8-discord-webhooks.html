@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>prd-8-discord-webhooks</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">prd-8-discord-webhooks</h1>
+</header>
+<h1 id="prd-8-discord-integration-via-webhooks">PRD-8: Discord
+Integration via Webhooks</h1>
+<blockquote>
+<p>Per-team Discord webhook forwarding for Crusade campaign events.
+Outgoing webhooks only — no bot, no DMs, no bidirectional sync. Each
+<code>CampaignTeam</code> registers at most one webhook URL; the team’s
+Crusade Team Leader (or the primary CM) configures which
+<code>EventKind</code> values fire it. Delivery is async via BullMQ with
+retry, team-isolation enforced at the fanout step.</p>
+</blockquote>
+<hr />
+<h2 id="glossary">0. Glossary</h2>
+<ul>
+<li><strong>Discord webhook</strong> — an HTTPS endpoint of the form
+<code>https://discord.com/api/webhooks/{id}/{token}</code> that accepts
+<code>POST</code> requests with a JSON body to publish a message into a
+specific Discord guild channel. Owned by the channel; created via
+Discord’s UI (Integrations → Webhooks). Anyone with the URL can post to
+that channel.</li>
+<li><strong>Webhook (this app)</strong> — a <code>DiscordWebhook</code>
+row representing one registered Discord webhook URL, scoped to a single
+<code>CampaignTeam</code>. Owned/configured by the team’s Crusade Team
+Leader (TL) or the primary CM.</li>
+<li><strong>Embed</strong> — Discord’s rich-message format: a JSON
+object with <code>title</code>, <code>description</code>,
+<code>fields[]</code>, <code>color</code>, <code>timestamp</code>,
+<code>author</code>, etc. Renders as a card in the channel.</li>
+<li><strong>Loudness</strong> — borrowed from PRD-5 §8:
+<code>loud</code> / <code>normal</code> / <code>quiet</code>
+classification of how urgent a notification is. PRD-8 forwards
+team-eligible events at the loudness floor the team has configured
+(default: <code>normal</code>).</li>
+<li><strong>Team-isolation invariant</strong> — PRD-0 §3b / §4b.3
+guarantee. No <code>Event</code> row of any kind may leak across teams.
+PRD-8 implements this invariant at the event fanout step; the delivery
+worker is dumb pipe.</li>
+<li><strong>Subscription (this app)</strong> — a
+per-<code>DiscordWebhook</code> row in
+<code>DiscordWebhookSubscription</code> declaring “this event kind
+triggers a delivery to this webhook.” The TL configures
+subscriptions.</li>
+<li><strong>Delivery worker</strong> — the BullMQ consumer for the
+<code>discord-webhook-delivery</code> queue. Decrypts the URL, renders
+the embed, <code>POST</code>s to Discord, records the result, retries
+with backoff.</li>
+<li><strong>429 (rate-limited)</strong> — Discord’s response when a
+webhook is over its quota (30/min per webhook, 5 concurrent per
+webhook). Response includes a <code>Retry-After</code> header.</li>
+</ul>
+<p><strong>Roles used (per PRD-0 §3b + PRD-1 §0):</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>What they are</th>
+<th>Webhook authority</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Primary CM</strong></td>
+<td>Full campaign authority</td>
+<td>Full CRUD on any team’s webhook (override)</td>
+</tr>
+<tr class="even">
+<td><strong>Crusade Team Leader (TL)</strong></td>
+<td>Player on a team with delegated team-scoped approval authority</td>
+<td>Full CRUD on <strong>their team’s</strong> webhook</td>
+</tr>
+<tr class="odd">
+<td><strong>Player</strong></td>
+<td>Player on a team</td>
+<td>Read-only view of <strong>their team’s</strong> webhook (delivery
+status, test results, subscriptions). Cannot edit.</td>
+</tr>
+<tr class="even">
+<td><strong>Player on another team</strong></td>
+<td>Different team in same campaign</td>
+<td>Cannot see the webhook exists</td>
+</tr>
+<tr class="odd">
+<td><strong>Spectator</strong></td>
+<td>Read-only cross-team viewer</td>
+<td>No webhook visibility</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="goals-non-goals">1. Goals &amp; Non-Goals</h2>
+<h3 id="goals">1.1 Goals</h3>
+<ol type="1">
+<li><strong>CM or TL can wire up team-chat in &lt;60 seconds.</strong>
+Open panel → paste webhook URL → check “approval.requested” +
+“roster.approved” → save. Test-send fires a sample embed.</li>
+<li><strong>Zero new infrastructure.</strong> Webhooks are outbound
+HTTPS from the existing BullMQ worker. No bot token, no OAuth scope
+expansion, no new daemon.</li>
+<li><strong>Team-isolation is preserved by construction.</strong> PRD-0
+§3b invariant enforced at the fanout step, not the delivery worker. No
+code path can leak <code>team</code>,
+<code>cm_only</code>-without-affected-teams, or <code>private</code>
+events to a Discord channel.</li>
+<li><strong>Reliable delivery.</strong> Discord 429s, transient network
+errors, and process restarts don’t lose events. Failed deliveries retry
+with exponential backoff + <code>Retry-After</code> honoring.</li>
+<li><strong>Auditable.</strong> Every delivery attempt (success or
+failure) is in the audit log. CM can see “this webhook delivered 247
+events in the last 7 days, 3 failed.”</li>
+<li><strong>Configurable without code changes.</strong> TL
+enables/disables per-event-kind subscriptions via the UI; no redeploy
+required.</li>
+</ol>
+<h3 id="non-goals-v1">1.2 Non-Goals (v1)</h3>
+<ul>
+<li>❌ <strong>Discord bot.</strong> No bot token, no slash commands, no
+reactions, no DMs, no role-lookups, no guild verification. Webhooks are
+server→channel only.</li>
+<li>❌ <strong>Bidirectional sync.</strong> Discord → app reads do not
+exist. We send; we don’t listen.</li>
+<li>❌ <strong>Campaign-wide webhook.</strong> Each team gets one; there
+is no separate “all campaign events to one channel” in v1. (Deferred to
+v1.x; see §16.)</li>
+<li>❌ <strong>Cross-tenant webhooks.</strong> A webhook belongs to one
+tenant and one campaign.</li>
+<li>❌ <strong>Edit-message affordance.</strong> Discord supports
+<code>PATCH /webhooks/{id}/{token}/messages/{message_id}</code>; we do
+not use it in v1.</li>
+<li>❌ <strong>Threaded messages.</strong> Each event is one embed; no
+per-event thread.</li>
+<li>❌ <strong>Per-event-kind payload customization.</strong> Embed
+layout is templated from <code>EventKind</code>; the TL cannot edit
+templates.</li>
+<li>❌ <strong>Custom Discord embeds (markdown links, images, etc.) in
+event fields.</strong> Embeds are structured; free-text content goes
+into <code>description</code> only.</li>
+<li>❌ <strong>Per-user opt-out.</strong> If a webhook is registered for
+the team and an event matches, it fires. PRD-2 §5d does
+<strong>not</strong> add an <code>echoToDiscord</code> preference.
+Players who don’t want their actions in a guild channel should discuss
+with their TL.</li>
+</ul>
+<hr />
+<h2 id="background-user-stories">2. Background &amp; User Stories</h2>
+<h3 id="background">2.1 Background</h3>
+<p>The 40K Crusade community runs most of its conversation in Discord
+guilds. The PRD-1 §6b Flow 5 pain point articulates this directly:</p>
+<blockquote>
+<p>He runs a Discord server for the group; the in-app notifications live
+in a different tool from the conversation. — Mike’s persona, PRD-1
+§6b</p>
+</blockquote>
+<p>The current PRD-1 §5c placeholder explicitly anticipates
+webhook-based forwarding:</p>
+<blockquote>
+<p>Webhook-based Discord integration is a high-value v2 feature
+(community runs most 40K conversation in Discord). The system will emit
+events that can be forwarded to Discord channels; the wiring lives in
+v2.</p>
+</blockquote>
+<p>This PRD makes that wiring live.</p>
+<p><strong>Why per-team (not per-campaign)?</strong> Teams have separate
+narrative arcs, separate <code>#crusade-helsreach</code> channels, and
+separate conversational context. Forcing all events into one campaign
+channel conflates teams; team-specific channels are how 40K groups
+actually organize. The CM doesn’t want Team Gorgutz’s roster-approval
+notifications cluttering the Helsreach Defenders’ chat.</p>
+<p><strong>Why one webhook per team?</strong> The Discord side has one
+channel per team; one URL maps cleanly. Multiple webhooks per team would
+multiply URLs without a clean semantic split (events still need
+team-isolation, subscriptions, delivery guarantees — same machinery).
+Limit is enforced as a unique constraint on
+<code>(campaignId, teamId)</code>.</p>
+<h3 id="user-stories">2.2 User Stories</h3>
+<p><strong>Mike (Primary CM of “Aurelian” campaign):</strong> - I want
+to wire Helsreach Defenders’ <code>#crusade-chat</code> to my app so the
+team sees roster-approval notifications without opening the app. - I
+want Team Gorgutz’s webhook to receive ONLY battle reports and
+requisition purchases — they get noisy about approvals. - If a webhook
+goes down or Discord rate-limits me, I want to know which webhook failed
+and why, and I want failed events to retry, not vanish.</p>
+<p><strong>Hana (Team Leader of Helsreach Defenders):</strong> - I want
+to register my team’s webhook and pick which events fire it. - I want to
+test-fire a sample embed before saving, so I know my URL works. - If a
+delivery fails repeatedly, I want a notification in my inbox saying
+“your team’s webhook is disabled — fix it.”</p>
+<p><strong>Sarah (Player on Helsreach Defenders):</strong> - I want to
+see the delivery status of my team’s webhook (last delivered, recent
+failures) — so I know whether to expect notifications in Discord. - If a
+webhook misconfiguration causes my action to leak to the wrong channel,
+I want to flag it to the CM via the audit log.</p>
+<p><strong>Instance Admin:</strong> - I want to see aggregate webhook
+health across all tenants and campaigns (delivery rate, top failing
+webhooks) on the instance metrics page.</p>
+<hr />
+<h2 id="architecture-overview">3. Architecture Overview</h2>
+<pre class="mermaid"><code>flowchart LR
+    subgraph App
+        Src[Source action&lt;br/&gt;player UI / CM UI /&lt;br/&gt;BullMQ worker / scheduled job]
+        Ev[Emit Event row&lt;br/&gt;PRD-4 §3]
+        Fanout[Fanout function&lt;br/&gt;compute recipients]
+        Notif[Notification rows&lt;br/&gt;in-app + email]
+        WHSubs[DiscordWebhook&lt;br/&gt;Subscription lookup]
+        WHEnq[Enqueue delivery jobs&lt;br/&gt;one per matching team webhook]
+        DLVQ[discord-webhook-delivery&lt;br/&gt;BullMQ queue]
+        Worker[Delivery worker]
+        Discord[(Discord API)]
+        Audit[Audit log +&lt;br/&gt;DiscordWebhookDelivery rows]
+    end
+    Src --&gt; Ev --&gt; Fanout
+    Fanout --&gt; Notif
+    Fanout --&gt; WHSubs
+    WHSubs --&gt;|eligible teams| WHEnq
+    WHEnq --&gt; DLVQ --&gt; Worker --&gt; Discord
+    Worker --&gt; Audit</code></pre>
+<p>The <strong>fanout function</strong> is the single chokepoint where
+team-isolation is enforced. The delivery worker is dumb pipe — it trusts
+whatever the fanout function queued and ships it.</p>
+<hr />
+<h2 id="data-model">4. Data Model</h2>
+<h3 id="new-tables-added-to-prd-0-4-shared-data-model">4.1 New Tables
+(added to PRD-0 §4 shared data model)</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">// PRD-0 §4 additions</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">// Per-team Discord webhook registration.</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">// Unique on (campaignId, teamId) — at most one active webhook per team per campaign.</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>DiscordWebhook {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">,</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  teamId<span class="op">,</span>                          <span class="co">// FK to CampaignTeam; one webhook per team per campaign</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span>                            <span class="co">// friendly label for UI (&quot;Helsreach #crusade-chat&quot;)</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  urlEncrypted<span class="op">,</span>                    <span class="co">// servocrypt-encrypted Discord webhook URL</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  urlFingerprint<span class="op">,</span>                  <span class="co">// SHA-256 of the URL — used for audit logs without leaking the secret</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  createdByUserId<span class="op">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  updatedAt<span class="op">,</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Disabled state: when set, deliveries are skipped (event still emitted + in-app + email).</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Set automatically after N consecutive failures (PRD-8 §10); cleared by rotate or test-send success.</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  disabledAt<span class="op">?,</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  disabledReason<span class="op">?,</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  consecutiveFailureCount<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Rolling counters used by the auto-disable logic (PRD-8 §10).</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  lastDeliveryAt<span class="op">?,</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  lastSuccessAt<span class="op">?,</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Loudness floor: events below this loudness do NOT fire this webhook.</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Default &#39;normal&#39;. TL-configurable per webhook.</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  minLoudness<span class="op">:</span> <span class="st">&#39;loud&#39;</span> <span class="op">|</span> <span class="st">&#39;normal&#39;</span> <span class="op">|</span> <span class="st">&#39;quiet&#39;</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co">// Per-webhook subscription: which EventKind values trigger a delivery.</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="co">// TL-configurable via the Integrations UI (PRD-8 §6).</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>DiscordWebhookSubscription {</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  webhookId<span class="op">,</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  eventKind<span class="op">:</span> EventKind<span class="op">,</span>            <span class="co">// from PRD-4 §3 taxonomy</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  enabled<span class="op">:</span> bool<span class="op">,</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  enabledAt<span class="op">?,</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>  enabledByUserId<span class="op">?</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="co">// Delivery log: one row per delivery ATTEMPT (success or failure).</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co">// Used for the in-app delivery status UI + audit log.</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>DiscordWebhookDelivery {</span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>  webhookId<span class="op">,</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>  eventId<span class="op">,</span>                         <span class="co">// FK to Event</span></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>  attempt<span class="op">,</span>                         <span class="co">// 1..maxAttempts (default max=5)</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;success&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span> <span class="op">|</span> <span class="st">&#39;rate_limited&#39;</span> <span class="op">|</span> <span class="st">&#39;gave_up&#39;</span><span class="op">,</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>  httpStatus<span class="op">?,</span></span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>  errorMessage<span class="op">?,</span>                   <span class="co">// truncated Discord error body or network error</span></span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>  durationMs<span class="op">?,</span></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>  enqueuedAt<span class="op">,</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>  deliveredAt<span class="op">?,</span></span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Rendered embed JSON — kept for &quot;show me what was sent&quot; debug UI.</span></span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Redacted of any private fields per PRD-0 §4b.3.</span></span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>  embedJson<span class="op">?</span></span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="co">// Unique constraints</span></span>
+<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="co">// - DiscordWebhook: UNIQUE (campaignId, teamId) WHERE disabledAt IS NULL</span></span>
+<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="co">//   (allows a &quot;soft-retired&quot; disabled row to exist alongside a new one after rotation; see §6.5)</span></span>
+<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="co">// - DiscordWebhookSubscription: UNIQUE (webhookId, eventKind)</span></span></code></pre></div>
+<h3 id="relationships">4.2 Relationships</h3>
+<ul>
+<li><code>DiscordWebhook.teamId → CampaignTeam.id</code></li>
+<li><code>DiscordWebhook.createdByUserId → User.id</code></li>
+<li><code>DiscordWebhookSubscription.webhookId → DiscordWebhook.id</code></li>
+<li><code>DiscordWebhookDelivery.webhookId → DiscordWebhook.id</code></li>
+<li><code>DiscordWebhookDelivery.eventId → Event.id</code></li>
+</ul>
+<h3 id="rls-policies-extends-prd-0-3b">4.3 RLS Policies (extends PRD-0
+§3b)</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Table</th>
+<th>Visible to</th>
+<th>Editable by</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>DiscordWebhook</code></td>
+<td>TL of the team; CM of the campaign; players on the team
+(read-only)</td>
+<td>TL of the team; CM of the campaign</td>
+</tr>
+<tr class="even">
+<td><code>DiscordWebhookSubscription</code></td>
+<td>Same as parent <code>DiscordWebhook</code></td>
+<td>Same as parent <code>DiscordWebhook</code></td>
+</tr>
+<tr class="odd">
+<td><code>DiscordWebhookDelivery</code></td>
+<td>Same as parent <code>DiscordWebhook</code></td>
+<td>System only (no user edits)</td>
+</tr>
+</tbody>
+</table>
+<p>Other teams in the campaign: cannot see the table exists. Players on
+other teams’ SELECT on <code>DiscordWebhook WHERE teamId = X</code>
+returns no rows.</p>
+<p>Instance Admin: read-only across all tenants for debugging; not
+exposed in v1 UI.</p>
+<hr />
+<h2 id="event-subscription-model">5. Event Subscription Model</h2>
+<h3 id="tl-configurable-subscriptions">5.1 TL-Configurable
+Subscriptions</h3>
+<p>A team’s TL configures which <code>EventKind</code> values trigger
+their team’s webhook. The default subscription set is curated for “team
+updates” — events that a team typically cares about:</p>
+<p><strong>Default-enabled (recommended starter set):</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>EventKind</th>
+<th>Why default-on</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>roster.parse_succeeded</code></td>
+<td>TL knows when a player finishes an import</td>
+</tr>
+<tr class="even">
+<td><code>roster.parse_failed</code></td>
+<td>TL can ping the player to fix and retry</td>
+</tr>
+<tr class="odd">
+<td><code>roster.approved</code></td>
+<td>TL sees the result of their own approvals land</td>
+</tr>
+<tr class="even">
+<td><code>roster.rejected</code></td>
+<td>TL sees when their own rejection triggered further action</td>
+</tr>
+<tr class="odd">
+<td><code>approval.requested</code></td>
+<td><strong>Primary reason for the webhook</strong> — TL’s inbox
+mirror</td>
+</tr>
+<tr class="even">
+<td><code>approval.approved</code></td>
+<td>TL’s own approvals succeeding</td>
+</tr>
+<tr class="odd">
+<td><code>approval.rejected</code></td>
+<td>TL’s own decisions getting overridden (e.g., by CM)</td>
+</tr>
+<tr class="even">
+<td><code>approval.changes_requested</code></td>
+<td>CM asked for changes on a request the TL had been tracking</td>
+</tr>
+<tr class="odd">
+<td><code>battle.filed</code></td>
+<td>Team member filed a battle report</td>
+</tr>
+<tr class="even">
+<td><code>battle.approved</code></td>
+<td>TL sees battles they approved land</td>
+</tr>
+<tr class="odd">
+<td><code>crusade.rp_gained</code></td>
+<td>RP ticks from approved battles</td>
+</tr>
+<tr class="even">
+<td><code>crusade.req_purchased</code></td>
+<td>CM-gifted requisitions land</td>
+</tr>
+<tr class="odd">
+<td><code>member.joined</code></td>
+<td>New player on the team</td>
+</tr>
+<tr class="even">
+<td><code>member.left</code></td>
+<td>Player left the team</td>
+</tr>
+<tr class="odd">
+<td><code>member.role_changed</code></td>
+<td>TL grants/revokes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default-disabled (TL must opt in):</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>EventKind</th>
+<th>Why default-off</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>roster.draft_submitted</code></td>
+<td>High-frequency; TL usually sees this in their inbox already</td>
+</tr>
+<tr class="even">
+<td><code>roster.draft_reviewed</code></td>
+<td>Player action; not actionable by TL</td>
+</tr>
+<tr class="odd">
+<td><code>roster.draft_acknowledged</code></td>
+<td>Player action</td>
+</tr>
+<tr class="even">
+<td><code>battle.disputed</code></td>
+<td>Rare; usually handled out-of-band</td>
+</tr>
+<tr class="odd">
+<td><code>crusade.rp_lost</code></td>
+<td>Less common; TL may or may not care</td>
+</tr>
+<tr class="even">
+<td><code>crusade.alignment_changed</code></td>
+<td>Cosmetic; can be noisy</td>
+</tr>
+<tr class="odd">
+<td><code>roster.rolled_back</code></td>
+<td>Rare and important; TL should opt in to be notified</td>
+</tr>
+<tr class="even">
+<td><code>rule_check.run</code></td>
+<td>High-frequency; noisy</td>
+</tr>
+<tr class="odd">
+<td><code>rule_check.warn_acknowledged</code></td>
+<td>Player action</td>
+</tr>
+<tr class="even">
+<td><code>system.*</code></td>
+<td>Almost always noise; opt-in for diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Always blocked (regardless of subscription):</strong></p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>EventKind</th>
+<th>Why blocked</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Any <code>private</code> event</td>
+<td>Would leak player-private actions to a guild channel</td>
+</tr>
+<tr class="even">
+<td>Any event with <code>visibility = 'private'</code></td>
+<td>Same</td>
+</tr>
+<tr class="odd">
+<td>Any event with <code>visibility = 'cm_only'</code> AND
+<code>affectedTeamIds</code> does NOT include this team’s id</td>
+<td>Would leak CM’s private audit content</td>
+</tr>
+<tr class="even">
+<td><code>roster.override_applied</code></td>
+<td>CM’s override audit — surface only to CM’s UI, not team
+channels</td>
+</tr>
+<tr class="odd">
+<td><code>approval.overridden</code></td>
+<td>Same</td>
+</tr>
+</tbody>
+</table>
+<h3 id="loudness-floor">5.2 Loudness Floor</h3>
+<p>Each webhook has a <code>minLoudness</code> field. Events whose
+loudness (per PRD-5 §8) is below the floor are NOT fired even if
+subscribed. Default <code>normal</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Loudness assignment per EventKind (extends PRD-5 §8 table)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> DEFAULT_LOUDNESS<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span>EventKind<span class="op">,</span> <span class="st">&#39;loud&#39;</span> <span class="op">|</span> <span class="st">&#39;normal&#39;</span> <span class="op">|</span> <span class="st">&#39;quiet&#39;</span><span class="op">&gt;</span> <span class="op">=</span> {</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;approval.requested&#39;</span><span class="op">:</span> <span class="st">&#39;loud&#39;</span><span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;approval.rejected&#39;</span><span class="op">:</span> <span class="st">&#39;loud&#39;</span><span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.rejected&#39;</span><span class="op">:</span> <span class="st">&#39;loud&#39;</span><span class="op">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.parse_failed&#39;</span><span class="op">:</span> <span class="st">&#39;loud&#39;</span><span class="op">,</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;battle.filed&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;battle.approved&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.approved&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;approval.approved&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;crusade.rp_gained&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;crusade.req_purchased&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;member.joined&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;member.left&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;member.role_changed&#39;</span><span class="op">:</span> <span class="st">&#39;normal&#39;</span><span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.parse_succeeded&#39;</span><span class="op">:</span> <span class="st">&#39;quiet&#39;</span><span class="op">,</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;rule_check.run&#39;</span><span class="op">:</span> <span class="st">&#39;quiet&#39;</span><span class="op">,</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... etc</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This is a <strong>separate</strong> loudness assignment from PRD-5
+§8’s in-app loudness. PRD-5 controls in-app toast vs
+notification-list-only; PRD-8 controls Discord eligibility. They share
+the same enum but the table is independently editable by the TL.</p>
+<hr />
+<h2 id="configuration-ui">6. Configuration UI</h2>
+<h3 id="location">6.1 Location</h3>
+<p><code>Crusade Administration panel → Teams → {Team Name} → Integrations tab → Discord Webhook</code></p>
+<p>Players on the team see a read-only summary on the same tab (no edit
+controls).</p>
+<p>CMs see this tab on every team (read + write via the override
+authority).</p>
+<h3 id="list-view-no-webhook-registered">6.2 List View (no webhook
+registered)</h3>
+<pre><code>+----------------------------------------------------------+
+| Discord Webhook                            [+ Register]  |
++----------------------------------------------------------+
+| No webhook configured for this team.                     |
+|                                                          |
+| Registering a webhook sends notifications about your     |
+| team&#39;s events to a Discord channel. Useful for keeping   |
+| team chat in sync with the app. See PRD-8 for details.   |
++----------------------------------------------------------+</code></pre>
+<h3 id="register-edit-form">6.3 Register / Edit Form</h3>
+<pre><code>+----------------------------------------------------------+
+| Register Discord Webhook                                 |
++----------------------------------------------------------+
+| Webhook URL *                                            |
+| [https://discord.com/api/webhooks/xxxxxx/yyyyyy]         |
+| Create one in Discord: Channel Settings → Integrations   |
+| → Webhooks → New Webhook. Copy the URL here.             |
+|                                                          |
+| Friendly name (UI only, not sent to Discord)            |
+| [Helsreach #crusade-chat                              ]  |
+|                                                          |
+| Minimum loudness                                         |
+| ( ) loud only    (•) normal and above                    |
+| ( ) quiet and above                                     |
+|                                                          |
+| Events to forward (16 of 42 kinds enabled)               |
+|                                                          |
+|   [✓] approval.requested (loud) — TL inbox mirror        |
+|   [✓] approval.approved (normal)                         |
+|   [✓] approval.rejected (loud)                           |
+|   [✓] roster.parse_succeeded (quiet)                     |
+|   [✓] roster.parse_failed (loud)                         |
+|   ... (expand for full list)                             |
+|                                                          |
+|   [Enable all defaults]   [Disable all]                  |
+|                                                          |
+| [Send test embed]   [Cancel]   [Save]                    |
++----------------------------------------------------------+</code></pre>
+<p><code>Send test embed</code> posts a synthetic
+<code>approval.requested</code> event (clearly marked as a test in the
+embed footer) to the URL. Result appears inline:</p>
+<pre><code>[Send test embed] → ✓ Delivered (HTTP 204, 142ms)
+                  → ✗ Failed (HTTP 401, check that the URL is valid)
+                  → ✗ Rate-limited (retry after 12s)</code></pre>
+<h3 id="list-view-webhook-registered">6.4 List View (webhook
+registered)</h3>
+<pre><code>+----------------------------------------------------------+
+| Discord Webhook — Helsreach #crusade-chat                |
+| Status: ✓ Active  · Last delivery: 2 min ago             |
+|                                                          |
+| Subscriptions: 16 enabled · Loudness floor: normal       |
+| URL: https://discord.com/api/webhooks/****/**** (redacted)|
+| Created by: Hana (TL) on 2026-06-15                      |
+|                                                          |
+| [Edit subscriptions]  [Edit name/loudness]               |
+| [Rotate URL]           [Send test]                       |
+| [View delivery log]    [Disable]                         |
++----------------------------------------------------------+</code></pre>
+<p>Disabled webhooks show their <code>disabledReason</code>
+(“Auto-disabled after 10 consecutive failures starting 2026-06-28
+14:22”) and a <code>Re-enable</code> button (which clears
+<code>disabledAt</code> and resets
+<code>consecutiveFailureCount</code>).</p>
+<h3 id="rotation">6.5 Rotation</h3>
+<p><code>Rotate URL</code> regenerates the URL by: 1. Prompting the TL:
+“Paste the new webhook URL. Subscriptions and name will be preserved.”
+2. Replacing <code>urlEncrypted</code> and <code>urlFingerprint</code>.
+3. Resetting <code>consecutiveFailureCount</code> to 0 (a rotation
+implies the old URL was compromised; we start fresh). 4. Audit-logging
+the rotation (actor, timestamp, new URL fingerprint).</p>
+<p>The old <code>DiscordWebhookSubscription</code> rows and
+<code>DiscordWebhookDelivery</code> history are preserved. The
+<code>name</code> is also preserved.</p>
+<p><strong>Why not soft-delete + recreate?</strong> PRD-0 §4 audit-trail
+principle: don’t destroy history. A rotation that preserved
+subscriptions and delivery history is more useful than one that wiped
+and started fresh. The unique constraint
+<code>UNIQUE (campaignId, teamId) WHERE disabledAt IS NULL</code> lets a
+rotated-out webhook exist as a soft-retired row alongside a new one.</p>
+<hr />
+<h2 id="authorization-model">7. Authorization Model</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Action</th>
+<th>TL of team</th>
+<th>CM of campaign</th>
+<th>Player on team</th>
+<th>Player on other team</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>View webhook status</td>
+<td>✓</td>
+<td>✓ (all teams)</td>
+<td>✓ (own team only)</td>
+<td>✗</td>
+</tr>
+<tr class="even">
+<td>View subscriptions</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td>Edit subscriptions</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr class="even">
+<td>Edit name + loudness floor</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td>Rotate URL</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr class="even">
+<td>Send test embed</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td>View delivery log</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr class="even">
+<td>Disable / Re-enable</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr class="odd">
+<td>Delete (hard)</td>
+<td>CM only</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Policy (mirrors PRD-1 §0):</strong> “Only the CM can grant or
+revoke team-leader authority; players cannot self-promote.” Extended
+here: only the TL of the team (or CM) can configure that team’s
+webhook.</p>
+<p><strong>Audit:</strong> every change to <code>DiscordWebhook</code>
+or <code>DiscordWebhookSubscription</code> writes an entry to the
+campaign’s audit log with <code>actorUserId</code>,
+<code>beforeValue</code>, <code>afterValue</code>, <code>reason</code>
+(optional free text).</p>
+<hr />
+<h2 id="delivery-pipeline">8. Delivery Pipeline</h2>
+<h3 id="sequence-happy-path">8.1 Sequence (happy path)</h3>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor TL as TL (Hana)
+    participant UI as Frontend
+    participant API as Hapi
+    participant DB as Postgres
+    participant RQ as BullMQ
+    participant W as Delivery worker
+    participant DC as Discord
+
+    Note over API,DB: Event emitted, fanout runs
+    API-&gt;&gt;DB: INSERT Event (approval.requested)
+    API-&gt;&gt;DB: Compute recipients (PRD-4 §3.3)
+    API-&gt;&gt;DB: SELECT DiscordWebhookSubscription&lt;br/&gt;WHERE eventKind=&#39;approval.requested&#39;&lt;br/&gt;AND enabled=true&lt;br/&gt;JOIN DiscordWebhook&lt;br/&gt;WHERE minLoudness &lt;= event.loudness&lt;br/&gt;AND disabledAt IS NULL&lt;br/&gt;AND team passes visibility filter
+    API-&gt;&gt;RQ: enqueue discord-webhook-delivery&lt;br/&gt;{webhookId, eventId, attempt: 1}
+    RQ-&gt;&gt;W: job dispatched
+    W-&gt;&gt;DB: SELECT DiscordWebhook (decrypt URL)&lt;br/&gt;SELECT Event (payload)
+    W-&gt;&gt;W: Render embed (PRD-8 §9)
+    W-&gt;&gt;DC: POST /webhooks/{id}/{token}&lt;br/&gt;{embeds: [...]}
+    alt Success
+        DC--&gt;&gt;W: 204 No Content
+        W-&gt;&gt;DB: INSERT DiscordWebhookDelivery&lt;br/&gt;status=success, httpStatus=204
+        W-&gt;&gt;DB: UPDATE DiscordWebhook&lt;br/&gt;lastDeliveryAt=now, lastSuccessAt=now&lt;br/&gt;consecutiveFailureCount=0
+    else 4xx / 5xx
+        DC--&gt;&gt;W: 4xx or 5xx with body
+        W-&gt;&gt;DB: INSERT DiscordWebhookDelivery&lt;br/&gt;status=failed, httpStatus=4xx
+        W-&gt;&gt;DB: UPDATE DiscordWebhook&lt;br/&gt;consecutiveFailureCount++
+        Note over W,RQ: If under retry budget,&lt;br/&gt;re-enqueue with backoff
+    else 429 rate-limited
+        DC--&gt;&gt;W: 429 Retry-After: 12
+        W-&gt;&gt;DB: INSERT DiscordWebhookDelivery&lt;br/&gt;status=rate_limited
+        Note over W,RQ: Re-enqueue with&lt;br/&gt;delay = Retry-After
+    end</code></pre>
+<h3 id="bullmq-job-configuration">8.2 BullMQ Job Configuration</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">// apps/worker/src/queues/discordWebhookDelivery.ts</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> discordWebhookDeliveryQueue <span class="op">=</span> <span class="kw">new</span> <span class="fu">Queue</span>(<span class="st">&#39;discord-webhook-delivery&#39;</span><span class="op">,</span> {</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  connection<span class="op">:</span> redis<span class="op">,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  defaultJobOptions<span class="op">:</span> {</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    attempts<span class="op">:</span> <span class="dv">5</span><span class="op">,</span>                            <span class="co">// initial + 4 retries</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    backoff<span class="op">:</span> {</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      type<span class="op">:</span> <span class="st">&#39;exponential&#39;</span><span class="op">,</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>      delay<span class="op">:</span> <span class="dv">5_000</span><span class="op">,</span>                         <span class="co">// first retry after 5s</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    removeOnComplete<span class="op">:</span> { age<span class="op">:</span> <span class="dv">86_400</span><span class="op">,</span> count<span class="op">:</span> <span class="dv">1_000</span> }<span class="op">,</span>   <span class="co">// 24h retention</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    removeOnFail<span class="op">:</span> { age<span class="op">:</span> <span class="dv">7</span> <span class="op">*</span> <span class="dv">86_400</span> }<span class="op">,</span>                <span class="co">// 7d retention for failures</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<p><strong>Retry schedule:</strong> 5s → 25s → 2m05s → 10m25s → give up
+(matches Discord’s typical 429 cooldown curve for sustained bursts).</p>
+<h3 id="visibility-filter-the-team-isolation-rule">8.3 Visibility Filter
+(the team-isolation rule)</h3>
+<p>Enforced in the fanout function (single chokepoint), not the delivery
+worker. Pseudocode:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">isWebhookEligible</span>(event<span class="op">:</span> <span class="bu">Event</span><span class="op">,</span> team<span class="op">:</span> CampaignTeam<span class="op">,</span> webhook<span class="op">:</span> DiscordWebhook)<span class="op">:</span> <span class="dt">boolean</span> {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 1. Loudness floor</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">loudnessRank</span>(<span class="bu">event</span><span class="op">.</span><span class="at">loudness</span>) <span class="op">&lt;</span> <span class="fu">loudnessRank</span>(webhook<span class="op">.</span><span class="at">minLoudness</span>)) <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// 2. Visibility check — the heart of team-isolation</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">event</span><span class="op">.</span><span class="at">visibility</span> <span class="op">===</span> <span class="st">&#39;private&#39;</span>) <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span>        <span class="co">// never forward</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">event</span><span class="op">.</span><span class="at">visibility</span> <span class="op">===</span> <span class="st">&#39;public&#39;</span> <span class="op">||</span> <span class="bu">event</span><span class="op">.</span><span class="at">visibility</span> <span class="op">===</span> <span class="st">&#39;campaign&#39;</span>) <span class="cf">return</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">event</span><span class="op">.</span><span class="at">visibility</span> <span class="op">===</span> <span class="st">&#39;team&#39;</span>) {</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Forward only if the event is scoped to this team</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">event</span><span class="op">.</span><span class="at">affectedTeamIds</span><span class="op">?.</span><span class="fu">includes</span>(team<span class="op">.</span><span class="at">id</span>) <span class="op">??</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="bu">event</span><span class="op">.</span><span class="at">visibility</span> <span class="op">===</span> <span class="st">&#39;cm_only&#39;</span>) {</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Forward only if CM marked the event as relevant to this team</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">event</span><span class="op">.</span><span class="at">affectedTeamIds</span><span class="op">?.</span><span class="fu">includes</span>(team<span class="op">.</span><span class="at">id</span>) <span class="op">??</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><code>affectedTeamIds</code> is an optional field added to
+<code>Event</code> (PRD-4 §3 schema extension):</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> <span class="bu">Event</span> {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... existing fields per PRD-4 §3 ...</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  affectedTeamIds<span class="op">?:</span> <span class="dt">string</span>[]<span class="op">;</span>   <span class="co">// present when event is scoped to specific teams</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Existing events that don’t have <code>affectedTeamIds</code> are
+treated as not team-scoped (only
+<code>public</code>/<code>campaign</code> visibility forwards them).</p>
+<h3 id="worker-implementation-notes">8.4 Worker Implementation
+Notes</h3>
+<p>The delivery worker:</p>
+<ol type="1">
+<li><strong>Decrypts the URL</strong> via the same
+<code>servocrypt</code> envelope pattern as the rest of the app. The
+plaintext URL lives only in this worker’s process memory for the
+duration of the HTTP call.</li>
+<li><strong>Renders the embed</strong> from the event’s
+<code>kind</code> + <code>payload</code> per the templates in §9. Embed
+generation is a pure function — testable in isolation.</li>
+<li><strong>POSTs to Discord</strong> with a 5-second
+<code>AbortController</code> timeout (Discord’s typical response is
+&lt;500ms; timeout means network problem).</li>
+<li><strong>Records the delivery</strong> to
+<code>DiscordWebhookDelivery</code> regardless of outcome.</li>
+<li><strong>Updates the webhook’s rolling counters</strong> atomically
+(single UPDATE statement).</li>
+<li><strong>Triggers auto-disable</strong> if
+<code>consecutiveFailureCount</code> reaches the threshold (default 10,
+per-webhook configurable; PRD-8 §10).</li>
+</ol>
+<p>The worker MUST NOT do visibility filtering — that decision was made
+at the fanout step. The worker trusts its input.</p>
+<hr />
+<h2 id="embed-format">9. Embed Format</h2>
+<h3 id="common-structure">9.1 Common Structure</h3>
+<p>Every embed has the same skeleton; event-specific fields vary:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;username&quot;</span><span class="fu">:</span> <span class="st">&quot;Crusade Master — Aurelian&quot;</span><span class="fu">,</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;avatar_url&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;tenant or campaign avatar&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;embeds&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="fu">{</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;title&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;event-specific title&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;event-specific description&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;color&quot;</span><span class="fu">:</span> <span class="er">&lt;loudness</span> <span class="er">color:</span> <span class="er">loud=</span><span class="dv">0</span><span class="er">xE74C3C</span><span class="fu">,</span> <span class="er">normal=0x3498DB</span><span class="fu">,</span> <span class="er">quiet=0x95A5A6&gt;</span><span class="fu">,</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;author&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;actor display name, or &#39;System&#39;&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;icon_url&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;actor avatar URL&gt;&quot;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;fields&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;Campaign&quot;</span><span class="fu">,</span> <span class="dt">&quot;value&quot;</span><span class="fu">:</span> <span class="st">&quot;Aurelian&quot;</span><span class="fu">,</span> <span class="dt">&quot;inline&quot;</span><span class="fu">:</span> <span class="kw">true</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;Team&quot;</span><span class="fu">,</span> <span class="dt">&quot;value&quot;</span><span class="fu">:</span> <span class="st">&quot;Helsreach Defenders&quot;</span><span class="fu">,</span> <span class="dt">&quot;inline&quot;</span><span class="fu">:</span> <span class="kw">true</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;Submitted by&quot;</span><span class="fu">,</span> <span class="dt">&quot;value&quot;</span><span class="fu">:</span> <span class="st">&quot;Sarah K.&quot;</span><span class="fu">,</span> <span class="dt">&quot;inline&quot;</span><span class="fu">:</span> <span class="kw">true</span> <span class="fu">}</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;footer&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;text&quot;</span><span class="fu">:</span> <span class="st">&quot;Crusade Master · view in app&quot;</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;timestamp&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;ISO 8601 of event.occurredAt&gt;&quot;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span><span class="ot">]</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><code>view in app</code> footer includes a link:
+<code>${PUBLIC_BASE_URL}/campaigns/${campaignId}/events/${eventId}</code>.
+The link is the <strong>only</strong> thing sent to Discord that
+includes a tenant-specific URL; the URL itself is not sensitive.</p>
+<h3 id="per-event-kind-templates">9.2 Per-Event-Kind Templates</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">// apps/worker/src/embeds/discord/templates.ts</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> embedTemplates<span class="op">:</span> <span class="bu">Record</span><span class="op">&lt;</span>EventKind<span class="op">,</span> (event<span class="op">:</span> <span class="bu">Event</span><span class="op">,</span> ctx<span class="op">:</span> EmbedContext) <span class="kw">=&gt;</span> Embed<span class="op">&gt;</span> <span class="op">=</span> {</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;approval.requested&#39;</span><span class="op">:</span> (e<span class="op">,</span> ctx) <span class="kw">=&gt;</span> ({</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    title<span class="op">:</span> <span class="vs">`📥 New approval request: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">kind</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    description<span class="op">:</span> e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">summary</span> <span class="op">??</span> <span class="st">&#39;Awaiting review&#39;</span><span class="op">,</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    color<span class="op">:</span> COLOR_LOUD<span class="op">,</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    fields<span class="op">:</span> [</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Submitted by&#39;</span><span class="op">,</span> value<span class="op">:</span> e<span class="op">.</span><span class="at">actorDisplayName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }<span class="op">,</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Campaign&#39;</span><span class="op">,</span> value<span class="op">:</span> ctx<span class="op">.</span><span class="at">campaignName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }<span class="op">,</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Team&#39;</span><span class="op">,</span> value<span class="op">:</span> ctx<span class="op">.</span><span class="at">teamName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">,</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    footer<span class="op">:</span> { text<span class="op">:</span> <span class="st">&#39;Crusade Master · view in app&#39;</span> }<span class="op">,</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    timestamp<span class="op">:</span> e<span class="op">.</span><span class="at">occurredAt</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;approval.approved&#39;</span><span class="op">:</span> (e<span class="op">,</span> ctx) <span class="kw">=&gt;</span> ({</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    title<span class="op">:</span> <span class="vs">`✓ Approved: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">kind</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    description<span class="op">:</span> e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">decisionReason</span> <span class="op">??</span> <span class="st">&#39;&#39;</span><span class="op">,</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    color<span class="op">:</span> COLOR_NORMAL<span class="op">,</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    fields<span class="op">:</span> [</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Reviewer&#39;</span><span class="op">,</span> value<span class="op">:</span> e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">reviewerDisplayName</span> <span class="op">??</span> <span class="st">&#39;System&#39;</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }<span class="op">,</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Campaign&#39;</span><span class="op">,</span> value<span class="op">:</span> ctx<span class="op">.</span><span class="at">campaignName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }<span class="op">,</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Team&#39;</span><span class="op">,</span> value<span class="op">:</span> ctx<span class="op">.</span><span class="at">teamName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">,</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    timestamp<span class="op">:</span> e<span class="op">.</span><span class="at">occurredAt</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.parse_succeeded&#39;</span><span class="op">:</span> (e<span class="op">,</span> ctx) <span class="kw">=&gt;</span> ({</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    title<span class="op">:</span> <span class="vs">`📋 Roster parsed: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">forceName</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    description<span class="op">:</span> <span class="vs">`</span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">unitCount</span><span class="sc">}</span><span class="vs"> units, </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">totalPoints</span><span class="sc">}</span><span class="vs"> pts`</span><span class="op">,</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>    color<span class="op">:</span> COLOR_QUIET<span class="op">,</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    timestamp<span class="op">:</span> e<span class="op">.</span><span class="at">occurredAt</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;roster.parse_failed&#39;</span><span class="op">:</span> (e<span class="op">,</span> ctx) <span class="kw">=&gt;</span> ({</span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    title<span class="op">:</span> <span class="vs">`❌ Roster parse failed: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">forceName</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>    description<span class="op">:</span> <span class="vs">`</span><span class="sc">\`\`\`${</span><span class="fu">truncate</span>(e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">error</span><span class="op">,</span> <span class="dv">500</span>)<span class="sc">}\`\`\`</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>    color<span class="op">:</span> COLOR_LOUD<span class="op">,</span></span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>    timestamp<span class="op">:</span> e<span class="op">.</span><span class="at">occurredAt</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;battle.filed&#39;</span><span class="op">:</span> (e<span class="op">,</span> ctx) <span class="kw">=&gt;</span> ({</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>    title<span class="op">:</span> <span class="vs">`⚔️ Battle filed: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">missionName</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    description<span class="op">:</span> <span class="vs">`Result: **</span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">result</span><span class="sc">}</span><span class="vs">** · Agenda: </span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">agendasAchieved</span><span class="sc">}</span><span class="vs">/</span><span class="sc">${</span>e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">agendasAttempted</span><span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a>    color<span class="op">:</span> COLOR_NORMAL<span class="op">,</span></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>    fields<span class="op">:</span> [</span>
+<span id="cb13-48"><a href="#cb13-48" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Player&#39;</span><span class="op">,</span> value<span class="op">:</span> e<span class="op">.</span><span class="at">actorDisplayName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }<span class="op">,</span></span>
+<span id="cb13-49"><a href="#cb13-49" aria-hidden="true" tabindex="-1"></a>      { name<span class="op">:</span> <span class="st">&#39;Opponent&#39;</span><span class="op">,</span> value<span class="op">:</span> e<span class="op">.</span><span class="at">payload</span><span class="op">.</span><span class="at">opponentDisplayName</span><span class="op">,</span> inline<span class="op">:</span> <span class="kw">true</span> }</span>
+<span id="cb13-50"><a href="#cb13-50" aria-hidden="true" tabindex="-1"></a>    ]<span class="op">,</span></span>
+<span id="cb13-51"><a href="#cb13-51" aria-hidden="true" tabindex="-1"></a>    timestamp<span class="op">:</span> e<span class="op">.</span><span class="at">occurredAt</span></span>
+<span id="cb13-52"><a href="#cb13-52" aria-hidden="true" tabindex="-1"></a>  })<span class="op">,</span></span>
+<span id="cb13-53"><a href="#cb13-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-54"><a href="#cb13-54" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... etc for each subscribed EventKind</span></span>
+<span id="cb13-55"><a href="#cb13-55" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Templates are pure functions of <code>(event, context)</code>. The
+<code>context</code> provides campaign name, team name, etc. — looked up
+once when the job is enqueued and passed in the job payload.</p>
+<h3 id="truncation">9.3 Truncation</h3>
+<p>Discord enforces 6000 chars total per embed and 1024 chars per field.
+The worker truncates with a <code>[truncated — view in app]</code>
+marker:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">truncate</span>(s<span class="op">:</span> <span class="dt">string</span><span class="op">,</span> max<span class="op">:</span> <span class="dt">number</span>)<span class="op">:</span> <span class="dt">string</span> {</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (s<span class="op">.</span><span class="at">length</span> <span class="op">&lt;=</span> max) <span class="cf">return</span> s<span class="op">;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> s<span class="op">.</span><span class="fu">slice</span>(<span class="dv">0</span><span class="op">,</span> max <span class="op">-</span> <span class="dv">25</span>) <span class="op">+</span> <span class="st">&#39;... [truncated]&#39;</span><span class="op">;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Fields like <code>description</code> (max 4096) and individual
+<code>fields[].value</code> (max 1024) are truncated independently.</p>
+<hr />
+<h2 id="failure-modes-auto-disable">10. Failure Modes &amp;
+Auto-Disable</h2>
+<h3 id="retry-behavior">10.1 Retry Behavior</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Discord response</th>
+<th>Worker action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>204 No Content</code></td>
+<td>Success. Reset <code>consecutiveFailureCount</code> to 0.</td>
+</tr>
+<tr class="even">
+<td><code>429 Too Many Requests</code></td>
+<td>Rate-limited. Honor <code>Retry-After</code> header (seconds).
+Re-enqueue with that delay. Increment failure counter for visibility but
+do NOT count toward auto-disable (rate-limiting is transient and
+recoverable).</td>
+</tr>
+<tr class="odd">
+<td><code>400 Bad Request</code></td>
+<td>Permanent failure (bad embed JSON). Log error, mark
+<code>status=failed</code>, <strong>do not retry</strong> — give up
+immediately. Reset consecutiveFailureCount (a 400 means our embed is
+broken, not that the webhook is down).</td>
+</tr>
+<tr class="even">
+<td><code>401 Unauthorized</code></td>
+<td>Permanent failure (URL revoked or invalid). Mark failed. Increment
+failure counter toward auto-disable.</td>
+</tr>
+<tr class="odd">
+<td><code>404 Not Found</code></td>
+<td>Same as 401 — webhook deleted. Mark failed. Increment.</td>
+</tr>
+<tr class="even">
+<td><code>5xx Server Error</code></td>
+<td>Transient. Retry with exponential backoff. Increment.</td>
+</tr>
+<tr class="odd">
+<td>Network timeout (5s)</td>
+<td>Transient. Retry. Increment.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="auto-disable-threshold">10.2 Auto-Disable Threshold</h3>
+<p>Per webhook, configurable (default 10):</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>DiscordWebhook {</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... existing fields ...</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  autoDisableThreshold<span class="op">:</span> int    <span class="co">// default 10; TL-configurable 5–50</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>When <code>consecutiveFailureCount &gt;= autoDisableThreshold</code>:
+1. Set <code>disabledAt = now()</code>,
+<code>disabledReason = 'auto_disabled_after_n_failures'</code>. 2. Emit
+<code>system.parse_pipeline_alert</code>-style notification to the TL +
+CM (in-app + email; not Discord, since Discord is the broken channel).
+3. Audit log entry: “Auto-disabled after N consecutive failures starting
+at {first_failure_at}.” 4. Subsequent events still emit, fan out,
+deliver in-app + email — just skip Discord delivery.</p>
+<p><code>Re-enable</code> button in the UI clears
+<code>disabledAt</code>, resets <code>consecutiveFailureCount</code>,
+fires a synthetic test embed to verify the URL works before
+re-enabling.</p>
+<h3 id="persistent-failure-cleanup">10.3 Persistent Failure Cleanup</h3>
+<p>Failed <code>DiscordWebhookDelivery</code> rows are retained 7 days
+(BullMQ <code>removeOnFail</code> config), then garbage-collected. The
+aggregate counters on <code>DiscordWebhook</code> (lastDeliveryAt,
+consecutiveFailureCount) persist for the lifetime of the webhook
+row.</p>
+<hr />
+<h2 id="security">11. Security</h2>
+<h3 id="url-encryption-at-rest">11.1 URL Encryption at Rest</h3>
+<p><code>urlEncrypted</code> uses the same envelope encryption as
+<code>Identity.providerData</code> and other app secrets:</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Per PRD-0 §3.4 secret management</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>DiscordWebhook {</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  urlEncrypted<span class="op">:</span> bytea<span class="op">,</span>   <span class="co">// servocrypt envelope-encrypted URL</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  urlFingerprint<span class="op">:</span> text   <span class="co">// SHA-256 of the plaintext URL; safe for audit logs</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Never</strong> log the plaintext URL. Workers fetch the URL,
+decrypt in-memory, POST, discard.</p>
+<p><strong>Never</strong> return the URL in API responses after
+creation. The URL is shown ONCE on creation (when the TL pastes it) and
+never again. API responses return
+<code>urlRedacted: 'https://discord.com/api/webhooks/****/****'</code>
+for already-registered webhooks.</p>
+<h3 id="rate-limit-defense">11.2 Rate-Limit Defense</h3>
+<p>Beyond honoring <code>Retry-After</code>, the delivery worker has a
+per-webhook concurrency limiter:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">// apps/worker/src/queues/discordWebhookDelivery.ts</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> discordWebhookDeliveryWorker <span class="op">=</span> <span class="kw">new</span> <span class="bu">Worker</span>(</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;discord-webhook-delivery&#39;</span><span class="op">,</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  processJob<span class="op">,</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  {</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    connection<span class="op">:</span> redis<span class="op">,</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    concurrency<span class="op">:</span> <span class="dv">50</span><span class="op">,</span>                    <span class="co">// global worker concurrency</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    limiter<span class="op">:</span> {</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>      max<span class="op">:</span> <span class="dv">25</span><span class="op">,</span>                          <span class="co">// max jobs per duration per process</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      duration<span class="op">:</span> <span class="dv">60_000</span>                  <span class="co">// 25 deliveries per minute per worker process</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span></code></pre></div>
+<p>Plus per-webhook throttling in BullMQ (group key):</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">enqueueDiscordDelivery</span>({ webhookId<span class="op">,</span> eventId }) {</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> discordWebhookDeliveryQueue<span class="op">.</span><span class="fu">add</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">&#39;deliver&#39;</span><span class="op">,</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    { webhookId<span class="op">,</span> eventId }<span class="op">,</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    {</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>      jobId<span class="op">:</span> <span class="vs">`</span><span class="sc">${</span>webhookId<span class="sc">}</span><span class="vs">:</span><span class="sc">${</span>eventId<span class="sc">}</span><span class="vs">`</span><span class="op">,</span>           <span class="co">// idempotent enqueue</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>      <span class="co">// BullMQ rate-limiter per group key — Discord&#39;s 30/min/webhook</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>      <span class="co">// (we stay slightly under to leave headroom for retries)</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>      <span class="co">// ... (BullMQ doesn&#39;t have native per-group rate limit; we use the worker&#39;s limiter + a Redis-side token bucket)</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  )<span class="op">;</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The exact token-bucket implementation lives in the worker; the design
+intent is <strong>no more than 25 deliveries per minute per
+webhook</strong> (vs Discord’s 30/min hard cap).</p>
+<h3 id="input-validation">11.3 Input Validation</h3>
+<p>The TL-provided URL is validated on save: - Must match
+<code>^https://discord\.com/api/webhooks/\d+/[\w-]+$</code> or
+<code>^https://discordapp\.com/api/webhooks/\d+/[\w-]+$</code> - HTTPS
+only - The numeric ID portion is extracted and stored as
+<code>urlFingerprint</code> along with the SHA-256</p>
+<p>A webhook URL that fails validation is rejected with a clear error:
+“URL must look like
+<code>https://discord.com/api/webhooks/1234567890/abc...</code>.”</p>
+<hr />
+<h2 id="openapi-surface">12. OpenAPI Surface</h2>
+<p>PRD-6 §4.1 has a placeholder:</p>
+<blockquote>
+<p>Webhooks (if we add outbound webhooks in v2): document as
+<code>webhooks</code> block</p>
+</blockquote>
+<p>PRD-8 implements that block:</p>
+<div class="sourceCode" id="cb19"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># apps/api/src/routes/teams/webhooks.ts</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tags</span><span class="kw">:</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Team Discord Webhooks</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="fu">    description</span><span class="kw">: </span><span class="ch">|</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>      Per-team Discord webhook configuration. At most one active webhook per team</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      per campaign. See PRD-8 for the full specification.</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a><span class="fu">paths</span><span class="kw">:</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">/api/campaigns/{campaignId}/teams/{teamId}/webhook</span><span class="kw">:</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">get</span><span class="kw">:</span></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Get the team&#39;s Discord webhook</span></span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a><span class="co">      # returns 404 if no webhook registered</span></span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="co">      # returns DiscordWebhook with urlRedacted</span></span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">post</span><span class="kw">:</span></span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Register a new Discord webhook for the team</span></span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">requestBody</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> url</span><span class="kw">,</span><span class="at"> name</span><span class="kw">,</span><span class="at"> minLoudness</span><span class="kw">,</span><span class="at"> subscriptions </span><span class="kw">}</span></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">responses</span><span class="kw">:</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">201</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Webhook created </span><span class="kw">}</span></span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">409</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Webhook already exists for this team </span><span class="kw">}</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">patch</span><span class="kw">:</span></span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Update webhook config (name, loudness floor, subscriptions)</span></span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a><span class="co">      # Note: URL rotation is a separate endpoint</span></span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">delete</span><span class="kw">:</span></span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Delete the team&#39;s webhook (CM only)</span></span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">/api/campaigns/{campaignId}/teams/{teamId}/webhook/rotate</span><span class="kw">:</span></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">post</span><span class="kw">:</span></span>
+<span id="cb19-33"><a href="#cb19-33" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-34"><a href="#cb19-34" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Rotate the webhook URL (preserves subscriptions + history)</span></span>
+<span id="cb19-35"><a href="#cb19-35" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">requestBody</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> newUrl </span><span class="kw">}</span></span>
+<span id="cb19-36"><a href="#cb19-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-37"><a href="#cb19-37" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">/api/campaigns/{campaignId}/teams/{teamId}/webhook/test</span><span class="kw">:</span></span>
+<span id="cb19-38"><a href="#cb19-38" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">post</span><span class="kw">:</span></span>
+<span id="cb19-39"><a href="#cb19-39" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-40"><a href="#cb19-40" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> Send a synthetic test embed to verify the URL works</span></span>
+<span id="cb19-41"><a href="#cb19-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-42"><a href="#cb19-42" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">/api/campaigns/{campaignId}/teams/{teamId}/webhook/deliveries</span><span class="kw">:</span></span>
+<span id="cb19-43"><a href="#cb19-43" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">get</span><span class="kw">:</span></span>
+<span id="cb19-44"><a href="#cb19-44" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">tags</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">Team Discord Webhooks</span><span class="kw">]</span></span>
+<span id="cb19-45"><a href="#cb19-45" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">summary</span><span class="kw">:</span><span class="at"> List recent delivery attempts (paginated)</span></span>
+<span id="cb19-46"><a href="#cb19-46" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">parameters</span><span class="kw">:</span></span>
+<span id="cb19-47"><a href="#cb19-47" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> limit</span><span class="kw">,</span><span class="at"> </span><span class="fu">in</span><span class="kw">:</span><span class="at"> query</span><span class="kw">,</span><span class="at"> </span><span class="fu">schema</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">type</span><span class="kw">:</span><span class="at"> integer</span><span class="kw">,</span><span class="at"> </span><span class="fu">default</span><span class="kw">:</span><span class="at"> </span><span class="dv">50</span><span class="kw">,</span><span class="at"> </span><span class="fu">maximum</span><span class="kw">:</span><span class="at"> </span><span class="dv">200</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span>
+<span id="cb19-48"><a href="#cb19-48" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="kw">-</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> status</span><span class="kw">,</span><span class="at"> </span><span class="fu">in</span><span class="kw">:</span><span class="at"> query</span><span class="kw">,</span><span class="at"> </span><span class="fu">schema</span><span class="kw">:</span><span class="at"> </span><span class="kw">{</span><span class="at"> </span><span class="fu">type</span><span class="kw">:</span><span class="at"> string</span><span class="kw">,</span><span class="at"> </span><span class="fu">enum</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">success</span><span class="kw">,</span><span class="at"> failed</span><span class="kw">,</span><span class="at"> rate_limited</span><span class="kw">,</span><span class="at"> gave_up</span><span class="kw">]</span><span class="at"> </span><span class="kw">}</span><span class="at"> </span><span class="kw">}</span></span></code></pre></div>
+<p>All endpoints documented per PRD-6 §4 conventions: JSDoc → Joi schema
+→ OpenAPI metadata. Drift detection (PRD-6 §6) catches any
+divergence.</p>
+<hr />
+<h2 id="cross-prd-touch-points">13. Cross-PRD Touch Points</h2>
+<p>PRD-8 introduces changes that touch the following existing PRDs. Each
+is small and additive.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Doc</th>
+<th>Section</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>prd-0-overview.md</code></td>
+<td>§4 (data model)</td>
+<td>Add <code>DiscordWebhook*</code> tables per §4.1 above. Extend
+<code>Event</code> interface with <code>affectedTeamIds?</code> per
+§8.3.</td>
+</tr>
+<tr class="even">
+<td><code>prd-1-crusade-master-admin.md</code></td>
+<td>§5c</td>
+<td><strong>Replace the 2-line placeholder</strong> with a one-liner +
+link to PRD-8. The placeholder’s intent (“high-value v2 feature”) is now
+implemented in PRD-8.</td>
+</tr>
+<tr class="odd">
+<td><code>prd-1-crusade-master-admin.md</code></td>
+<td>§6b Flow 5</td>
+<td>Remove the “Mike can copy text from here to post in Discord”
+workaround — it’s now automated via PRD-8.</td>
+</tr>
+<tr class="even">
+<td><code>prd-4-events-deltas.md</code></td>
+<td>§3 (Event schema)</td>
+<td>Add <code>affectedTeamIds?</code> field.</td>
+</tr>
+<tr class="odd">
+<td><code>prd-4-events-deltas.md</code></td>
+<td>§3.3 (fanout)</td>
+<td>Add a side branch: after Notification fanout, also enqueue Discord
+deliveries per PRD-8 §8.</td>
+</tr>
+<tr class="even">
+<td><code>prd-5-approval-system.md</code></td>
+<td>§8 (Notifications UX)</td>
+<td>Add a sub-section noting that Discord is a 4th delivery channel per
+PRD-8; loudness assignments for Discord eligibility live in PRD-8 §5.2
+(separate from in-app loudness).</td>
+</tr>
+<tr class="odd">
+<td><code>prd-6-technical-architecture.md</code></td>
+<td>§4.1</td>
+<td>Implement the <code>webhooks</code> OpenAPI block per PRD-8
+§12.</td>
+</tr>
+<tr class="even">
+<td><code>prd-7-testing-strategy.md</code></td>
+<td>§5 (integration tests)</td>
+<td>Add mock Discord webhook receiver (httptest server); add
+<code>discord-webhook-delivery-job</code> to the test matrix table.</td>
+</tr>
+<tr class="odd">
+<td><code>prd-7-testing-strategy.md</code></td>
+<td>env table</td>
+<td>The <code>dev</code> and <code>staging</code> rows already list
+Discord; clarify the staging Discord is a <strong>test channel</strong>,
+and we now also test the webhook delivery path against a mock receiver
+in unit/integration tests.</td>
+</tr>
+<tr class="even">
+<td><code>prd-2-player-signup.md</code></td>
+<td>§5d (account page)</td>
+<td><strong>No change.</strong> PRD-8 deliberately does not add a
+per-user opt-out (per §1.2).</td>
+</tr>
+<tr class="odd">
+<td><code>okf/concepts/notification.md</code></td>
+<td>description + <code>channels</code> field</td>
+<td>Flip Discord from “future” to “delivered to Discord when team’s
+webhook is registered (PRD-8).” Update tags to remove <code>v3.26</code>
+only / future-only framing.</td>
+</tr>
+<tr class="even">
+<td><code>okf/concepts/</code></td>
+<td>NEW</td>
+<td><code>discord-webhook.md</code> — domain concept doc for
+<code>DiscordWebhook</code> family, mirroring the format of
+<code>crusade-team-leader.md</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>README.md</code></td>
+<td>Documents table + CHANGELOG</td>
+<td>Add PRD-8 row. Add v4.0 (or whatever version) CHANGELOG entry.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="testing-strategy">14. Testing Strategy</h2>
+<h3 id="unit-tests">14.1 Unit Tests</h3>
+<ul>
+<li><strong>Embed renderer</strong> (PRD-8 §9):
+per-<code>EventKind</code> template, with <code>event</code> +
+<code>context</code> fixtures → expected JSON. 100% branch
+coverage.</li>
+<li><strong>Visibility filter</strong> (PRD-8 §8.3): matrix of
+<code>(event.visibility, event.affectedTeamIds, team.id) → boolean</code>.
+Every “blocked” case must be covered.</li>
+<li><strong>URL validator</strong>: valid Discord URL formats pass;
+non-Discord URLs fail; malformed URLs fail with clear error.</li>
+<li><strong>Encryption envelope</strong>: encrypt/decrypt roundtrip; URL
+never appears in logs.</li>
+</ul>
+<h3 id="integration-tests">14.2 Integration Tests</h3>
+<ul>
+<li><strong>BullMQ pipeline end-to-end:</strong> seed event → enqueue
+delivery → worker processes → <code>DiscordWebhookDelivery</code> row
+written with <code>status=success</code>. Mock Discord receiver accepts
+and returns 204.</li>
+<li><strong>Retry on 429:</strong> mock Discord returns 429 with
+<code>Retry-After: 12</code> once, then 204. Assert 2
+<code>DiscordWebhookDelivery</code> rows (one <code>rate_limited</code>,
+one <code>success</code>).</li>
+<li><strong>Auto-disable:</strong> seed webhook with
+<code>consecutiveFailureCount = 9</code>. Emit 1 event. Mock Discord
+returns 500. Assert webhook is now <code>disabledAt</code> set + audit
+entry written + notification fired to TL.</li>
+<li><strong>Idempotent enqueue:</strong> enqueue same
+<code>(webhookId, eventId)</code> twice. Assert only 1 delivery attempt
+recorded (BullMQ jobId-based dedup).</li>
+<li><strong>RLS isolation:</strong> Player on Team A’s session queries
+<code>DiscordWebhook WHERE teamId = teamB.id</code> → returns 0 rows.
+Same query as TL of Team A → returns Team A’s webhook. Same query as CM
+→ returns all teams’ webhooks.</li>
+</ul>
+<h3 id="e2e-tests">14.3 E2E Tests</h3>
+<ul>
+<li><strong>Real Discord test channel</strong> (staging only): A test
+guild + test channel are set up in Discord. A staging-only webhook URL
+points at the test channel. Test fires an event, then asserts the
+message arrived in the test channel via Discord’s bot API (read-back).
+This is the only test that exercises real Discord; runs in staging, not
+CI.</li>
+<li><strong>PRD-13.3 “Mike’s CM-as-player journey”</strong> (PRD-7) gets
+one extra step: PRD-8 webhook receives the event, delivery row is
+recorded.</li>
+</ul>
+<h3 id="test-fixtures">14.4 Test Fixtures</h3>
+<ul>
+<li><code>tests/fixtures/discord-webhook-events/</code> — synthetic
+events covering each subscribed EventKind</li>
+<li><code>tests/fixtures/discord-webhook-responses/</code> — recorded
+Discord responses (success, 429, 400, 500, etc.) replayed by the mock
+receiver</li>
+<li><code>tests/helpers/mockDiscordReceiver.ts</code> — httptest server
+that scripts Discord responses per-test</li>
+</ul>
+<h3 id="hermetic-property">14.5 Hermetic Property</h3>
+<p>Per PRD-7 §0 (“hermetic: a test environment with no external
+dependencies — no live OAuth, no live SMTP, no live Discord”),
+<strong>unit and integration tests use the mock receiver
+exclusively</strong>. Live Discord is only used in the staging E2E test
+above, and that test is annotated as requiring a live test guild
+(skipped if <code>STAGING_DISCORD_WEBHOOK_URL</code> is unset).</p>
+<hr />
+<h2 id="migration-rollout">15. Migration &amp; Rollout</h2>
+<h3 id="database-migration">15.1 Database Migration</h3>
+<p>Standard PRD-3 migration pattern: 4 new tables
+(<code>DiscordWebhook</code>, <code>DiscordWebhookSubscription</code>,
+<code>DiscordWebhookDelivery</code>, plus the
+<code>Event.affectedTeamIds</code> column add). Idempotent;
+backwards-compatible (new column is nullable; existing events without
+<code>affectedTeamIds</code> are treated as not team-scoped).</p>
+<h3 id="feature-flag">15.2 Feature Flag</h3>
+<p><code>Campaign.settings.enableDiscordWebhooks: bool</code> (default
+<code>true</code> for new campaigns; default <code>false</code> for
+existing campaigns at migration time so the rollout is opt-in
+initially).</p>
+<p>CMs enable per-campaign via
+<code>Crusade Administration panel → Integrations → Discord</code>. Once
+enabled, the per-team registration UI surfaces for TLs.</p>
+<h3 id="rollout-sequence">15.3 Rollout Sequence</h3>
+<ol type="1">
+<li><strong>Internal testing</strong> — Instance Admin + a couple of CM
+friends enable the flag, register webhooks, validate end-to-end.</li>
+<li><strong>Beta cohort</strong> — Opt-in CMs (a checkbox in the Crusade
+Administration panel: “I’d like to try the Discord webhook
+integration”). 5–10 campaigns.</li>
+<li><strong>GA</strong> — Feature flag defaults to <code>true</code> for
+new campaigns; existing CMs see a banner inviting them to opt in.</li>
+</ol>
+<h3 id="backwards-compatibility">15.4 Backwards Compatibility</h3>
+<p>PRD-2 §5d (account page) does NOT gain an <code>echoToDiscord</code>
+preference in PRD-8. Players who don’t want their actions in a guild
+channel must talk to their TL. Adding the preference is documented as
+deferred to v1.x (see §16).</p>
+<hr />
+<h2 id="deferred-to-v1.x-future">16. Deferred to v1.x / Future</h2>
+<ul>
+<li><strong>Campaign-wide webhook</strong> for the primary CM.
+Conceptually clean: one webhook receives all events the CM would see in
+their inbox. Skipped in v1 because the team-level model is sufficient
+and adding a campaign-wide channel complicates the team-isolation
+story.</li>
+<li><strong>Edit-message affordance</strong> (Discord
+<code>PATCH /webhooks/.../messages/...</code>). Useful for “edit message
+when approval is later rejected” but adds state-management
+complexity.</li>
+<li><strong>Threaded messages per event</strong> — pin a follow-up
+thread to each approval request embed. Discord’s UX for this is
+improving but the API is still cumbersome.</li>
+<li><strong>Per-user opt-out</strong> — adding
+<code>echoToDiscord</code> to PRD-2 §5d. Deferred per §1.2; can be added
+later without schema changes (the visibility filter becomes “AND
+user.echoToDiscord” per-recipient).</li>
+<li><strong>Multi-webhook per team</strong> with event-routing rules
+(e.g., “send approvals to #mods and battles to #chat”). Defer until a CM
+actually asks.</li>
+<li><strong>Discord guild verification</strong> — link a Discord guild
+to the tenant; verify TL/CM roles via the Discord API. Heavy lift; defer
+to v2+.</li>
+<li><strong>Slash commands / interactive embeds</strong> — requires a
+bot. Out of scope for the foreseeable future.</li>
+<li><strong>Slack / Teams / Matrix adapters</strong> — the
+<code>DiscordWebhook</code> + <code>DiscordWebhookSubscription</code> +
+<code>DiscordWebhookDelivery</code> data model is generic enough that
+adding <code>SlackWebhook</code> is a copy-paste + adapter. Defer to v2+
+when there’s actual demand.</li>
+</ul>
+<hr />
+<h2 id="open-questions-resolved-during-drafting">17. Open Questions
+(resolved during drafting)</h2>
+<ul>
+<li>✅ Webhook rotation: yes, preserves subscriptions + history.</li>
+<li>✅ Raw event payload in delivery log: yes, redacted of private
+fields.</li>
+<li>✅ Edit-message: deferred.</li>
+<li>✅ Per-team naming: TL-supplied friendly label, UI-only, never sent
+to Discord.</li>
+<li>✅ Disabled webhook behavior: event still emitted, in-app + email
+unaffected, Discord delivery skipped with audit entry.</li>
+</ul>
+<hr />
+<h2 id="acceptance-criteria">18. Acceptance Criteria</h2>
+<p>PRD-8 ships when:</p>
+<ol type="1">
+<li><strong>A TL can register a webhook, enable 3+ subscriptions, and
+see test embeds arrive in Discord within 5 seconds.</strong> Manual QA
+on staging.</li>
+<li><strong>Team-isolation test passes:</strong> Player on Team B sees
+zero rows when querying Team A’s <code>DiscordWebhook</code>. Automated
+test in CI.</li>
+<li><strong>Retry on 429 works:</strong> 429 → re-enqueue with
+<code>Retry-After</code> honored → eventual success. Automated
+test.</li>
+<li><strong>Auto-disable triggers after threshold:</strong> webhook with
+N consecutive failures becomes disabled + audit entry + TL notification.
+Automated test.</li>
+<li><strong>URL never leaks in logs:</strong> grep the entire worker log
+output across an integration test run; assert no
+<code>discord.com/api/webhooks/1234567890/</code> literal appears.
+Automated test.</li>
+<li><strong>OpenAPI spec matches routes:</strong> drift detection (PRD-6
+§6) passes for the new <code>webhooks</code> block. CI gate.</li>
+<li><strong>OKF bundle lints clean:</strong> <code>validate.js</code>,
+<code>lint-frontmatter.js</code>, <code>check-orphans.js</code>,
+<code>check-index-sync.js</code> all return 0. CI gate.</li>
+</ol>
+<hr />
+<h2 id="cross-references">19. Cross-References</h2>
+<ul>
+<li><a href="/prds/prd-0-overview.md">PRD-0 — Overview</a> —
+<code>Event</code> schema, shared data model, RLS policies</li>
+<li><a href="/prds/prd-1-crusade-master-admin.md">PRD-1 — CM Admin</a> —
+TL authority model, Crusade Administration panel</li>
+<li><a href="/prds/prd-2-player-signup.md">PRD-2 — Player Sign-Up</a> —
+Account page (no opt-out per §1.2)</li>
+<li><a href="/prds/prd-3-army-export-versioning.md">PRD-3 — Roster
+Pipeline</a> — BullMQ pipeline pattern (parallels delivery
+pipeline)</li>
+<li><a href="/prds/prd-4-events-deltas.md">PRD-4 — Events &amp;
+Timeline</a> — Event taxonomy, fanout function, visibility levels</li>
+<li><a href="/prds/prd-5-approval-system.md">PRD-5 — Approval System</a>
+— Loudness assignment reference</li>
+<li><a href="/prds/prd-6-technical-architecture.md">PRD-6 — Technical
+Architecture</a> — OpenAPI/Swagger, <code>webhooks</code> block (§4.1
+placeholder implemented here)</li>
+<li><a href="/prds/prd-7-testing-strategy.md">PRD-7 — Testing
+Strategy</a> — Test pyramid, env matrix, mock pattern</li>
+<li><a href="/concepts/crusade-team-leader.md">CrusadeTeamLeader</a> —
+Authorization basis for webhook config</li>
+<li><a href="/concepts/notification.md">Notification</a> — Adjacent
+delivery channel (in-app + email); PRD-8 adds Discord as a 4th</li>
+<li><a href="/concepts/discord-webhook.md">DiscordWebhook</a> — Domain
+concept for the new schema family</li>
+</ul>
+</body>
+</html>

@@ -158,6 +158,10 @@ interface Event {
   delta: Delta | null;
   visibility: 'public' | 'campaign' | 'team' | 'cm_only' | 'private';
   activeRosterApprovedId: string | null;
+  // v4.0 (PRD-8): present when the event is scoped to specific teams. Used
+  // by the fanout function to decide which teams' Discord webhooks are
+  // eligible to receive this event. Null/undefined = not team-scoped.
+  affectedTeamIds?: string[];
 }
 
 interface Delta {
@@ -172,7 +176,9 @@ interface Delta {
 }
 ```
 
-**Extending the taxonomy:** new `EventKind` values are added as needed; the data model doesn't break (the kind column is `text` or a wide enum that gets updated). v1 ships the kinds above. v1.x may add kinds for Discord integration, multi-supplement campaigns, etc.
+**Extending the taxonomy:** new `EventKind` values are added as needed; the data model doesn't break (the kind column is `text` or a wide enum that gets updated). v1 ships the kinds above. v1.x may add kinds for multi-supplement campaigns, etc.
+
+**v4.0 (PRD-8) — Discord delivery side-branch:** After the fanout function computes Notification recipients per the diagram above, a second pass queries `DiscordWebhookSubscription` rows to identify which teams have subscribed to this `EventKind` AND pass the visibility filter (PRD-8 §8.3). For each eligible team, a `discord-webhook-delivery` BullMQ job is enqueued. The delivery worker is dumb pipe — visibility filtering happens in the fanout step, not the worker. See PRD-8 for the full pipeline.
 
 **Default visibility per kind** is documented in PRD-4 §8.
 

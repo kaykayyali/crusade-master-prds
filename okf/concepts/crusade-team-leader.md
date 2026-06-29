@@ -71,7 +71,7 @@ sequenceDiagram
 **Key invariants preserved by the flow:**
 - Every kind still produces an `ApprovalRequest` row — the pipeline runs uniformly.
 - `approvalSource` is the only field that varies by who submitted.
-- Events fire regardless of auto-approve, so future Discord/inbox hooks work without special-casing.
+- Events fire regardless of auto-approve, so future inbox hooks work without special-casing. Discord is now implemented as PRD-8 (v4.0).
 
 ---
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -289,10 +289,10 @@ one active team leader — the CM cannot remove the only team leader on a
 team without first promoting a replacement.</p>
 <p><strong>Multi-team-leader on a team:</strong> a team can have
 multiple team leaders (v3.12). Default approval semantics: any one of
-them can approve (<code>teamLeaderApprovalMode: &#39;any&#39;</code>). The CM
-can switch to <code>&#39;all&#39;</code> (every team leader must approve) per
-campaign, but <code>&#39;any&#39;</code> is the default and matches typical
-team-leadership workflows. With multi-leader + <code>&#39;all&#39;</code>, the
+them can approve (<code>teamLeaderApprovalMode: 'any'</code>). The CM
+can switch to <code>'all'</code> (every team leader must approve) per
+campaign, but <code>'any'</code> is the default and matches typical
+team-leadership workflows. With multi-leader + <code>'all'</code>, the
 request stays pending until every team leader has approved (or one has
 rejected).</p>
 <p><strong>Only the CM can grant or revoke the team leader role</strong>
@@ -302,7 +302,7 @@ Crusade Administration panel → Approvals section.</p>
 <p><strong>Data isolation:</strong> teams cannot see each other’s data
 through the app (RLS-enforced). Players share out-of-band if they want;
 the app doesn’t facilitate it. Exception: when the crusade ends
-(<code>Campaign.status = &#39;archived&#39;</code>), all data is
+(<code>Campaign.status = 'archived'</code>), all data is
 read-only-visible to all players.</p>
 <hr />
 <h2 id="goals">1. Goals</h2>
@@ -337,7 +337,8 @@ configure house rules</li>
 <p>Two paths:</p>
 <p><strong>Path A: Env-var bootstrap</strong> (recommended for
 production):</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">ADMIN_EMAIL</span><span class="op">=</span>admin@example.com</span>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">ADMIN_EMAIL</span><span class="op">=</span>admin@example.com</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">ADMIN_DISPLAY_NAME</span><span class="op">=</span><span class="st">&quot;Jane Admin&quot;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_HOST</span><span class="op">=</span>smtp.example.com</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="va">SMTP_PORT</span><span class="op">=</span>587</span>
@@ -382,7 +383,7 @@ removed</p>
 <p><strong>Tenant settings:</strong> -
 <code>allow_cross_tenant_spectators: bool</code> (default false) -
 <code>default_supplement: string</code> (default
-<code>&#39;armageddon&#39;</code>) - <code>max_campaigns_per_cm: int</code>
+<code>'armageddon'</code>) - <code>max_campaigns_per_cm: int</code>
 (default 10) - <code>max_members_per_campaign: int</code> (default
 32)</p>
 <h3 id="instance-wide-metrics">3.3 Instance-Wide Metrics</h3>
@@ -525,8 +526,8 @@ leaders via the Crusade Administration panel after inviting players
 disable packs they don’t want.</p>
 <p><strong>Step 4: Approvals</strong> — per-kind team-leader authority
 (PRD-1 §4.4 defaults),
-<code>teamLeaderApprovalMode: &#39;any&#39; | &#39;all&#39;</code> (default
-<code>&#39;any&#39;</code>), bulk-approve cap (default 50),
+<code>teamLeaderApprovalMode: 'any' | 'all'</code> (default
+<code>'any'</code>), bulk-approve cap (default 50),
 <code>auto_approve_routine_battle_updates</code> (default false),
 <code>require_battle_report</code> (default true).</p>
 <p><strong>Step 5: Invite Players</strong> — CM invites by email or
@@ -535,14 +536,14 @@ shareable link. Each invite is a single use or multi-use
 + a magic-link-style auth URL.</p>
 <p><strong>Step 6: Review &amp; Start</strong> — summary of all
 settings. CM clicks “Start campaign” to flip
-<code>Campaign.status: &#39;created&#39; → &#39;started&#39;</code> (per PRD-0 §4 v3.18
+<code>Campaign.status: 'created' → 'started'</code> (per PRD-0 §4 v3.18
 enum: <code>created</code> → <code>started</code> → <code>ended</code> →
 <code>archived</code>). The Start button is enabled only when the
 pre-flight validation (above) passes — every team has ≥1 active
 <code>TeamLeader</code> row. If validation fails, the button is disabled
 with a tooltip listing the unmet requirements.</p>
 <p><strong>Pre-campaign state
-(<code>Campaign.status: &#39;created&#39;</code>):</strong> the campaign exists
+(<code>Campaign.status: 'created'</code>):</strong> the campaign exists
 but is not yet active. Players can join via invite but cannot file
 approvals or play in battles. The CM can still edit settings. The state
 transitions to <code>started</code> when the CM clicks Start (and the
@@ -593,7 +594,7 @@ Change 10):</strong></p>
 <strong>All in-flight <code>ApprovalRequest</code>s with status
 <code>pending_approval</code> or <code>pending_review</code> are
 auto-rejected</strong> with
-<code>rejectionReason: &#39;campaign_ended&#39;</code>. A
+<code>rejectionReason: 'campaign_ended'</code>. A
 <code>Notification</code> fires to each submitter. - <strong>Team leader
 approval authority is suspended.</strong> No new approval actions. The
 CM retains read access and can still use the audit log and override tool
@@ -763,7 +764,7 @@ boundaries.</li>
 switched to their team after the request was filed (the request is bound
 to the team at filing time, not at approval time).</li>
 <li>When the crusade is archived
-(<code>Campaign.status = &#39;archived&#39;</code>), all inboxes become
+(<code>Campaign.status = 'archived'</code>), all inboxes become
 read-only and every player across teams sees the full history (per PRD-0
 §3b post-crusade relaxation).</li>
 </ul>
@@ -839,7 +840,7 @@ historical events still reference the phase.</li>
 <p><strong>Activation rules (v1):</strong></p>
 <ul>
 <li>A phase can only be activated when
-<code>Campaign.status = &#39;started&#39;</code> (no phases during
+<code>Campaign.status = 'started'</code> (no phases during
 <code>created</code> / <code>ended</code> / <code>archived</code>).</li>
 <li>Activating a phase emits <code>campaign.phase_activated</code> event
 (PRD-4 §3).</li>
@@ -1041,10 +1042,10 @@ cross-team-broad are team-leader-eligible; actions that affect the
 campaign as a whole or other teams are CM-only.</p>
 <ol start="2" type="1">
 <li><p><strong>Team-leader approval mode</strong>
-(<code>Campaign.teamLeaderApprovalMode: &#39;any&#39; | &#39;all&#39;</code>): when a
+(<code>Campaign.teamLeaderApprovalMode: 'any' | 'all'</code>): when a
 team has multiple team leaders, do all of them need to approve
-(<code>&#39;all&#39;</code>), or does any one suffice (<code>&#39;any&#39;</code>)?
-Default <code>&#39;any&#39;</code>. The <code>&#39;all&#39;</code> mode is a stronger
+(<code>'all'</code>), or does any one suffice (<code>'any'</code>)?
+Default <code>'any'</code>. The <code>'all'</code> mode is a stronger
 check, used rarely. The audit log records which team leaders approved,
 in order.</p></li>
 <li><p><strong>Bulk-approve cap</strong>
@@ -1128,7 +1129,7 @@ his reason text. The audit log is the campaign’s institutional
 memory.</p>
 <p><strong>Retention:</strong> audit log is retained for the lifetime of
 the campaign + 1 year after archival. Even after
-<code>Campaign.status = &#39;archived&#39;</code>, the audit log is read-only
+<code>Campaign.status = 'archived'</code>, the audit log is read-only
 accessible for the retention window. Hard-delete is only available to
 the Instance Admin and is logged separately (with a stronger audit
 trail).</p>
@@ -1255,7 +1256,7 @@ as CM-as-player (their own self-actions don’t need approval from
 themselves).</li>
 <li>The team leader is <strong>not</strong> auto-approved for OTHER
 players’ requests on their team — they explicitly approve those, with
-the audit trail recording <code>approvalSource: &#39;cm_review&#39;</code> and
+the audit trail recording <code>approvalSource: 'cm_review'</code> and
 <code>reviewerUserId: teamLeader</code>.</li>
 </ul></li>
 </ul>
@@ -1356,7 +1357,7 @@ Free-for-all mode is out of scope.</li>
 — the <code>narrativeLogFilter</code> controls which events the team’s
 players see (e.g., Defenders see all events; Invaders see only
 Inter-team battles + Inter-team events)</li>
-<li><code>CampaignMember.teamId: CampaignTeam[&#39;id&#39;]</code> — required;
+<li><code>CampaignMember.teamId: CampaignTeam['id']</code> — required;
 every player belongs to exactly one team</li>
 <li><code>Roster.teamId</code> — the roster is bound to the team
 directly; if the player switches teams, the CM decides whether the
@@ -1479,12 +1480,19 @@ prefer)</li>
 </ul>
 <p>These are aggregated views; the underlying events are per-player.</p>
 <hr />
-<h2 id="c.-discord-integration-future-not-in-v1">5c. Discord Integration
-(future, not in v1)</h2>
-<p>Webhook-based Discord integration is a high-value v2 feature
-(community runs most 40K conversation in Discord). The system will emit
-events that can be forwarded to Discord channels; the wiring lives in
-v2.</p>
+<h2 id="c.-discord-integration-prd-8-v4.0">5c. Discord Integration
+(PRD-8 / v4.0)</h2>
+<p>Webhook-based Discord integration is implemented in PRD-8 (v4.0).
+Per-team Discord webhook forwarding — each <code>CampaignTeam</code>
+registers at most one Discord webhook URL; the team’s Crusade Team
+Leader (or the primary CM) configures which <code>EventKind</code>
+values fire it. Outgoing webhooks only; no bot, no DMs, no bidirectional
+sync. See <a href="/prds/prd-8-discord-webhooks.md">PRD-8</a> for the
+full specification.</p>
+<hr />
+<p><strong>Note (historical):</strong> before PRD-8, this section was a
+2-line placeholder noting Discord as a v2 feature. The placeholder is
+now implemented; this section exists only as a forward-pointer.</p>
 <hr />
 <h2 id="user-flow-first-run-first-campaign">6. User Flow: First-Run →
 First Campaign</h2>
@@ -1591,7 +1599,7 @@ refresh is fine”)</strong> — the inbox polls
 New items merge into the Pinia store and appear with a fade-in
 animation. See PRD-6 §3 for the <code>useInboxPoller</code> composable
 contract. No SSE/WebSocket infrastructure required. Polling pauses when
-the tab is hidden (<code>document.visibilityState === &#39;hidden&#39;</code>)
+the tab is hidden (<code>document.visibilityState === 'hidden'</code>)
 and when the user is actively viewing the inbox detail pane (no point
 redrawing under their cursor).</li>
 <li><strong>Recently-decided items stay visible for 24 hours</strong>
@@ -1784,7 +1792,7 @@ provisioning, Postgres RLS policies, BullMQ workers</li>
 admin email; recovery requires re-running the bootstrap block, which is
 idempotent and resets the admin user.</li>
 <li><strong>CM is also a player (single-CM campaign)</strong>: own
-deltas auto-approve via <code>approvalSource: &#39;self_approved&#39;</code>
+deltas auto-approve via <code>approvalSource: 'self_approved'</code>
 (per PRD-5 §3.3) and the <strong>full pipeline still runs</strong> —
 ApprovalRequest created, rule checks fire, events emit, audit trail
 recorded. Future team view pages and event hooks work without
@@ -1816,7 +1824,8 @@ per-campaign narrative side</li>
 Leader</a> — TL role, removal workflow, gate at campaign start</li>
 <li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> — CM
 unilateral approval on any kind (v3.27)</li>
-<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+<li><a
+href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
 — CM <code>crusade_force_manual_edit</code></li>
 <li><a href="../okf/concepts/approval-kind.md">ApprovalKind</a> — all
 kinds (CM unilateral), kinds routed to TL</li>

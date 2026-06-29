@@ -152,7 +152,7 @@ interface ApprovalRequest {
   activeRosterApprovedId: string | null; // gating context
 
   // v3.7 (updated v3.11) — records HOW the request was approved. Required so future event
-  // hooks (team view pages, Discord, narrative analytics) can filter or
+  // hooks (team view pages, narrative analytics) can filter or
   // count self-approved vs human-approved vs routine-auto-approved deltas.
   approvalSource:
     | 'cm_review'                   // routed to a Primary CM or Crusade Team Leader (within team scope); covers both pending and approved
@@ -511,9 +511,9 @@ The `approvalSource` field records which path fired:
 2. Runs rule checks (including `team-narrative-alignment`, which gives the CM-as-player the same narrative-fit warn as any other player)
 3. Creates the downstream state (`RosterApproved`, `BattleUpdate`, `CampaignMember` updates, etc.)
 4. Emits the same events (`roster.approved`, `battle_update.filed`, `member.team_switched`, etc.)
-5. Fires the same notifications (in-app toast + email + future Discord)
+5. Fires the same notifications (in-app toast + email + Discord when a team webhook is subscribed per PRD-8)
 
-This guarantees future event hooks (team view pages, Discord integrations, narrative analytics, the audit trail itself) all work uniformly. The team view page example from PRD-1 §5 — Mike's deltas to Helsreach Defenders show up in the team's rollup because the events fired, not because the system special-cased Mike.
+This guarantees future event hooks (team view pages, narrative analytics, the audit trail itself) all work uniformly — and confirms PRD-8's Discord delivery works without special-casing. The team view page example from PRD-1 §5 — Mike's deltas to Helsreach Defenders show up in the team's rollup because the events fired, not because the system special-cased Mike.
 
 **Why this matters:** if the system special-cased CM-as-player to bypass the pipeline (e.g., directly mutating `RosterApproved` without an `ApprovalRequest`), every downstream consumer would have to special-case CM-as-player too. That's a permanent tax on every future feature. By keeping the pipeline uniform and varying only the `approvalSource`, the system stays clean.
 
@@ -1151,6 +1151,22 @@ When the CM-as-player self-approves their own delta (PRD-1 §5), the resulting n
 
 When a Team Leader approves another player's request on their team, the notification to the player is `loud` (player benefits from knowing). The notification to the team leader is `normal` (they just did it).
 
+### 8.6 Discord delivery channel (v4.0 / PRD-8)
+
+Discord is the **fourth delivery channel** alongside in-app toast, notification list, and email. Discord delivery is configured per-`CampaignTeam` (not per-user) — see [PRD-8](/prds/prd-8-discord-webhooks.md).
+
+| Loudness | In-app | Email | Discord (if team webhook subscribed) |
+|---|---|---|---|
+| `loud` | Toast (auto-dismiss 8s) + bell badge + email | Yes | Yes (default) |
+| `normal` | Bell badge + notification list page | No (in-app only) | Yes (default) |
+| `quiet` | Notification list page only | No | Optional — controlled by webhook's `minLoudness` |
+
+The Discord loudness assignment for each `EventKind` is **independent** of this table — PRD-8 §5.2 defines a separate loudness-to-EventKind mapping (TL-configurable per webhook). The TL can set a webhook's `minLoudness` floor to filter out quieter events.
+
+**No per-user opt-out (v4.0).** If a team's webhook is registered for an event kind, the event fires for the team's channel regardless of individual player preferences. PRD-2 §5d does not gain an `echoToDiscord` preference in v4.0. Players uncomfortable with their actions in a guild channel should discuss with their TL.
+
+**Team-isolation:** Discord delivery is gated by the fanout function's visibility filter (PRD-8 §8.3). `private` events never forward; `team` and `cm_only` events forward only to teams in `event.affectedTeamIds`. PRD-0 §3b invariant enforced at the fanout step, not the delivery worker.
+
 ---
 
 ## 9. Campaign-Level Approval Policies
@@ -1247,7 +1263,7 @@ flowchart TD
 1. **Two CMs approve the same request simultaneously**: optimistic locking via `contextHash`; second approver sees "already decided."
 2. **Submitter withdraws while a CM has it claimed**: request closed.
 3. **Approval is for a now-deleted entity**: apply step fails transactionally; CM is shown an error and asked to reject.
-4. **CM is the submitter**: auto-approves via `approvalSource: 'self_approved'`. The CM has full authority over their campaign (v3.27), so no second approver is needed for any kind. The pipeline still runs — `ApprovalRequest` is created, rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3, the architectural rule is "auto-approve ≠ pipeline bypass" so future event hooks (team view pages, Discord, narrative analytics) work uniformly.
+4. **CM is the submitter**: auto-approves via `approvalSource: 'self_approved'`. The CM has full authority over their campaign (v3.27), so no second approver is needed for any kind. The pipeline still runs — `ApprovalRequest` is created, rule checks fire, events emit, audit trail recorded. Per PRD-1 §5 and §3.3, the architectural rule is "auto-approve ≠ pipeline bypass" so future event hooks (team view pages, narrative analytics) work uniformly.
 5. **Submitter suspended mid-approval**: pending requests auto-rejected with reason "submitter suspended."
 6. **Active RosterApproved changes during approval**: drift detected; CM chooses re-validate, force-apply, or reject.
 7. **Notification email bounces**: status queued for retry; if persistent, in-app notification only.

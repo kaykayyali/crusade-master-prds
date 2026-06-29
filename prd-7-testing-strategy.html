@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -251,7 +251,9 @@ campaign, roster) used as the starting state for a test.</li>
 <li><strong>Factory</strong>: a function that creates fresh test data on
 demand (often with overrides).</li>
 <li><strong>Hermetic</strong>: a test environment with no external
-dependencies (no live OAuth, no live SMTP, no live Discord).</li>
+dependencies (no live OAuth, no live SMTP, no live Discord). Live
+Discord is used only in the PRD-8 §14.3 staging E2E test (skipped if
+<code>STAGING_DISCORD_WEBHOOK_URL</code> is unset).</li>
 </ul>
 <hr />
 <h2 id="goals">1. Goals</h2>
@@ -339,6 +341,14 @@ Inverted pyramids (mostly E2E, few units) become flaky and slow.</p>
 <td>Full approval request → decision → history</td>
 <td>Approval inbox, CM-as-player auto-approve, TL approval flow</td>
 </tr>
+<tr class="odd">
+<td><strong>PRD-8 (Discord webhooks, v4.0)</strong></td>
+<td><strong>Embed renderer, visibility filter (PRD-8 §8.3)</strong></td>
+<td><strong>BullMQ delivery pipeline with mock Discord
+receiver</strong></td>
+<td><strong>Staging E2E: real Discord test channel
+round-trip</strong></td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -375,7 +385,8 @@ Inverted pyramids (mostly E2E, few units) become flaky and slow.</p>
 <td>Synthetic (fresh per test run)</td>
 <td>Docker Compose + testcontainers in CI; long-running staging cluster
 mirrors prod</td>
-<td>Discord test app, real SMTP (Mailgun sandbox)</td>
+<td>Discord test app, real SMTP (Mailgun sandbox), <strong>Discord test
+channel webhook</strong> (PRD-8 staging E2E only)</td>
 </tr>
 <tr class="odd">
 <td><strong>prod</strong></td>
@@ -447,7 +458,8 @@ job processors (covered by integration tests with real Redis)</p>
 <span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ... 20 more cases covering each kind × each role × edge cases</span></span>
 <span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
 <h3 id="frontend-vitest-vuetest-utils-vue-3">4.2 Frontend (Vitest +
-<span class="citation" data-cites="vue/test-utils">@vue/test-utils</span>, Vue 3)</h3>
+<span class="citation"
+data-cites="vue/test-utils">@vue/test-utils</span>, Vue 3)</h3>
 <p><strong>Location</strong>: <code>apps/web/src/**/*.test.ts</code>
 (co-located)</p>
 <p><strong>Coverage targets</strong>: 70% line coverage. (UI is harder
@@ -485,7 +497,8 @@ JSON, partial output - Error mapping: parser error codes → our error
 categories - Determinism: same input → same output (within timestamp
 fields)</p>
 <p><strong>Example:</strong></p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_handles_malformed_json():</span>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> test_parse_handles_malformed_json():</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> run_parser(<span class="st">b&quot;not json at all&quot;</span>)</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.exit_code <span class="op">==</span> <span class="dv">1</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> result.error_category <span class="op">==</span> <span class="st">&quot;malformed_input&quot;</span></span>
@@ -542,6 +555,11 @@ user (should be filtered) and as a system job (should not be
 filtered)</li>
 <li><strong>OAuth callback flow</strong> with a mock Discord OAuth
 server (using <code>oauth2-mock-server</code> npm package)</li>
+<li><strong>Discord webhook delivery</strong> with a mock Discord
+receiver (<code>tests/helpers/mockDiscordReceiver.ts</code> per PRD-8
+§14.4) that scripts 204/400/401/404/429/5xx responses per-test. Asserts
+on <code>DiscordWebhookDelivery</code> rows + auto-disable
+behavior.</li>
 </ul>
 <h3 id="rls-verification-critical-prd-0-4b">5.3 RLS verification
 (critical — PRD-0 §4b)</h3>
@@ -700,7 +718,7 @@ their team</li>
 <h3 id="input-validation-tests">9.3 Input validation tests</h3>
 <ul>
 <li>SQL injection: every string field tested with
-<code>&#39;; DROP TABLE users; --</code></li>
+<code>'; DROP TABLE users; --</code></li>
 <li>XSS: every user-input field tested with
 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> (verify stored as
 text, not executed on render)</li>
@@ -716,7 +734,8 @@ Internal security review only in v1 dev.</p>
 <h3 id="factories">10.1 Factories</h3>
 <p>TypeScript factories in
 <code>packages/test-utils/src/factories/</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> makeCampaign <span class="op">=</span> (overrides<span class="op">?:</span> <span class="bu">Partial</span><span class="op">&lt;</span>Campaign<span class="op">&gt;</span>)<span class="op">:</span> Campaign <span class="kw">=&gt;</span> ({</span>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> makeCampaign <span class="op">=</span> (overrides<span class="op">?:</span> <span class="bu">Partial</span><span class="op">&lt;</span>Campaign<span class="op">&gt;</span>)<span class="op">:</span> Campaign <span class="kw">=&gt;</span> ({</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="fu">randomUUID</span>()<span class="op">,</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  tenantId<span class="op">:</span> <span class="st">&#39;tenant-1&#39;</span><span class="op">,</span></span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  name<span class="op">:</span> <span class="st">&#39;Test Campaign&#39;</span><span class="op">,</span></span>
@@ -948,8 +967,9 @@ pipeline runs” (PRD-1 + PRD-5)</h3>
 <li>Rule checks run (PRD-5 §3.3)</li>
 <li>History entry created</li>
 <li>Event emitted; notification fired for Mike’s own record</li>
-<li>Future event hook (Discord, team view page) works without
-modification</li>
+<li><strong>v4.0:</strong> PRD-8 Discord webhook fires automatically
+with no code changes to the pipeline — the future hook is now a present
+hook, validating the v3.28 architectural choice.</li>
 </ol>
 <h3 id="rls-prevents-cross-tenant-access-prd-0">13.4 “RLS prevents
 cross-tenant access” (PRD-0)</h3>
@@ -994,7 +1014,8 @@ request validation, e2e API test scaffolding)</li>
 <h2 id="references">16. References</h2>
 <ul>
 <li>Vitest: https://vitest.dev</li>
-<li><span class="citation" data-cites="vue/test-utils">@vue/test-utils</span>:
+<li><span class="citation"
+data-cites="vue/test-utils">@vue/test-utils</span>:
 https://test-utils.vuejs.org</li>
 <li>Playwright: https://playwright.dev</li>
 <li>testcontainers-node: https://node.testcontainers.org</li>
