@@ -475,7 +475,7 @@ The Swagger UI gets a "Authorize" button that lets you paste a JWT for trying ou
 
 ### Conditional (document if user-facing)
 
-- Webhooks (if we add outbound webhooks in v2): document as `webhooks` block
+- Webhooks (outbound Discord webhooks, v4.0 / PRD-8): document as `webhooks` block — see PRD-8 §12
 - Bulk operations: document with `x-bulk: true` extension
 
 ---

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -355,7 +355,8 @@ authority).</p>
 </tr>
 <tr class="even">
 <td>Backend</td>
-<td><strong><span class="citation" data-cites="hapi/hapi">@hapi/hapi</span></strong> (Node.js 22 LTS) +
+<td><strong><span class="citation"
+data-cites="hapi/hapi">@hapi/hapi</span></strong> (Node.js 22 LTS) +
 TypeScript</td>
 <td>Hapi 21.x; plugin-based</td>
 </tr>
@@ -460,7 +461,7 @@ Team B’s data; only the Primary CM (and Instance Admin) cross team
 boundaries. RLS policies enforce this at the database layer — no
 application-layer bug can leak cross-team data.</li>
 <li><strong>Post-crusade relaxation:</strong> when
-<code>Campaign.status = &#39;archived&#39;</code>, the team-isolation policies
+<code>Campaign.status = 'archived'</code>, the team-isolation policies
 relax to allow cross-team reads in read-only mode. The campaign is over;
 retrospective access is allowed.</li>
 <li>Wahapedia data, parser output schema, and reference data are shared
@@ -712,149 +713,182 @@ XLSX</li>
 <span id="cb4-187"><a href="#cb4-187" aria-hidden="true" tabindex="-1"></a>RuleCheck { id<span class="op">,</span> draftId<span class="op">,</span> runId<span class="op">,</span> kind<span class="op">,</span> status<span class="op">:</span> <span class="st">&#39;pass&#39;</span> <span class="op">|</span> <span class="st">&#39;warn&#39;</span> <span class="op">|</span> <span class="st">&#39;fail&#39;</span><span class="op">,</span> details }</span>
 <span id="cb4-188"><a href="#cb4-188" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-189"><a href="#cb4-189" aria-hidden="true" tabindex="-1"></a><span class="co">// === Events (unified timeline) ===</span></span>
-<span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId }</span>
-<span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
-<span id="cb4-192"><a href="#cb4-192" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-193"><a href="#cb4-193" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade supplements (per-book config) ===</span></span>
-<span id="cb4-194"><a href="#cb4-194" aria-hidden="true" tabindex="-1"></a><span class="co">// Each released Crusade book is one row. v1 ships Armageddon.</span></span>
-<span id="cb4-195"><a href="#cb4-195" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement {</span>
-<span id="cb4-196"><a href="#cb4-196" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span>                                  <span class="co">// e.g., &#39;armageddon&#39;, &#39;nachmund-gauntlet&#39; (v1.x+)</span></span>
-<span id="cb4-197"><a href="#cb4-197" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span></span>
-<span id="cb4-198"><a href="#cb4-198" aria-hidden="true" tabindex="-1"></a>  releasedAt<span class="op">,</span></span>
-<span id="cb4-199"><a href="#cb4-199" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement default JSON Schema for the post-battle update form.</span></span>
-<span id="cb4-200"><a href="#cb4-200" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The form UI auto-generates from this schema. Fields differ per book:</span></span>
-<span id="cb4-201"><a href="#cb4-201" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);</span></span>
-<span id="cb4-202"><a href="#cb4-202" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Nachmund has multi-player agendas and Crusade Blessings; etc.</span></span>
-<span id="cb4-203"><a href="#cb4-203" aria-hidden="true" tabindex="-1"></a>  <span class="co">// null = fall back to the system-default standard Crusade battle report form.</span></span>
-<span id="cb4-204"><a href="#cb4-204" aria-hidden="true" tabindex="-1"></a>  <span class="co">// This is the supplement&#39;s CURRENT default; campaigns pin their own copy</span></span>
-<span id="cb4-205"><a href="#cb4-205" aria-hidden="true" tabindex="-1"></a>  <span class="co">// via Campaign.battleReportSchema below.</span></span>
-<span id="cb4-206"><a href="#cb4-206" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb4-207"><a href="#cb4-207" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement pre-filled content (e.g., Armageddon&#39;s Helsreach/Hades/Gorgutz/Skari teams)</span></span>
-<span id="cb4-208"><a href="#cb4-208" aria-hidden="true" tabindex="-1"></a>  seedData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span></span>
-<span id="cb4-209"><a href="#cb4-209" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-210"><a href="#cb4-210" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-211"><a href="#cb4-211" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
-<span id="cb4-212"><a href="#cb4-212" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId<span class="op">,</span> approvalSource }</span>
-<span id="cb4-213"><a href="#cb4-213" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-214"><a href="#cb4-214" aria-hidden="true" tabindex="-1"></a><span class="co">// === History (computed once ApprovalRequest is approved) ===</span></span>
-<span id="cb4-215"><a href="#cb4-215" aria-hidden="true" tabindex="-1"></a><span class="co">// Every approved changeset generates HistoryEntry rows. Tombstoned (not</span></span>
-<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a><span class="co">// hard-deleted) when a rollback is approved. The grouping dimension is</span></span>
-<span id="cb4-217"><a href="#cb4-217" aria-hidden="true" tabindex="-1"></a><span class="co">// derived (multiple grouping strategies on the same data), but each</span></span>
-<span id="cb4-218"><a href="#cb4-218" aria-hidden="true" tabindex="-1"></a><span class="co">// entry has a single primary group for storage + indexing.</span></span>
-<span id="cb4-219"><a href="#cb4-219" aria-hidden="true" tabindex="-1"></a>HistoryEntry {</span>
-<span id="cb4-220"><a href="#cb4-220" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span></span>
-<span id="cb4-221"><a href="#cb4-221" aria-hidden="true" tabindex="-1"></a>  approvalRequestId<span class="op">,</span>                    <span class="co">// ties entry back to its approval (G5)</span></span>
-<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>  grouping<span class="op">,</span>                             <span class="co">// &#39;unit&#39; | &#39;roster_version&#39; | &#39;battle&#39; | &#39;requisition&#39; | &#39;state_field&#39;</span></span>
-<span id="cb4-223"><a href="#cb4-223" aria-hidden="true" tabindex="-1"></a>  groupKey<span class="op">,</span>                             <span class="co">// stable id within grouping (unitId, rosterApprovedId, battleId, etc.)</span></span>
-<span id="cb4-224"><a href="#cb4-224" aria-hidden="true" tabindex="-1"></a>  summary<span class="op">,</span>                              <span class="co">// human-readable 1-line (&quot;Cadian Castellan XP 5→8, +1 kill&quot;)</span></span>
-<span id="cb4-225"><a href="#cb4-225" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">,</span>                              <span class="co">// structured diff (per-grouping shape)</span></span>
-<span id="cb4-226"><a href="#cb4-226" aria-hidden="true" tabindex="-1"></a>  occurredAt<span class="op">,</span></span>
-<span id="cb4-227"><a href="#cb4-227" aria-hidden="true" tabindex="-1"></a>  tombstoned<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span>                  <span class="co">// true after rollback; hidden from timelines, kept in audit log</span></span>
-<span id="cb4-228"><a href="#cb4-228" aria-hidden="true" tabindex="-1"></a>  tombstonedByApprovalRequestId<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb4-229"><a href="#cb4-229" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-230"><a href="#cb4-230" aria-hidden="true" tabindex="-1"></a>HistoryEntryIndex { historyEntryId<span class="op">,</span> groupKey<span class="op">,</span> dimension }  <span class="co">// secondary indexes (e.g., unitId, battleId) for cross-grouping queries</span></span>
-<span id="cb4-231"><a href="#cb4-231" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-232"><a href="#cb4-232" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
-<span id="cb4-233"><a href="#cb4-233" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
-<span id="cb4-234"><a href="#cb4-234" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-235"><a href="#cb4-235" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
-<span id="cb4-236"><a href="#cb4-236" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span>
-<span id="cb4-237"><a href="#cb4-237" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-238"><a href="#cb4-238" aria-hidden="true" tabindex="-1"></a><span class="co">// === Notifications ===</span></span>
-<span id="cb4-239"><a href="#cb4-239" aria-hidden="true" tabindex="-1"></a><span class="co">// Per-user notification queue. Generated from Event outbox at fanout time.</span></span>
-<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a><span class="co">// Toast and email delivery are derived from this table; list page reads it.</span></span>
-<span id="cb4-241"><a href="#cb4-241" aria-hidden="true" tabindex="-1"></a><span class="bu">Notification</span> {</span>
-<span id="cb4-242"><a href="#cb4-242" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> recipientUserId<span class="op">,</span></span>
-<span id="cb4-243"><a href="#cb4-243" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> <span class="st">&#39;approval_status&#39;</span> <span class="op">|</span> <span class="st">&#39;approval_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;event_visible_to_user&#39;</span> <span class="op">|</span> <span class="st">&#39;team_leader_grant&#39;</span> <span class="op">|</span> <span class="st">&#39;team_leader_revoke&#39;</span> <span class="op">|</span> <span class="st">&#39;roster_rollback_executed&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign_archived&#39;</span><span class="op">,</span></span>
-<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a>  title<span class="op">,</span> summary<span class="op">,</span>                                 <span class="co">// markdown summaries, not full payloads</span></span>
-<span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>  sourceEventId<span class="op">?,</span> sourceApprovalRequestId<span class="op">?,</span>       <span class="co">// links to the originating record</span></span>
-<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a>  readAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
-<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
-<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
-<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Quiet-class determines UI delivery loudness (see PRD-5 §6).</span></span>
-<span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a>  loudness<span class="op">:</span> <span class="st">&#39;loud&#39;</span> <span class="op">|</span> <span class="st">&#39;normal&#39;</span> <span class="op">|</span> <span class="st">&#39;quiet&#39;</span><span class="op">,</span></span>
-<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a><span class="op">**</span>Identifiers<span class="op">**:</span> UUIDv7<span class="op">.</span></span>
-<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>### 4a<span class="op">.</span> <span class="at">Entity</span><span class="op">-</span>Relationship <span class="fu">Diagram</span> (v3<span class="op">.</span><span class="dv">23</span>)</span>
-<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>The core entities and their relationships<span class="op">.</span> <span class="at">Cardinality</span><span class="op">:</span> <span class="vs">`||`</span> (one<span class="op">-</span>and<span class="op">-</span>only<span class="op">-</span>one)<span class="op">,</span> <span class="vs">`o|`</span> (zero<span class="op">-</span>or<span class="op">-</span>one)<span class="op">,</span> <span class="vs">`}o`</span> (zero<span class="op">-</span>or<span class="op">-</span>many)<span class="op">,</span> <span class="vs">`}|`</span> (one<span class="op">-</span>or<span class="op">-</span>many)<span class="op">.</span> <span class="at">Arrows</span> show foreign<span class="op">-</span>key relationships<span class="op">;</span> the <span class="st">&quot;many&quot;</span> side typically has the FK column<span class="op">.</span></span>
-<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a><span class="vs">```mermaid</span></span>
-<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a><span class="vs">erDiagram</span></span>
-<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ User : &quot;has&quot;</span></span>
-<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ Identity : &quot;links&quot;</span></span>
-<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ CampaignMember : &quot;joins&quot;</span></span>
-<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ TeamLeader : &quot;may lead&quot;</span></span>
-<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ Notification : &quot;receives&quot;</span></span>
-<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ AuditLog : &quot;actor of&quot;</span></span>
+<span id="cb4-190"><a href="#cb4-190" aria-hidden="true" tabindex="-1"></a><span class="co">// v4.0 (PRD-8): `affectedTeamIds` added so the fanout function can decide which</span></span>
+<span id="cb4-191"><a href="#cb4-191" aria-hidden="true" tabindex="-1"></a><span class="co">// teams are eligible to receive a Discord webhook delivery for this event.</span></span>
+<span id="cb4-192"><a href="#cb4-192" aria-hidden="true" tabindex="-1"></a><span class="co">// Existing events without this field are treated as not team-scoped (only</span></span>
+<span id="cb4-193"><a href="#cb4-193" aria-hidden="true" tabindex="-1"></a><span class="co">// `public`/`campaign` visibility forwards them to Discord).</span></span>
+<span id="cb4-194"><a href="#cb4-194" aria-hidden="true" tabindex="-1"></a><span class="bu">Event</span> {</span>
+<span id="cb4-195"><a href="#cb4-195" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> occurredAt<span class="op">,</span> actorUserId<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span></span>
+<span id="cb4-196"><a href="#cb4-196" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">,</span> delta<span class="op">,</span> visibility<span class="op">,</span> activeRosterApprovedId<span class="op">,</span></span>
+<span id="cb4-197"><a href="#cb4-197" aria-hidden="true" tabindex="-1"></a>  affectedTeamIds<span class="op">?:</span> <span class="dt">string</span>[]   <span class="co">// PRD-8 §8.3</span></span>
+<span id="cb4-198"><a href="#cb4-198" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-199"><a href="#cb4-199" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-200"><a href="#cb4-200" aria-hidden="true" tabindex="-1"></a><span class="co">// === Discord Webhooks (v4.0 / PRD-8) ===</span></span>
+<span id="cb4-201"><a href="#cb4-201" aria-hidden="true" tabindex="-1"></a><span class="co">// Per-team Discord webhook registration. At most one active webhook per team</span></span>
+<span id="cb4-202"><a href="#cb4-202" aria-hidden="true" tabindex="-1"></a><span class="co">// per campaign (UNIQUE (campaignId, teamId) WHERE disabledAt IS NULL).</span></span>
+<span id="cb4-203"><a href="#cb4-203" aria-hidden="true" tabindex="-1"></a><span class="co">// See PRD-8 for the full specification.</span></span>
+<span id="cb4-204"><a href="#cb4-204" aria-hidden="true" tabindex="-1"></a>DiscordWebhook {</span>
+<span id="cb4-205"><a href="#cb4-205" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> teamId<span class="op">,</span></span>
+<span id="cb4-206"><a href="#cb4-206" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span>                            <span class="co">// friendly label, UI only</span></span>
+<span id="cb4-207"><a href="#cb4-207" aria-hidden="true" tabindex="-1"></a>  urlEncrypted<span class="op">,</span>                    <span class="co">// servocrypt-encrypted Discord webhook URL</span></span>
+<span id="cb4-208"><a href="#cb4-208" aria-hidden="true" tabindex="-1"></a>  urlFingerprint<span class="op">,</span>                  <span class="co">// SHA-256 of plaintext URL; safe for audit logs</span></span>
+<span id="cb4-209"><a href="#cb4-209" aria-hidden="true" tabindex="-1"></a>  createdByUserId<span class="op">,</span> createdAt<span class="op">,</span> updatedAt<span class="op">,</span></span>
+<span id="cb4-210"><a href="#cb4-210" aria-hidden="true" tabindex="-1"></a>  disabledAt<span class="op">?,</span> disabledReason<span class="op">?,</span></span>
+<span id="cb4-211"><a href="#cb4-211" aria-hidden="true" tabindex="-1"></a>  consecutiveFailureCount<span class="op">:</span> int<span class="op">,</span></span>
+<span id="cb4-212"><a href="#cb4-212" aria-hidden="true" tabindex="-1"></a>  lastDeliveryAt<span class="op">?,</span> lastSuccessAt<span class="op">?,</span></span>
+<span id="cb4-213"><a href="#cb4-213" aria-hidden="true" tabindex="-1"></a>  minLoudness<span class="op">:</span> <span class="st">&#39;loud&#39;</span> <span class="op">|</span> <span class="st">&#39;normal&#39;</span> <span class="op">|</span> <span class="st">&#39;quiet&#39;</span><span class="op">,</span>   <span class="co">// default &#39;normal&#39;</span></span>
+<span id="cb4-214"><a href="#cb4-214" aria-hidden="true" tabindex="-1"></a>  autoDisableThreshold<span class="op">:</span> int                   <span class="co">// default 10</span></span>
+<span id="cb4-215"><a href="#cb4-215" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-216"><a href="#cb4-216" aria-hidden="true" tabindex="-1"></a>DiscordWebhookSubscription { webhookId<span class="op">,</span> eventKind<span class="op">:</span> EventKind<span class="op">,</span> enabled<span class="op">:</span> bool<span class="op">,</span> enabledAt<span class="op">?,</span> enabledByUserId<span class="op">?</span> }</span>
+<span id="cb4-217"><a href="#cb4-217" aria-hidden="true" tabindex="-1"></a>DiscordWebhookDelivery {</span>
+<span id="cb4-218"><a href="#cb4-218" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> webhookId<span class="op">,</span> eventId<span class="op">,</span></span>
+<span id="cb4-219"><a href="#cb4-219" aria-hidden="true" tabindex="-1"></a>  attempt<span class="op">,</span>                         <span class="co">// 1..5</span></span>
+<span id="cb4-220"><a href="#cb4-220" aria-hidden="true" tabindex="-1"></a>  status<span class="op">:</span> <span class="st">&#39;pending&#39;</span> <span class="op">|</span> <span class="st">&#39;success&#39;</span> <span class="op">|</span> <span class="st">&#39;failed&#39;</span> <span class="op">|</span> <span class="st">&#39;rate_limited&#39;</span> <span class="op">|</span> <span class="st">&#39;gave_up&#39;</span><span class="op">,</span></span>
+<span id="cb4-221"><a href="#cb4-221" aria-hidden="true" tabindex="-1"></a>  httpStatus<span class="op">?,</span> errorMessage<span class="op">?,</span> durationMs<span class="op">?,</span></span>
+<span id="cb4-222"><a href="#cb4-222" aria-hidden="true" tabindex="-1"></a>  enqueuedAt<span class="op">,</span> deliveredAt<span class="op">?,</span> embedJson<span class="op">?</span></span>
+<span id="cb4-223"><a href="#cb4-223" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-224"><a href="#cb4-224" aria-hidden="true" tabindex="-1"></a>Delta { id<span class="op">,</span> eventId<span class="op">,</span> entityType<span class="op">,</span> entityId<span class="op">,</span> field<span class="op">,</span> beforeValue<span class="op">,</span> afterValue<span class="op">,</span> reason }</span>
+<span id="cb4-225"><a href="#cb4-225" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-226"><a href="#cb4-226" aria-hidden="true" tabindex="-1"></a><span class="co">// === Crusade supplements (per-book config) ===</span></span>
+<span id="cb4-227"><a href="#cb4-227" aria-hidden="true" tabindex="-1"></a><span class="co">// Each released Crusade book is one row. v1 ships Armageddon.</span></span>
+<span id="cb4-228"><a href="#cb4-228" aria-hidden="true" tabindex="-1"></a>CrusadeSupplement {</span>
+<span id="cb4-229"><a href="#cb4-229" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span>                                  <span class="co">// e.g., &#39;armageddon&#39;, &#39;nachmund-gauntlet&#39; (v1.x+)</span></span>
+<span id="cb4-230"><a href="#cb4-230" aria-hidden="true" tabindex="-1"></a>  name<span class="op">,</span></span>
+<span id="cb4-231"><a href="#cb4-231" aria-hidden="true" tabindex="-1"></a>  releasedAt<span class="op">,</span></span>
+<span id="cb4-232"><a href="#cb4-232" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement default JSON Schema for the post-battle update form.</span></span>
+<span id="cb4-233"><a href="#cb4-233" aria-hidden="true" tabindex="-1"></a>  <span class="co">// The form UI auto-generates from this schema. Fields differ per book:</span></span>
+<span id="cb4-234"><a href="#cb4-234" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Armageddon uses the standard Crusade form (agendas, OoA tests, per-unit XP);</span></span>
+<span id="cb4-235"><a href="#cb4-235" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Nachmund has multi-player agendas and Crusade Blessings; etc.</span></span>
+<span id="cb4-236"><a href="#cb4-236" aria-hidden="true" tabindex="-1"></a>  <span class="co">// null = fall back to the system-default standard Crusade battle report form.</span></span>
+<span id="cb4-237"><a href="#cb4-237" aria-hidden="true" tabindex="-1"></a>  <span class="co">// This is the supplement&#39;s CURRENT default; campaigns pin their own copy</span></span>
+<span id="cb4-238"><a href="#cb4-238" aria-hidden="true" tabindex="-1"></a>  <span class="co">// via Campaign.battleReportSchema below.</span></span>
+<span id="cb4-239"><a href="#cb4-239" aria-hidden="true" tabindex="-1"></a>  battleReportSchema<span class="op">:</span> <span class="dt">object</span> <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Per-supplement pre-filled content (e.g., Armageddon&#39;s Helsreach/Hades/Gorgutz/Skari teams)</span></span>
+<span id="cb4-241"><a href="#cb4-241" aria-hidden="true" tabindex="-1"></a>  seedData<span class="op">:</span> <span class="dt">object</span><span class="op">,</span></span>
+<span id="cb4-242"><a href="#cb4-242" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-243"><a href="#cb4-243" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-244"><a href="#cb4-244" aria-hidden="true" tabindex="-1"></a><span class="co">// === Approval ===</span></span>
+<span id="cb4-245"><a href="#cb4-245" aria-hidden="true" tabindex="-1"></a>ApprovalRequest { id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span> kind<span class="op">,</span> submittedByUserId<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> reviewerUserId<span class="op">,</span> decidedAt<span class="op">,</span> decisionReason<span class="op">,</span> contextHash<span class="op">,</span> ruleCheckIds<span class="op">,</span> activeRosterApprovedId<span class="op">,</span> approvalSource }</span>
+<span id="cb4-246"><a href="#cb4-246" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-247"><a href="#cb4-247" aria-hidden="true" tabindex="-1"></a><span class="co">// === History (computed once ApprovalRequest is approved) ===</span></span>
+<span id="cb4-248"><a href="#cb4-248" aria-hidden="true" tabindex="-1"></a><span class="co">// Every approved changeset generates HistoryEntry rows. Tombstoned (not</span></span>
+<span id="cb4-249"><a href="#cb4-249" aria-hidden="true" tabindex="-1"></a><span class="co">// hard-deleted) when a rollback is approved. The grouping dimension is</span></span>
+<span id="cb4-250"><a href="#cb4-250" aria-hidden="true" tabindex="-1"></a><span class="co">// derived (multiple grouping strategies on the same data), but each</span></span>
+<span id="cb4-251"><a href="#cb4-251" aria-hidden="true" tabindex="-1"></a><span class="co">// entry has a single primary group for storage + indexing.</span></span>
+<span id="cb4-252"><a href="#cb4-252" aria-hidden="true" tabindex="-1"></a>HistoryEntry {</span>
+<span id="cb4-253"><a href="#cb4-253" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> campaignId<span class="op">,</span></span>
+<span id="cb4-254"><a href="#cb4-254" aria-hidden="true" tabindex="-1"></a>  approvalRequestId<span class="op">,</span>                    <span class="co">// ties entry back to its approval (G5)</span></span>
+<span id="cb4-255"><a href="#cb4-255" aria-hidden="true" tabindex="-1"></a>  grouping<span class="op">,</span>                             <span class="co">// &#39;unit&#39; | &#39;roster_version&#39; | &#39;battle&#39; | &#39;requisition&#39; | &#39;state_field&#39;</span></span>
+<span id="cb4-256"><a href="#cb4-256" aria-hidden="true" tabindex="-1"></a>  groupKey<span class="op">,</span>                             <span class="co">// stable id within grouping (unitId, rosterApprovedId, battleId, etc.)</span></span>
+<span id="cb4-257"><a href="#cb4-257" aria-hidden="true" tabindex="-1"></a>  summary<span class="op">,</span>                              <span class="co">// human-readable 1-line (&quot;Cadian Castellan XP 5→8, +1 kill&quot;)</span></span>
+<span id="cb4-258"><a href="#cb4-258" aria-hidden="true" tabindex="-1"></a>  payload<span class="op">,</span>                              <span class="co">// structured diff (per-grouping shape)</span></span>
+<span id="cb4-259"><a href="#cb4-259" aria-hidden="true" tabindex="-1"></a>  occurredAt<span class="op">,</span></span>
+<span id="cb4-260"><a href="#cb4-260" aria-hidden="true" tabindex="-1"></a>  tombstoned<span class="op">:</span> <span class="dt">boolean</span><span class="op">,</span>                  <span class="co">// true after rollback; hidden from timelines, kept in audit log</span></span>
+<span id="cb4-261"><a href="#cb4-261" aria-hidden="true" tabindex="-1"></a>  tombstonedByApprovalRequestId<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb4-262"><a href="#cb4-262" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-263"><a href="#cb4-263" aria-hidden="true" tabindex="-1"></a>HistoryEntryIndex { historyEntryId<span class="op">,</span> groupKey<span class="op">,</span> dimension }  <span class="co">// secondary indexes (e.g., unitId, battleId) for cross-grouping queries</span></span>
+<span id="cb4-264"><a href="#cb4-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-265"><a href="#cb4-265" aria-hidden="true" tabindex="-1"></a><span class="co">// === Queue / async ===</span></span>
+<span id="cb4-266"><a href="#cb4-266" aria-hidden="true" tabindex="-1"></a>JobRecord { id<span class="op">,</span> kind<span class="op">,</span> payload<span class="op">,</span> status<span class="op">,</span> attempts<span class="op">,</span> lastError<span class="op">,</span> resultRef<span class="op">,</span> enqueuedAt<span class="op">,</span> completedAt }</span>
 <span id="cb4-267"><a href="#cb4-267" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ Campaign : &quot;hosts&quot;</span></span>
-<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ Faction : &quot;global (no FK)&quot;</span></span>
+<span id="cb4-268"><a href="#cb4-268" aria-hidden="true" tabindex="-1"></a><span class="co">// === Audit ===</span></span>
+<span id="cb4-269"><a href="#cb4-269" aria-hidden="true" tabindex="-1"></a>AuditLog { id<span class="op">,</span> tenantId<span class="op">,</span> actorUserId<span class="op">,</span> action<span class="op">,</span> targetType<span class="op">,</span> targetId<span class="op">,</span> payload<span class="op">,</span> occurredAt }</span>
 <span id="cb4-270"><a href="#cb4-270" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--|| Tenant : &quot;scoped to&quot;</span></span>
-<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--|| User : &quot;primary CM&quot;</span></span>
-<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignPhase : &quot;narrative periods&quot;</span></span>
-<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignTeam : &quot;teams (mandatory)&quot;</span></span>
-<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignMember : &quot;members&quot;</span></span>
-<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignInvite : &quot;open invites&quot;</span></span>
-<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ Battle : &quot;battles&quot;</span></span>
-<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ ApprovalRequest : &quot;approvals&quot;</span></span>
-<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ Event : &quot;events&quot;</span></span>
-<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ HistoryEntry : &quot;history&quot;</span></span>
-<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ RuleDefinition : &quot;CM-defined rules&quot;</span></span>
-<span id="cb4-282"><a href="#cb4-282" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignPhase }o--|| Campaign : &quot;belongs to&quot;</span></span>
-<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignTeam }o--|| Campaign : &quot;belongs to&quot;</span></span>
-<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignTeam ||--o{ Faction : &quot;expectedFactionIds (M:N)&quot;</span></span>
-<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a><span class="vs">    TeamLeader }o--|| CampaignTeam : &quot;leads&quot;</span></span>
-<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a><span class="vs">    TeamLeader }o--|| User : &quot;is a user&quot;</span></span>
+<span id="cb4-271"><a href="#cb4-271" aria-hidden="true" tabindex="-1"></a><span class="co">// === Notifications ===</span></span>
+<span id="cb4-272"><a href="#cb4-272" aria-hidden="true" tabindex="-1"></a><span class="co">// Per-user notification queue. Generated from Event outbox at fanout time.</span></span>
+<span id="cb4-273"><a href="#cb4-273" aria-hidden="true" tabindex="-1"></a><span class="co">// Toast and email delivery are derived from this table; list page reads it.</span></span>
+<span id="cb4-274"><a href="#cb4-274" aria-hidden="true" tabindex="-1"></a><span class="bu">Notification</span> {</span>
+<span id="cb4-275"><a href="#cb4-275" aria-hidden="true" tabindex="-1"></a>  id<span class="op">,</span> tenantId<span class="op">,</span> recipientUserId<span class="op">,</span></span>
+<span id="cb4-276"><a href="#cb4-276" aria-hidden="true" tabindex="-1"></a>  kind<span class="op">:</span> <span class="st">&#39;approval_status&#39;</span> <span class="op">|</span> <span class="st">&#39;approval_requested&#39;</span> <span class="op">|</span> <span class="st">&#39;event_visible_to_user&#39;</span> <span class="op">|</span> <span class="st">&#39;team_leader_grant&#39;</span> <span class="op">|</span> <span class="st">&#39;team_leader_revoke&#39;</span> <span class="op">|</span> <span class="st">&#39;roster_rollback_executed&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign_archived&#39;</span><span class="op">,</span></span>
+<span id="cb4-277"><a href="#cb4-277" aria-hidden="true" tabindex="-1"></a>  title<span class="op">,</span> summary<span class="op">,</span>                                 <span class="co">// markdown summaries, not full payloads</span></span>
+<span id="cb4-278"><a href="#cb4-278" aria-hidden="true" tabindex="-1"></a>  sourceEventId<span class="op">?,</span> sourceApprovalRequestId<span class="op">?,</span>       <span class="co">// links to the originating record</span></span>
+<span id="cb4-279"><a href="#cb4-279" aria-hidden="true" tabindex="-1"></a>  readAt<span class="op">:</span> timestamp <span class="op">|</span> <span class="dt">null</span><span class="op">,</span></span>
+<span id="cb4-280"><a href="#cb4-280" aria-hidden="true" tabindex="-1"></a>  createdAt<span class="op">,</span></span>
+<span id="cb4-281"><a href="#cb4-281" aria-hidden="true" tabindex="-1"></a>  campaignId<span class="op">?:</span> <span class="dt">string</span><span class="op">,</span></span>
+<span id="cb4-282"><a href="#cb4-282" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Quiet-class determines UI delivery loudness (see PRD-5 §6).</span></span>
+<span id="cb4-283"><a href="#cb4-283" aria-hidden="true" tabindex="-1"></a>  loudness<span class="op">:</span> <span class="st">&#39;loud&#39;</span> <span class="op">|</span> <span class="st">&#39;normal&#39;</span> <span class="op">|</span> <span class="st">&#39;quiet&#39;</span><span class="op">,</span></span>
+<span id="cb4-284"><a href="#cb4-284" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-285"><a href="#cb4-285" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-286"><a href="#cb4-286" aria-hidden="true" tabindex="-1"></a><span class="op">**</span>Identifiers<span class="op">**:</span> UUIDv7<span class="op">.</span></span>
+<span id="cb4-287"><a href="#cb4-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-288"><a href="#cb4-288" aria-hidden="true" tabindex="-1"></a>### 4a<span class="op">.</span> <span class="at">Entity</span><span class="op">-</span>Relationship <span class="fu">Diagram</span> (v3<span class="op">.</span><span class="dv">23</span>)</span>
 <span id="cb4-289"><a href="#cb4-289" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| Campaign : &quot;in&quot;</span></span>
-<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| User : &quot;is a user&quot;</span></span>
-<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| CampaignTeam : &quot;on team&quot;</span></span>
-<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| Faction : &quot;plays 40K faction&quot;</span></span>
-<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember ||--o{ CrusadeForce : &quot;owns (up to maxCrusadeForcesPerPlayer)&quot;</span></span>
-<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--|| Faction : &quot;plays one faction&quot;</span></span>
-<span id="cb4-297"><a href="#cb4-297" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--|| CampaignTeam : &quot;bound to one team&quot;</span></span>
-<span id="cb4-298"><a href="#cb4-298" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--o{ CrusadeForceVersion : &quot;versioned snapshots&quot;</span></span>
-<span id="cb4-299"><a href="#cb4-299" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--o| CrusadeForceVersion : &quot;currentVersionId&quot;</span></span>
-<span id="cb4-300"><a href="#cb4-300" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForceVersion ||--o{ CrusadeArmy : &quot;musters for battles&quot;</span></span>
-<span id="cb4-301"><a href="#cb4-301" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeArmy ||--o| Battle : &quot;deployed in&quot;</span></span>
-<span id="cb4-302"><a href="#cb4-302" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-303"><a href="#cb4-303" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ RuleCheck : &quot;ran rules&quot;</span></span>
-<span id="cb4-304"><a href="#cb4-304" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ Delta : &quot;diff vs last approved&quot;</span></span>
-<span id="cb4-305"><a href="#cb4-305" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ ApprovalRequest : &quot;may trigger&quot;</span></span>
-<span id="cb4-306"><a href="#cb4-306" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-307"><a href="#cb4-307" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--|| Campaign : &quot;in&quot;</span></span>
-<span id="cb4-308"><a href="#cb4-308" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--o{ BattleUpdate : &quot;updates (post-battle)&quot;</span></span>
-<span id="cb4-309"><a href="#cb4-309" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--o{ Event : &quot;lifecycle events&quot;</span></span>
-<span id="cb4-310"><a href="#cb4-310" aria-hidden="true" tabindex="-1"></a><span class="vs">    BattleUpdate ||--o{ ApprovalRequest : &quot;may trigger&quot;</span></span>
-<span id="cb4-311"><a href="#cb4-311" aria-hidden="true" tabindex="-1"></a><span class="vs">    BattleUpdate ||--o{ RuleCheck : &quot;ran rules&quot;</span></span>
-<span id="cb4-312"><a href="#cb4-312" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-313"><a href="#cb4-313" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ RuleCheck : &quot;evaluated by&quot;</span></span>
-<span id="cb4-314"><a href="#cb4-314" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ HistoryEntry : &quot;produces on approve&quot;</span></span>
-<span id="cb4-315"><a href="#cb4-315" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest }o--o{ User : &quot;submitted by / reviewed by&quot;</span></span>
-<span id="cb4-316"><a href="#cb4-316" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ Event : &quot;lifecycle events&quot;</span></span>
-<span id="cb4-317"><a href="#cb4-317" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-318"><a href="#cb4-318" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ HistoryEntryIndex : &quot;secondary indexes&quot;</span></span>
-<span id="cb4-319"><a href="#cb4-319" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ Delta : &quot;field-level changes&quot;</span></span>
-<span id="cb4-320"><a href="#cb4-320" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ Event : &quot;source event&quot;</span></span>
-<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry }o--o| ApprovalRequest : &quot;tombstoned by (rollback)&quot;</span></span>
+<span id="cb4-290"><a href="#cb4-290" aria-hidden="true" tabindex="-1"></a>The core entities and their relationships<span class="op">.</span> <span class="at">Cardinality</span><span class="op">:</span> <span class="vs">`||`</span> (one<span class="op">-</span>and<span class="op">-</span>only<span class="op">-</span>one)<span class="op">,</span> <span class="vs">`o|`</span> (zero<span class="op">-</span>or<span class="op">-</span>one)<span class="op">,</span> <span class="vs">`}o`</span> (zero<span class="op">-</span>or<span class="op">-</span>many)<span class="op">,</span> <span class="vs">`}|`</span> (one<span class="op">-</span>or<span class="op">-</span>many)<span class="op">.</span> <span class="at">Arrows</span> show foreign<span class="op">-</span>key relationships<span class="op">;</span> the <span class="st">&quot;many&quot;</span> side typically has the FK column<span class="op">.</span></span>
+<span id="cb4-291"><a href="#cb4-291" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-292"><a href="#cb4-292" aria-hidden="true" tabindex="-1"></a><span class="vs">```mermaid</span></span>
+<span id="cb4-293"><a href="#cb4-293" aria-hidden="true" tabindex="-1"></a><span class="vs">erDiagram</span></span>
+<span id="cb4-294"><a href="#cb4-294" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ User : &quot;has&quot;</span></span>
+<span id="cb4-295"><a href="#cb4-295" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ Identity : &quot;links&quot;</span></span>
+<span id="cb4-296"><a href="#cb4-296" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ CampaignMember : &quot;joins&quot;</span></span>
+<span id="cb4-297"><a href="#cb4-297" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ TeamLeader : &quot;may lead&quot;</span></span>
+<span id="cb4-298"><a href="#cb4-298" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ Notification : &quot;receives&quot;</span></span>
+<span id="cb4-299"><a href="#cb4-299" aria-hidden="true" tabindex="-1"></a><span class="vs">    User ||--o{ AuditLog : &quot;actor of&quot;</span></span>
+<span id="cb4-300"><a href="#cb4-300" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-301"><a href="#cb4-301" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ Campaign : &quot;hosts&quot;</span></span>
+<span id="cb4-302"><a href="#cb4-302" aria-hidden="true" tabindex="-1"></a><span class="vs">    Tenant ||--o{ Faction : &quot;global (no FK)&quot;</span></span>
+<span id="cb4-303"><a href="#cb4-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-304"><a href="#cb4-304" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--|| Tenant : &quot;scoped to&quot;</span></span>
+<span id="cb4-305"><a href="#cb4-305" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--|| User : &quot;primary CM&quot;</span></span>
+<span id="cb4-306"><a href="#cb4-306" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignPhase : &quot;narrative periods&quot;</span></span>
+<span id="cb4-307"><a href="#cb4-307" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignTeam : &quot;teams (mandatory)&quot;</span></span>
+<span id="cb4-308"><a href="#cb4-308" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignMember : &quot;members&quot;</span></span>
+<span id="cb4-309"><a href="#cb4-309" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ CampaignInvite : &quot;open invites&quot;</span></span>
+<span id="cb4-310"><a href="#cb4-310" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ Battle : &quot;battles&quot;</span></span>
+<span id="cb4-311"><a href="#cb4-311" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ ApprovalRequest : &quot;approvals&quot;</span></span>
+<span id="cb4-312"><a href="#cb4-312" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ Event : &quot;events&quot;</span></span>
+<span id="cb4-313"><a href="#cb4-313" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ HistoryEntry : &quot;history&quot;</span></span>
+<span id="cb4-314"><a href="#cb4-314" aria-hidden="true" tabindex="-1"></a><span class="vs">    Campaign ||--o{ RuleDefinition : &quot;CM-defined rules&quot;</span></span>
+<span id="cb4-315"><a href="#cb4-315" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-316"><a href="#cb4-316" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignPhase }o--|| Campaign : &quot;belongs to&quot;</span></span>
+<span id="cb4-317"><a href="#cb4-317" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignTeam }o--|| Campaign : &quot;belongs to&quot;</span></span>
+<span id="cb4-318"><a href="#cb4-318" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignTeam ||--o{ Faction : &quot;expectedFactionIds (M:N)&quot;</span></span>
+<span id="cb4-319"><a href="#cb4-319" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-320"><a href="#cb4-320" aria-hidden="true" tabindex="-1"></a><span class="vs">    TeamLeader }o--|| CampaignTeam : &quot;leads&quot;</span></span>
+<span id="cb4-321"><a href="#cb4-321" aria-hidden="true" tabindex="-1"></a><span class="vs">    TeamLeader }o--|| User : &quot;is a user&quot;</span></span>
 <span id="cb4-322"><a href="#cb4-322" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-323"><a href="#cb4-323" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event ||--o{ Delta : &quot;field-level changes&quot;</span></span>
-<span id="cb4-324"><a href="#cb4-324" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event ||--o{ Notification : &quot;fanout&quot;</span></span>
-<span id="cb4-325"><a href="#cb4-325" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event }o--o| JobRecord : &quot;produced by (async pipeline)&quot;</span></span>
-<span id="cb4-326"><a href="#cb4-326" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-327"><a href="#cb4-327" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeSupplement ||--o{ Campaign : &quot;template for&quot;</span></span>
-<span id="cb4-328"><a href="#cb4-328" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeSupplement ||--|| Faction : &quot;covers faction&quot;</span></span>
-<span id="cb4-329"><a href="#cb4-329" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-330"><a href="#cb4-330" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--|| Tenant : &quot;scope&quot;</span></span>
-<span id="cb4-331"><a href="#cb4-331" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--o| Campaign : &quot;may be per-crusade&quot;</span></span>
-<span id="cb4-332"><a href="#cb4-332" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--o| User : &quot;authored by&quot;</span></span></code></pre></div>
+<span id="cb4-323"><a href="#cb4-323" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| Campaign : &quot;in&quot;</span></span>
+<span id="cb4-324"><a href="#cb4-324" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| User : &quot;is a user&quot;</span></span>
+<span id="cb4-325"><a href="#cb4-325" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| CampaignTeam : &quot;on team&quot;</span></span>
+<span id="cb4-326"><a href="#cb4-326" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember }o--|| Faction : &quot;plays 40K faction&quot;</span></span>
+<span id="cb4-327"><a href="#cb4-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-328"><a href="#cb4-328" aria-hidden="true" tabindex="-1"></a><span class="vs">    CampaignMember ||--o{ CrusadeForce : &quot;owns (up to maxCrusadeForcesPerPlayer)&quot;</span></span>
+<span id="cb4-329"><a href="#cb4-329" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--|| Faction : &quot;plays one faction&quot;</span></span>
+<span id="cb4-330"><a href="#cb4-330" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--|| CampaignTeam : &quot;bound to one team&quot;</span></span>
+<span id="cb4-331"><a href="#cb4-331" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--o{ CrusadeForceVersion : &quot;versioned snapshots&quot;</span></span>
+<span id="cb4-332"><a href="#cb4-332" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForce ||--o| CrusadeForceVersion : &quot;currentVersionId&quot;</span></span>
+<span id="cb4-333"><a href="#cb4-333" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeForceVersion ||--o{ CrusadeArmy : &quot;musters for battles&quot;</span></span>
+<span id="cb4-334"><a href="#cb4-334" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeArmy ||--o| Battle : &quot;deployed in&quot;</span></span>
+<span id="cb4-335"><a href="#cb4-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-336"><a href="#cb4-336" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ RuleCheck : &quot;ran rules&quot;</span></span>
+<span id="cb4-337"><a href="#cb4-337" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ Delta : &quot;diff vs last approved&quot;</span></span>
+<span id="cb4-338"><a href="#cb4-338" aria-hidden="true" tabindex="-1"></a><span class="vs">    RosterDraft ||--o{ ApprovalRequest : &quot;may trigger&quot;</span></span>
+<span id="cb4-339"><a href="#cb4-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-340"><a href="#cb4-340" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--|| Campaign : &quot;in&quot;</span></span>
+<span id="cb4-341"><a href="#cb4-341" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--o{ BattleUpdate : &quot;updates (post-battle)&quot;</span></span>
+<span id="cb4-342"><a href="#cb4-342" aria-hidden="true" tabindex="-1"></a><span class="vs">    Battle ||--o{ Event : &quot;lifecycle events&quot;</span></span>
+<span id="cb4-343"><a href="#cb4-343" aria-hidden="true" tabindex="-1"></a><span class="vs">    BattleUpdate ||--o{ ApprovalRequest : &quot;may trigger&quot;</span></span>
+<span id="cb4-344"><a href="#cb4-344" aria-hidden="true" tabindex="-1"></a><span class="vs">    BattleUpdate ||--o{ RuleCheck : &quot;ran rules&quot;</span></span>
+<span id="cb4-345"><a href="#cb4-345" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-346"><a href="#cb4-346" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ RuleCheck : &quot;evaluated by&quot;</span></span>
+<span id="cb4-347"><a href="#cb4-347" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ HistoryEntry : &quot;produces on approve&quot;</span></span>
+<span id="cb4-348"><a href="#cb4-348" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest }o--o{ User : &quot;submitted by / reviewed by&quot;</span></span>
+<span id="cb4-349"><a href="#cb4-349" aria-hidden="true" tabindex="-1"></a><span class="vs">    ApprovalRequest ||--o{ Event : &quot;lifecycle events&quot;</span></span>
+<span id="cb4-350"><a href="#cb4-350" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-351"><a href="#cb4-351" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ HistoryEntryIndex : &quot;secondary indexes&quot;</span></span>
+<span id="cb4-352"><a href="#cb4-352" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ Delta : &quot;field-level changes&quot;</span></span>
+<span id="cb4-353"><a href="#cb4-353" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry ||--o{ Event : &quot;source event&quot;</span></span>
+<span id="cb4-354"><a href="#cb4-354" aria-hidden="true" tabindex="-1"></a><span class="vs">    HistoryEntry }o--o| ApprovalRequest : &quot;tombstoned by (rollback)&quot;</span></span>
+<span id="cb4-355"><a href="#cb4-355" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-356"><a href="#cb4-356" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event ||--o{ Delta : &quot;field-level changes&quot;</span></span>
+<span id="cb4-357"><a href="#cb4-357" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event ||--o{ Notification : &quot;fanout&quot;</span></span>
+<span id="cb4-358"><a href="#cb4-358" aria-hidden="true" tabindex="-1"></a><span class="vs">    Event }o--o| JobRecord : &quot;produced by (async pipeline)&quot;</span></span>
+<span id="cb4-359"><a href="#cb4-359" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-360"><a href="#cb4-360" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeSupplement ||--o{ Campaign : &quot;template for&quot;</span></span>
+<span id="cb4-361"><a href="#cb4-361" aria-hidden="true" tabindex="-1"></a><span class="vs">    CrusadeSupplement ||--|| Faction : &quot;covers faction&quot;</span></span>
+<span id="cb4-362"><a href="#cb4-362" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-363"><a href="#cb4-363" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--|| Tenant : &quot;scope&quot;</span></span>
+<span id="cb4-364"><a href="#cb4-364" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--o| Campaign : &quot;may be per-crusade&quot;</span></span>
+<span id="cb4-365"><a href="#cb4-365" aria-hidden="true" tabindex="-1"></a><span class="vs">    RuleDefinition }o--o| User : &quot;authored by&quot;</span></span></code></pre></div>
 <p><strong>Reading the diagram:</strong> - Vertical stacking groups
 entities by subdomain (Tenancy → Campaign core → Roster/Battles →
 Approvals/Events/History) - The Campaign row is the hub — almost every
@@ -989,8 +1023,8 @@ exposes. No team membership.</td>
 team leaders. Any one of them can approve a request in their team’s
 scope (default OR-semantics). The primary CM controls whether approval
 requires any one or all of the team leaders via
-<code>Campaign.teamLeaderApprovalMode: &#39;any&#39; | &#39;all&#39;</code> (default
-<code>&#39;any&#39;</code>). With <code>&#39;all&#39;</code>, every team leader on the
+<code>Campaign.teamLeaderApprovalMode: 'any' | 'all'</code> (default
+<code>'any'</code>). With <code>'all'</code>, every team leader on the
 team must approve before the request is decided — a stronger check, used
 rarely. The audit log records which team leaders approved, in order.</p>
 <p><strong>Naming for the UI:</strong> team leaders are referred to as
@@ -1102,7 +1136,8 @@ Player UI preferences (theme, language, notification settings) -
 Player’s own drafts (private until submitted; once submitted, they enter
 the approval queue) - Per-unit cosmetics that don’t change game state
 (paint color, custom name drafts)</p>
-<h3 id="b.2-architectural-principle-new-recruit-is-the-source-of-truth-for-unitroster-state">4b.2
+<h3
+id="b.2-architectural-principle-new-recruit-is-the-source-of-truth-for-unitroster-state">4b.2
 Architectural Principle: New Recruit is the Source of Truth for
 Unit/Roster State</h3>
 <blockquote>
@@ -1330,7 +1365,8 @@ demands)</td>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Backend: FastAPI (Python) → <strong><span class="citation" data-cites="hapi/hapi">@hapi/hapi</span> (Node 22,
+<td>Backend: FastAPI (Python) → <strong><span class="citation"
+data-cites="hapi/hapi">@hapi/hapi</span> (Node 22,
 TypeScript)</strong></td>
 <td>Per user — “I strongly prefer a node/typescript system”</td>
 </tr>
@@ -1383,7 +1419,8 @@ bundle at <a href="../okf"><code>okf/</code></a>. The most relevant:</p>
 <ul>
 <li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> —
 player’s army in a campaign; replaces Roster (v3.28)</li>
-<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+<li><a
+href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
 — immutable, monotonically-numbered OoB snapshot</li>
 <li><a href="../okf/concepts/crusade-army.md">CrusadeArmy</a> — mustered
 subset of units for a specific battle</li>
@@ -1403,7 +1440,8 @@ how an ApprovalRequest was decided</li>
 user-facing materialization of an Event</li>
 <li><a href="../okf/concepts/history-entry.md">HistoryEntry</a> —
 append-only history record</li>
-<li><a href="../okf/concepts/changeset-grouping.md">ChangesetGrouping</a> —
+<li><a
+href="../okf/concepts/changeset-grouping.md">ChangesetGrouping</a> —
 G1–G7 configurable groupings</li>
 <li><a href="../okf/concepts/rollback.md">Rollback</a> — tombstone +
 compensating entry pattern</li>

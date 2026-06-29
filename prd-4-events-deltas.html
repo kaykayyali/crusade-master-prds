@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -400,23 +400,36 @@ regardless of subsequent role changes.</p>
 <span id="cb1-121"><a href="#cb1-121" aria-hidden="true" tabindex="-1"></a>  delta<span class="op">:</span> Delta <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
 <span id="cb1-122"><a href="#cb1-122" aria-hidden="true" tabindex="-1"></a>  visibility<span class="op">:</span> <span class="st">&#39;public&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;cm_only&#39;</span> <span class="op">|</span> <span class="st">&#39;private&#39;</span><span class="op">;</span></span>
 <span id="cb1-123"><a href="#cb1-123" aria-hidden="true" tabindex="-1"></a>  activeRosterApprovedId<span class="op">:</span> <span class="dt">string</span> <span class="op">|</span> <span class="dt">null</span><span class="op">;</span></span>
-<span id="cb1-124"><a href="#cb1-124" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb1-125"><a href="#cb1-125" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-126"><a href="#cb1-126" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> Delta {</span>
-<span id="cb1-127"><a href="#cb1-127" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-128"><a href="#cb1-128" aria-hidden="true" tabindex="-1"></a>  eventId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-129"><a href="#cb1-129" aria-hidden="true" tabindex="-1"></a>  entityType<span class="op">:</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span> <span class="op">|</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;member&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign&#39;</span><span class="op">;</span></span>
-<span id="cb1-130"><a href="#cb1-130" aria-hidden="true" tabindex="-1"></a>  entityId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-131"><a href="#cb1-131" aria-hidden="true" tabindex="-1"></a>  field<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-132"><a href="#cb1-132" aria-hidden="true" tabindex="-1"></a>  beforeValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
-<span id="cb1-133"><a href="#cb1-133" aria-hidden="true" tabindex="-1"></a>  afterValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
-<span id="cb1-134"><a href="#cb1-134" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
-<span id="cb1-135"><a href="#cb1-135" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb1-124"><a href="#cb1-124" aria-hidden="true" tabindex="-1"></a>  <span class="co">// v4.0 (PRD-8): present when the event is scoped to specific teams. Used</span></span>
+<span id="cb1-125"><a href="#cb1-125" aria-hidden="true" tabindex="-1"></a>  <span class="co">// by the fanout function to decide which teams&#39; Discord webhooks are</span></span>
+<span id="cb1-126"><a href="#cb1-126" aria-hidden="true" tabindex="-1"></a>  <span class="co">// eligible to receive this event. Null/undefined = not team-scoped.</span></span>
+<span id="cb1-127"><a href="#cb1-127" aria-hidden="true" tabindex="-1"></a>  affectedTeamIds<span class="op">?:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb1-128"><a href="#cb1-128" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-129"><a href="#cb1-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-130"><a href="#cb1-130" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> Delta {</span>
+<span id="cb1-131"><a href="#cb1-131" aria-hidden="true" tabindex="-1"></a>  id<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-132"><a href="#cb1-132" aria-hidden="true" tabindex="-1"></a>  eventId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-133"><a href="#cb1-133" aria-hidden="true" tabindex="-1"></a>  entityType<span class="op">:</span> <span class="st">&#39;unit&#39;</span> <span class="op">|</span> <span class="st">&#39;crusade&#39;</span> <span class="op">|</span> <span class="st">&#39;roster&#39;</span> <span class="op">|</span> <span class="st">&#39;team&#39;</span> <span class="op">|</span> <span class="st">&#39;member&#39;</span> <span class="op">|</span> <span class="st">&#39;campaign&#39;</span><span class="op">;</span></span>
+<span id="cb1-134"><a href="#cb1-134" aria-hidden="true" tabindex="-1"></a>  entityId<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-135"><a href="#cb1-135" aria-hidden="true" tabindex="-1"></a>  field<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-136"><a href="#cb1-136" aria-hidden="true" tabindex="-1"></a>  beforeValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
+<span id="cb1-137"><a href="#cb1-137" aria-hidden="true" tabindex="-1"></a>  afterValue<span class="op">:</span> <span class="dt">any</span><span class="op">;</span></span>
+<span id="cb1-138"><a href="#cb1-138" aria-hidden="true" tabindex="-1"></a>  reason<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb1-139"><a href="#cb1-139" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p><strong>Extending the taxonomy:</strong> new <code>EventKind</code>
 values are added as needed; the data model doesn’t break (the kind
 column is <code>text</code> or a wide enum that gets updated). v1 ships
-the kinds above. v1.x may add kinds for Discord integration,
-multi-supplement campaigns, etc.</p>
+the kinds above. v1.x may add kinds for multi-supplement campaigns,
+etc.</p>
+<p><strong>v4.0 (PRD-8) — Discord delivery side-branch:</strong> After
+the fanout function computes Notification recipients per the diagram
+above, a second pass queries <code>DiscordWebhookSubscription</code>
+rows to identify which teams have subscribed to this
+<code>EventKind</code> AND pass the visibility filter (PRD-8 §8.3). For
+each eligible team, a <code>discord-webhook-delivery</code> BullMQ job
+is enqueued. The delivery worker is dumb pipe — visibility filtering
+happens in the fanout step, not the worker. See PRD-8 for the full
+pipeline.</p>
 <p><strong>Default visibility per kind</strong> is documented in PRD-4
 §8.</p>
 <h3 id="event-visibility-rules-recap-from-prd-4-8">3.1 Event visibility
@@ -475,7 +488,7 @@ only).</p>
 <tbody>
 <tr class="odd">
 <td>Has the campaign begun?</td>
-<td><code>status = &#39;started&#39;</code></td>
+<td><code>status = 'started'</code></td>
 <td>n/a</td>
 </tr>
 <tr class="even">
@@ -485,7 +498,7 @@ only).</p>
 </tr>
 <tr class="odd">
 <td>Can players file approvals?</td>
-<td>Yes if <code>status = &#39;started&#39;</code></td>
+<td>Yes if <code>status = 'started'</code></td>
 <td>Yes (any active phase; phase doesn’t gate approvals)</td>
 </tr>
 <tr class="even">
@@ -495,7 +508,7 @@ only).</p>
 </tr>
 <tr class="odd">
 <td>Is the campaign over?</td>
-<td><code>status = &#39;ended&#39; \| &#39;archived&#39;</code></td>
+<td><code>status = 'ended' \| 'archived'</code></td>
 <td>The active phase can be deactivated; phases don’t gate state
 transitions</td>
 </tr>
@@ -591,7 +604,7 @@ Battle Update Form — Supplement-Specific, Campaign-Level Only</h3>
 <p>Each player in a battle files <strong>their own</strong>
 <code>BattleUpdate</code>. A 1v1 battle = 2 BattleUpdates (one per
 player); a 4-player free-for-all = 4 BattleUpdates. Each becomes its own
-<code>ApprovalRequest { kind: &#39;post_battle_update&#39; }</code> (PRD-5
+<code>ApprovalRequest { kind: 'post_battle_update' }</code> (PRD-5
 §3.2). The CM bulk-approves routine ones via the inbox; disputes (e.g.,
 both players claim victory) surface as a <code>disputed</code> flag on
 both.</p>
@@ -1030,15 +1043,15 @@ narrative log is split into <strong>three scopes</strong>, not just one
 “public” log:</p>
 <ol type="1">
 <li><strong>Team-scoped narrative log</strong> (default for players) —
-events with <code>visibility = &#39;team&#39;</code> or
-<code>visibility = &#39;public&#39;</code> for events affecting the player’s
+events with <code>visibility = 'team'</code> or
+<code>visibility = 'public'</code> for events affecting the player’s
 team. A player on Team A sees Team A’s log only.</li>
 <li><strong>Public narrative log</strong> — events with
-<code>visibility = &#39;public&#39;</code>. Cross-team. Visible to all players
+<code>visibility = 'public'</code>. Cross-team. Visible to all players
 in the campaign (regardless of team). Use sparingly: cross-team battles,
 campaign-wide announcements.</li>
 <li><strong>CM-only events</strong> — events with
-<code>visibility = &#39;cm&#39;</code>. Visible to the primary CM and (per PRD-1
+<code>visibility = 'cm'</code>. Visible to the primary CM and (per PRD-1
 §4.3.1) to Crusade Team Leaders when the event affects their team.</li>
 </ol>
 <h3 id="narrative-log-ui-v3.13">8.1 Narrative Log UI (v3.13)</h3>
@@ -1065,14 +1078,14 @@ campaign-wide announcements.</li>
 <li>Each entry has a 1-line summary + optional expand for the full
 battle report or narrative text</li>
 <li>The “Public announcements only” tab shows only
-<code>visibility = &#39;public&#39;</code> events (e.g., campaign-wide narrative
+<code>visibility = 'public'</code> events (e.g., campaign-wide narrative
 triggers, point-cap changes)</li>
 <li>Filter chips: by event kind, by player, by date range</li>
 </ul>
 <p><strong>Crusade Team Leader view (team-scoped +
 cm-only-for-team):</strong></p>
 <p>Same as player view but additionally includes
-<code>visibility = &#39;cm&#39;</code> events that affect their team: - Team
+<code>visibility = 'cm'</code> events that affect their team: - Team
 leader grants/revocations (when they happen) - Approval override reasons
 (when those approvals affected their team) - Rollback audit events</p>
 <p>The CM-only cross-team events (other teams’ overrides, other teams’
@@ -1085,7 +1098,7 @@ player - Filter by event kind - Filter by date</p>
 <p>The CM can click any event to override its visibility (PRD-4 §8
 default visibility can be changed per-event).</p>
 <p><strong>Crusade-end retrospective view (when
-<code>Campaign.status = &#39;archived&#39;</code>):</strong></p>
+<code>Campaign.status = 'archived'</code>):</strong></p>
 <p>A special read-only mode that supersedes all the above. All events
 across all teams are visible to every player, in chronological order. A
 banner at the top reads: “End of crusade — this campaign has been
@@ -1195,7 +1208,7 @@ not)</td>
 The defaults above reflect a privacy-respecting baseline.</p>
 <p><strong>Crusade-end archival (v3.11):</strong></p>
 <p>When the primary CM archives a campaign
-(<code>Campaign.status = &#39;archived&#39;</code>), the narrative log switches
+(<code>Campaign.status = 'archived'</code>), the narrative log switches
 to <strong>post-crusade retrospective mode</strong>: - All events become
 readable by every player across all teams (per PRD-0 §3b data-isolation
 relaxation). - No new events can be filed (approvals are frozen; uploads
@@ -1290,7 +1303,8 @@ campaign lifecycle events</li>
 phase_created / activated / deactivated events</li>
 <li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> —
 CrusadeForce.withdrawn event (v3.28)</li>
-<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+<li><a
+href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
 — version status transitions</li>
 <li><a href="../okf/concepts/crusade-army.md">CrusadeArmy</a> — muster /
 deploy events</li>
@@ -1300,7 +1314,8 @@ post-battle submission events</li>
 approval lifecycle events</li>
 <li><a href="../okf/concepts/history-entry.md">HistoryEntry</a> —
 generated on approval</li>
-<li><a href="../okf/concepts/changeset-grouping.md">ChangesetGrouping</a> —
+<li><a
+href="../okf/concepts/changeset-grouping.md">ChangesetGrouping</a> —
 G1–G7 groupings</li>
 <li><a href="../okf/concepts/rollback.md">Rollback</a> — tombstone +
 compensating entry</li>

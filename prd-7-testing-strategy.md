@@ -16,7 +16,7 @@
 - **Smoke test**: a small set of E2E tests run against the live production deployment to detect catastrophic failures.
 - **Fixture**: a piece of pre-built test data (user, campaign, roster) used as the starting state for a test.
 - **Factory**: a function that creates fresh test data on demand (often with overrides).
-- **Hermetic**: a test environment with no external dependencies (no live OAuth, no live SMTP, no live Discord).
+- **Hermetic**: a test environment with no external dependencies (no live OAuth, no live SMTP, no live Discord). Live Discord is used only in the PRD-8 §14.3 staging E2E test (skipped if `STAGING_DISCORD_WEBHOOK_URL` is unset).
 
 ---
 
@@ -56,6 +56,7 @@ flowchart TB
 | PRD-3 (roster pipeline) | Parser contract, diff logic, rule engine | Full BullMQ pipeline with real worker | Upload JSON → diff → rule check → approve flow |
 | PRD-4 (events) | Event taxonomy, delta computation | Event-to-Notification fanout | Player timeline view |
 | PRD-5 (approvals) | Routing decision logic (per PRD-5 §3.2) | Full approval request → decision → history | Approval inbox, CM-as-player auto-approve, TL approval flow |
+| **PRD-8 (Discord webhooks, v4.0)** | **Embed renderer, visibility filter (PRD-8 §8.3)** | **BullMQ delivery pipeline with mock Discord receiver** | **Staging E2E: real Discord test channel round-trip** |
 
 ---
 
@@ -66,7 +67,7 @@ Three environments, with strict isolation between them.
 | Environment | Purpose | Data | Infrastructure | External services |
 |---|---|---|---|---|
 | **dev** (developer machine) | Local development, TDD, manual testing | Synthetic (seeded per-developer) | `docker-compose.dev.yml` with hot reload | Discord test app, MailHog (fake SMTP) |
-| **staging** (CI + pre-prod) | PR checks, full test suite, manual QA | Synthetic (fresh per test run) | Docker Compose + testcontainers in CI; long-running staging cluster mirrors prod | Discord test app, real SMTP (Mailgun sandbox) |
+| **staging** (CI + pre-prod) | PR checks, full test suite, manual QA | Synthetic (fresh per test run) | Docker Compose + testcontainers in CI; long-running staging cluster mirrors prod | Discord test app, real SMTP (Mailgun sandbox), **Discord test channel webhook** (PRD-8 staging E2E only) |
 | **prod** | Live users | Real | Docker Compose on instance | Real Discord OAuth, real SMTP |
 
 ```mermaid
@@ -241,6 +242,7 @@ flowchart LR
 - **MinIO operations**: blob upload, retrieval, deletion
 - **RLS enforcement**: every test runs queries both as a user (should be filtered) and as a system job (should not be filtered)
 - **OAuth callback flow** with a mock Discord OAuth server (using `oauth2-mock-server` npm package)
+- **Discord webhook delivery** with a mock Discord receiver (`tests/helpers/mockDiscordReceiver.ts` per PRD-8 §14.4) that scripts 204/400/401/404/429/5xx responses per-test. Asserts on `DiscordWebhookDelivery` rows + auto-disable behavior.
 
 ### 5.3 RLS verification (critical — PRD-0 §4b)
 
@@ -573,7 +575,7 @@ End-to-end scenarios that span multiple PRDs. These are the "did we wire it up c
 4. Rule checks run (PRD-5 §3.3)
 5. History entry created
 6. Event emitted; notification fired for Mike's own record
-7. Future event hook (Discord, team view page) works without modification
+7. **v4.0:** PRD-8 Discord webhook fires automatically with no code changes to the pipeline — the future hook is now a present hook, validating the v3.28 architectural choice.
 
 ### 13.4 "RLS prevents cross-tenant access" (PRD-0)
 

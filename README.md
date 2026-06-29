@@ -19,11 +19,47 @@ Product requirements for a self-hosted, multi-tenant app that lets a Crusade Mas
 | [prd-5-approval-system.md](./prd-5-approval-system.md) | Unified approval pipeline, `roster_approval` as primary kind |
 | [prd-6-technical-architecture.md](./prd-6-technical-architecture.md) | Hapi API contract, OpenAPI/Swagger generation, drift detection |
 | [prd-7-testing-strategy.md](./prd-7-testing-strategy.md) | Test pyramid, dev/staging/prod environments, e2e API + UI, RLS verification |
+| [prd-8-discord-webhooks.md](./prd-8-discord-webhooks.md) | **NEW (v4.0)** Per-team Discord webhook forwarding — outgoing only, no bot |
 | [validators/](./validators/) | NR export validation: `is_crusade_force_export.py` (reference) + `isCrusadeForceExport.ts` (worker) + 4 reference JSON files |
 
 ## CHANGELOG
 
-### v3.28.1 (current) — NR export detection logic implemented + reference files stored
+### v4.0 (current) — Discord Integration via Webhooks (PRD-8)
+
+Implements the v2 placeholder in PRD-1 §5c. PRD-8 introduces per-team Discord webhook forwarding for Crusade campaign events.
+
+**Files added:**
+- `prd-8-discord-webhooks.md` — Full PRD (~700 lines) covering: per-team registration, TL/CM authorization, event subscriptions, BullMQ delivery worker, embed templates, rate-limit handling, auto-disable on persistent failure, URL encryption, OpenAPI surface, testing strategy, migration & rollout.
+- `okf/prds/prd-8-discord-webhooks.md` — OKF bundle version (synced from upstream).
+- `okf/concepts/discord-webhook.md` — New domain concept doc for the `DiscordWebhook*` schema family.
+
+**Data model additions:**
+- `DiscordWebhook` — registration row, UNIQUE `(campaignId, teamId) WHERE disabledAt IS NULL`
+- `DiscordWebhookSubscription` — per-event-kind enable/disable
+- `DiscordWebhookDelivery` — delivery attempt log
+- `Event.affectedTeamIds?: string[]` — fanout hint for team-scoped events
+
+**Cross-PRD touch points (additive):**
+- `prd-0-overview.md` — added `DiscordWebhook*` + `affectedTeamIds` to data model
+- `prd-1-crusade-master-admin.md` §5c — replaced 2-line placeholder with link to PRD-8
+- `prd-4-events-deltas.md` §3 + §3.3 — `affectedTeamIds` field + Discord delivery side-branch in fanout diagram
+- `prd-5-approval-system.md` §8.6 — Discord as 4th delivery channel; loudness assignment lives in PRD-8
+- `prd-6-technical-architecture.md` §4.1 — implemented `webhooks` OpenAPI block (was placeholder)
+- `prd-7-testing-strategy.md` — added mock Discord receiver + `discord-webhook-delivery-job` to test matrix
+- `okf/concepts/notification.md` — flipped Discord from "future" to live channel
+
+**Acceptance criteria (PRD-8 §18):**
+- TL registers webhook + 3 subscriptions → test embed arrives in Discord <5s
+- Team-isolation test (RLS): Team B player queries Team A's webhook → 0 rows
+- 429 → retry with `Retry-After` honored → eventual success
+- Auto-disable after threshold N + audit entry + TL notification
+- URL never appears in logs (CI grep)
+- OpenAPI drift detection passes for `webhooks` block
+- OKF bundle linters (`validate.js`, `lint-frontmatter.js`, `check-orphans.js`, `check-index-sync.js`) all return 0
+
+**Deferred to v1.x / v2+:** campaign-wide webhook, edit-message affordance, threaded messages, per-user opt-out, multi-webhook per team with routing, Discord guild verification, Slack/Teams adapters.
+
+### v3.28.1 — NR export detection logic implemented + reference files stored
 
 Per user-provided reference files (4 known NR exports), the PRD-3 §3.0 detection logic is now implemented and validated:
 

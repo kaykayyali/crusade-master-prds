@@ -2,7 +2,7 @@
 okf_version: "0.1"
 ---
 
-# Crusade Master App — OKF Bundle (v3.28 sync)
+# Crusade Master App — OKF Bundle (v3.28 sync + v4.0 PRD-8)
 
 This bundle captures the product requirements for the Crusade Master app
 synced to upstream v3.28 (commits `6cd2490` → `a916708`; v3.28.1 adds NR
@@ -23,6 +23,7 @@ export detection logic). It documents:
 - **Event taxonomy** (v3.17 expansion) covering campaign / member / team / roster / battle lifecycle
 - **Event→Notification fanout** (v3.26)
 - **NR export validation gate (v3.28)** — parse-job step 0 detects Crusade Force exports
+- **Per-team Discord webhook forwarding (v4.0, PRD-8)** — TL/CM registers a Discord webhook URL per team; team-scoped events forwarded as rich embeds via a BullMQ delivery worker with retry + auto-disable
 - **`ended` and `archived` state behavior** (v3.28)
 - **Retrospective View (v3.28)** — archived campaigns get a read-only, cross-team UI shell
 - **Vitest + testcontainers + Playwright** testing strategy (PRD-7, v3.24+)
@@ -41,6 +42,7 @@ each PRD is a separate OKF concept under [`prds/`](prds/).
 * [PRD-5 — Approval System](prds/prd-5-approval-system.md)
 * [PRD-6 — Technical Architecture & API Surface](prds/prd-6-technical-architecture.md)
 * [PRD-7 — Testing Strategy](prds/prd-7-testing-strategy.md)
+* [PRD-8 — Discord Integration via Webhooks](prds/prd-8-discord-webhooks.md) **(v4.0, NEW)**
 
 ## Domain Concepts
 
@@ -75,7 +77,8 @@ warrant first-class OKF concepts here.
 * [Crusade Team Leader](concepts/crusade-team-leader.md) — Team-scoped authority (v3.11+).
 * [BattleReportForm](concepts/battle-report-form.md) — Per-Campaign JSON Schema (v3.8+).
 * [BattleUpdate](concepts/battle-update.md) — Per-player post-battle submission (v3.28).
-* [Notification](concepts/notification.md) — User-facing materialization of an Event (v3.26).
+* [Notification](concepts/notification.md) — User-facing materialization of an Event (v3.26). Discord delivery added in v4.0 (PRD-8).
+* [DiscordWebhook](concepts/discord-webhook.md) — Per-team Discord webhook registration + delivery log schema (v4.0, PRD-8).
 
 ## References
 
@@ -121,5 +124,6 @@ done
 - For the testing strategy, read [PRD-7](prds/prd-7-testing-strategy.md).
 - For the API/OpenAPI strategy, read [PRD-6](prds/prd-6-technical-architecture.md).
 - For real-time polling, read PRD-6 §3.1.
+- For Discord webhook delivery, read PRD-8 + `concepts/discord-webhook.md`.
 - For NR export detection, read PRD-3 §3.0 and `validators/`.
 - See [`log.md`](log.md) for the v3.28 sync history.

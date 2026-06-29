@@ -2,9 +2,27 @@
 
 ## 2026-06-28
 
+### v4.0 — Discord Integration via Webhooks (PRD-8)
+
+* **Creation**: [PRD-8 — Discord Integration via Webhooks](/prds/prd-8-discord-webhooks.md). Implements the v2 placeholder in PRD-1 §5c. Per-team Discord webhook forwarding for campaign events; outgoing webhooks only, no bot. ~700 lines covering data model, TL/CM authorization, event subscriptions, BullMQ delivery pipeline, embed templates, rate-limit handling, auto-disable, security (URL encryption), OpenAPI surface, testing strategy.
+* **Creation**: New Domain Concept [DiscordWebhook](/concepts/discord-webhook.md) — the `DiscordWebhook` + `DiscordWebhookSubscription` + `DiscordWebhookDelivery` schema family.
+* **Update**: [Notification](/concepts/notification.md) — Discord flipped from "future" to live delivery channel (PRD-8 §1.2).
+* **Update**: Bundle-root `index.md` — added v4.0 summary line + PRD-8 nav entry + DiscordWebhook concept entry.
+* **Update**: `concepts/index.md` — added DiscordWebhook entry under "Teams, battles, notifications" group.
+* **Update**: `prds/index.md` — added PRD-8 entry; cross-PRD touch annotations added to PRD-0/1/4/5/6/7 entries referencing v4.0 changes.
+* **Update**: [PRD-0](/prds/prd-0-overview.md) data model — `Event.affectedTeamIds?` field + `DiscordWebhook*` table definitions added.
+* **Update**: [PRD-1](/prds/prd-1-crusade-master-admin.md) §5c — replaced 2-line "future v2" placeholder with link to PRD-8.
+* **Update**: [PRD-4](/prds/prd-4-events-deltas.md) §3 + §3.3 — `affectedTeamIds` field on `Event`; Discord delivery side-branch added to fanout diagram; v1.x taxonomy-extension comment trimmed.
+* **Update**: [PRD-5](/prds/prd-5-approval-system.md) §8.6 — new sub-section: Discord as 4th delivery channel; independent loudness assignment in PRD-8.
+* **Update**: [PRD-6](/prds/prd-6-technical-architecture.md) §4.1 — implemented `webhooks` OpenAPI block reference (was placeholder); points at PRD-8 §12.
+* **Update**: [PRD-7](/prds/prd-7-testing-strategy.md) — added `discord-webhook-delivery-job` to test matrix; added mock Discord receiver to integration test list; clarified staging-only live Discord E2E.
+* **Update**: Upstream `README.md` — added PRD-8 to Documents table; added v4.0 CHANGELOG entry.
+
 ### v3.28 sync
 
-* **Update**: Bundle synced to upstream v3.28 (commits `6cd2490` → `a916708`; v3.28.1 includes NR export detection logic). **8 PRD concepts**, **14 Domain Concepts** (added CrusadeForce, CrusadeForceVersion, CrusadeArmy, ApprovalSource, BattleUpdate, Notification), **11 Reference concepts**, **4 validators**.
+### v3.28 sync
+
+* **Update**: Bundle synced to upstream v3.28 (commits `6cd2490` → `a916708`; v3.28.1 includes NR export detection logic). At sync time: **8 PRD concepts**, **14 Domain Concepts** (added CrusadeForce, CrusadeForceVersion, CrusadeArmy, ApprovalSource, BattleUpdate, Notification), **11 Reference concepts**, **4 validators**. (Subsequently extended by the v4.0 sync above: 9 PRD concepts + 15 Domain Concepts.)
 
 * **Update**: All 8 PRDs and 9 existing concepts frontmatter updated to:
   - `timestamp: "2026-06-28T23:28:00Z"`

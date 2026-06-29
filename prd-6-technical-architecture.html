@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -356,7 +356,7 @@ startup, walks every registered route - For each route, reads
 (Joi schemas) - Converts Joi schemas → OpenAPI 3.0 schemas (handles
 <code>string().uuid()</code>, <code>number().min()</code>, etc.) - Adds
 tag grouping from <code>options.tags</code> - Adds security definitions
-from <code>options.plugins[&#39;hapi-swagger&#39;].security</code> - Emits a
+from <code>options.plugins['hapi-swagger'].security</code> - Emits a
 complete OpenAPI JSON document at <code>/api/docs/openapi.json</code> -
 Serves a Swagger UI at <code>/api/docs</code></p>
 <p><strong>What <code>@hapi/swagger</code> does NOT do</strong> (we have
@@ -380,7 +380,7 @@ responses. Clients that don’t know about new fields ignore them. Clients
 that do know use them.</p>
 <h3 id="deprecation-policy">3.3 Deprecation policy</h3>
 <p>When a field or endpoint is deprecated: 1. Mark it in the route’s
-<code>options.plugins[&#39;hapi-swagger&#39;].deprecated: true</code> 2. Add a
+<code>options.plugins['hapi-swagger'].deprecated: true</code> 2. Add a
 <code>@deprecated</code> note in the schema description 3. The Swagger
 UI renders it as struck-through with a warning 4. Keep deprecated fields
 for ≥6 months before removal</p>
@@ -446,7 +446,7 @@ Polling at 20s is good enough UX for a campaign-management tool with low
 concurrent user count - v1.x may upgrade to SSE if user feedback demands
 sub-second latency</p>
 <p><strong>Pause conditions (saves requests):</strong> -
-<code>document.visibilityState === &#39;hidden&#39;</code> (backgrounded tab) -
+<code>document.visibilityState === 'hidden'</code> (backgrounded tab) -
 User is actively in the inbox detail view (no point redrawing under
 their cursor) - User has explicitly paused via a UI control</p>
 <p><strong>Resume conditions:</strong> - <code>visibilitychange</code>
@@ -474,7 +474,8 @@ build time:</p>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// ...</span></span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
 <p><strong>Build pipeline:</strong></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;scripts&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;generate:api-types&quot;</span><span class="fu">:</span> <span class="st">&quot;openapi-typescript http://localhost:3000/api/docs/openapi.json -o apps/web/src/api/types.ts&quot;</span><span class="fu">,</span></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;prebuild&quot;</span><span class="fu">:</span> <span class="st">&quot;pnpm generate:api-types&quot;</span></span>
@@ -534,7 +535,8 @@ in PRs. It’s the artifact external integrations pin to.</p>
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="fu">main</span>()<span class="op">;</span></span></code></pre></div>
 <p><strong>CI script
 (<code>.github/workflows/drift-check.yml</code>):</strong></p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> OpenAPI Drift Check</span></span>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">name</span><span class="kw">:</span><span class="at"> OpenAPI Drift Check</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">on</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">push</span><span class="kw">,</span><span class="at"> pull_request</span><span class="kw">]</span></span>
 <span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -574,7 +576,8 @@ reviewers see it.</p>
 <h3 id="what-about-generated-types-in-the-frontend">5.5 What about
 generated types in the frontend?</h3>
 <p>The frontend types are regenerated in the same workflow:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Regenerate frontend types</span></span>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Regenerate frontend types</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">run</span><span class="kw">:</span><span class="at"> pnpm generate:api-types</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Check for frontend type drift</span></span>
@@ -630,12 +633,12 @@ additions:</p>
 <td>All <code>/api/tenants/{tenantId}/...</code> routes</td>
 </tr>
 <tr class="even">
-<td><code>x-requires-role: [&quot;cm&quot;]</code></td>
+<td><code>x-requires-role: ["cm"]</code></td>
 <td>Roles required to call this endpoint</td>
 <td>CM-only admin routes</td>
 </tr>
 <tr class="odd">
-<td><code>x-rate-limit: &quot;10/minute&quot;</code></td>
+<td><code>x-rate-limit: "10/minute"</code></td>
 <td>Rate limit per PRD-7 (if added)</td>
 <td>Upload endpoints</td>
 </tr>
@@ -653,7 +656,8 @@ generation tools.</p>
 OpenAPI Spec</h2>
 <p>Hapi routes use bearer auth (JWT). We declare the security scheme
 once and reference it:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">// apps/api/src/server.ts</span></span>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">// apps/api/src/server.ts</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>{</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  plugin<span class="op">:</span> HapiSwagger<span class="op">,</span></span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  options<span class="op">:</span> {</span>
@@ -669,7 +673,8 @@ once and reference it:</p>
 <span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
 <span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
 <p>Routes opt-in via:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plugins<span class="op">:</span> {</span>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode ts"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plugins<span class="op">:</span> {</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;hapi-swagger&#39;</span><span class="op">:</span> {</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    security<span class="op">:</span> [{ bearerAuth<span class="op">:</span> [] }]<span class="op">,</span></span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  }<span class="op">,</span></span>
@@ -699,8 +704,8 @@ indicates private</li>
 <h3 id="conditional-document-if-user-facing">Conditional (document if
 user-facing)</h3>
 <ul>
-<li>Webhooks (if we add outbound webhooks in v2): document as
-<code>webhooks</code> block</li>
+<li>Webhooks (outbound Discord webhooks, v4.0 / PRD-8): document as
+<code>webhooks</code> block — see PRD-8 §12</li>
 <li>Bulk operations: document with <code>x-bulk: true</code>
 extension</li>
 </ul>
@@ -734,7 +739,8 @@ overkill for our CRUD-heavy API; harder to use file uploads.
 <strong>Verdict</strong>: rejected. Our API is mostly CRUD; REST/OpenAPI
 fits.</p>
 <h3 id="chosen-code-first-with-hapiswagger">Chosen: Code-first with
-<span class="citation" data-cites="hapi/swagger">@hapi/swagger</span></h3>
+<span class="citation"
+data-cites="hapi/swagger">@hapi/swagger</span></h3>
 <p>Code-first with Joi schemas as the source of truth, OpenAPI generated
 at build time, drift detection via snapshot.</p>
 <p><strong>Pros</strong>: One definition (the route file); schemas
@@ -775,14 +781,17 @@ snapshot for E2E tests</li>
 <hr />
 <h2 id="references">12. References</h2>
 <ul>
-<li><span class="citation" data-cites="hapi/swagger">@hapi/swagger</span>:
+<li><span class="citation"
+data-cites="hapi/swagger">@hapi/swagger</span>:
 https://github.com/hapi-swagger/hapi-swagger</li>
 <li>OpenAPI 3.0 spec: https://swagger.io/specification/</li>
 <li>openapi-typescript:
 https://github.com/drwpow/openapi-typescript</li>
-<li><span class="citation" data-cites="hapi/api-version">@hapi/api-version</span>:
+<li><span class="citation"
+data-cites="hapi/api-version">@hapi/api-version</span>:
 https://github.com/hapi-community/api-version</li>
-<li>Joi (validation library that <span class="citation" data-cites="hapi/swagger">@hapi/swagger</span> converts to OpenAPI):
+<li>Joi (validation library that <span class="citation"
+data-cites="hapi/swagger">@hapi/swagger</span> converts to OpenAPI):
 https://joi.dev</li>
 <li>Joi-to-OpenAPI conversion rules:
 https://github.com/hapi-swagger/hapi-swagger/blob/master/usage指南.md</li>
@@ -792,7 +801,8 @@ https://github.com/hapi-swagger/hapi-swagger/blob/master/usage指南.md</li>
 bundle at <a href="../okf"><code>okf/</code></a>. The most relevant:</p>
 <ul>
 <li><a href="../okf/references/hapi.md">Hapi</a> — Node.js HTTP
-framework + <span class="citation" data-cites="hapi/swagger">@hapi/swagger</span> plugin</li>
+framework + <span class="citation"
+data-cites="hapi/swagger">@hapi/swagger</span> plugin</li>
 <li><a href="../okf/references/bullmq.md">BullMQ</a> — Redis-backed job
 queue</li>
 <li><a href="../okf/references/minio.md">MinIO</a> — S3-compatible
@@ -807,7 +817,8 @@ configurable compliance check engine</li>
 contract kinds for OpenAPI generation</li>
 <li><a href="../okf/concepts/crusade-force.md">CrusadeForce</a> — API
 resources for force CRUD</li>
-<li><a href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
+<li><a
+href="../okf/concepts/crusade-force-version.md">CrusadeForceVersion</a>
 — API resources for version CRUD</li>
 </ul>
 <p>See <a href="../okf/index.md"><code>okf/index.md</code></a> for the

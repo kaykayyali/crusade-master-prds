@@ -358,7 +358,40 @@ RuleDefinition { id, tenantId, scope: 'builtin' | 'cm' | 'crusade', authorUserId
 RuleCheck { id, draftId, runId, kind, status: 'pass' | 'warn' | 'fail', details }
 
 // === Events (unified timeline) ===
-Event { id, tenantId, campaignId, kind, occurredAt, actorUserId, targetType, targetId, payload, delta, visibility, activeRosterApprovedId }
+// v4.0 (PRD-8): `affectedTeamIds` added so the fanout function can decide which
+// teams are eligible to receive a Discord webhook delivery for this event.
+// Existing events without this field are treated as not team-scoped (only
+// `public`/`campaign` visibility forwards them to Discord).
+Event {
+  id, tenantId, campaignId, kind, occurredAt, actorUserId, targetType, targetId,
+  payload, delta, visibility, activeRosterApprovedId,
+  affectedTeamIds?: string[]   // PRD-8 §8.3
+}
+
+// === Discord Webhooks (v4.0 / PRD-8) ===
+// Per-team Discord webhook registration. At most one active webhook per team
+// per campaign (UNIQUE (campaignId, teamId) WHERE disabledAt IS NULL).
+// See PRD-8 for the full specification.
+DiscordWebhook {
+  id, tenantId, campaignId, teamId,
+  name,                            // friendly label, UI only
+  urlEncrypted,                    // servocrypt-encrypted Discord webhook URL
+  urlFingerprint,                  // SHA-256 of plaintext URL; safe for audit logs
+  createdByUserId, createdAt, updatedAt,
+  disabledAt?, disabledReason?,
+  consecutiveFailureCount: int,
+  lastDeliveryAt?, lastSuccessAt?,
+  minLoudness: 'loud' | 'normal' | 'quiet',   // default 'normal'
+  autoDisableThreshold: int                   // default 10
+}
+DiscordWebhookSubscription { webhookId, eventKind: EventKind, enabled: bool, enabledAt?, enabledByUserId? }
+DiscordWebhookDelivery {
+  id, webhookId, eventId,
+  attempt,                         // 1..5
+  status: 'pending' | 'success' | 'failed' | 'rate_limited' | 'gave_up',
+  httpStatus?, errorMessage?, durationMs?,
+  enqueuedAt, deliveredAt?, embedJson?
+}
 Delta { id, eventId, entityType, entityId, field, beforeValue, afterValue, reason }
 
 // === Crusade supplements (per-book config) ===
